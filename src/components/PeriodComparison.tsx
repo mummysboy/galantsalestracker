@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Button } from './ui/button';
-import { TrendingUp, TrendingDown, Minus, Package, DollarSign, Users } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Package, Users } from 'lucide-react';
 import { AlpineSalesRecord } from '../utils/alpineParser';
 
 interface PeriodComparisonProps {

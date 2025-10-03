@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, TrendingUp, TrendingDown, AlertTriangle, DollarSign, Package, Calendar, Users } from 'lucide-react';
+import { X, TrendingUp, TrendingDown, Package, Calendar, Users } from 'lucide-react';
 import { Button } from './ui/button';
 import { AlpineSalesRecord, CustomerProgressAnalysis } from '../utils/alpineParser';
 
@@ -279,7 +279,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
         previousProductCount: new Set(previousCustomerInvoices.map(inv => inv.productName)).size
       }
     };
-  }, [customerName, currentInvoices, previousInvoices]);
+  }, [customerName, currentInvoices, previousInvoices, alpineData]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {

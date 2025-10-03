@@ -44,7 +44,7 @@ export function parseAlpineTXT(txtContent: string, reportDate: string): ParsedAl
     const match = headerLine.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})/g);
     if (match && match.length >= 2) {
       const [, toDate] = match;
-      const [month, day, year] = toDate.includes('/') ? toDate.split('/') : ['', '', ''];
+      const [month, , year] = toDate.includes('/') ? toDate.split('/') : ['', '', ''];
       if (month && year) {
         // Convert to YYYY-MM format
         const fullYear = year.length === 2 ? `20${year}` : year;
