@@ -36,19 +36,49 @@ export function parseAlpineTXT(txtContent: string, reportDate: string): ParsedAl
   const records: AlpineSalesRecord[] = [];
   const supplier = 'ALPINE';
   
+  // Detect header column positions based on the header titles line (mirrors June format)
+  let headerPositions: {
+    itemStart: number;
+    descriptionStart: number;
+    sizeStart: number;
+    casesStart: number;
+    piecesStart: number;
+    netLbsStart: number;
+    salesStart: number;
+    mfgStart: number;
+  } | null = null;
+  const headerTitlesLine = lines.find(line =>
+    line.includes('DESCRIPTION') && line.includes('SIZE') && line.includes('SALES') && line.includes('MFG ITEM #')
+  );
+  if (headerTitlesLine) {
+    headerPositions = {
+      itemStart: (headerTitlesLine.indexOf('#') !== -1 ? headerTitlesLine.indexOf('#') : 0),
+      descriptionStart: headerTitlesLine.indexOf('DESCRIPTION'),
+      sizeStart: headerTitlesLine.indexOf('SIZE'),
+      casesStart: headerTitlesLine.indexOf('CASES'),
+      piecesStart: headerTitlesLine.indexOf('PIECES'),
+      netLbsStart: headerTitlesLine.indexOf('NET LBS'),
+      salesStart: headerTitlesLine.indexOf('SALES'),
+      mfgStart: headerTitlesLine.indexOf('MFG ITEM #')
+    };
+  }
+
   
-  // Look for period information in the header
+  // Look for period information in the header (normalize via UTC to avoid TZ differences)
   const headerLine = lines.find(line => line.includes('FROM :') && line.includes('THRU'));
   let period = reportDate;
   if (headerLine) {
     const match = headerLine.match(/(\d{1,2}\/\d{1,2}\/\d{2,4})/g);
     if (match && match.length >= 2) {
       const [, toDate] = match;
-      const [month, , year] = toDate.includes('/') ? toDate.split('/') : ['', '', ''];
+      const [month, day, year] = toDate.includes('/') ? toDate.split('/') : ['', '', ''];
       if (month && year) {
-        // Convert to YYYY-MM format
-        const fullYear = year.length === 2 ? `20${year}` : year;
-        period = `${fullYear}-${month.padStart(2, '0')}`;
+        const yyyy = year.length === 2 ? `20${year}` : year;
+        // Create a UTC date to avoid timezone shifts
+        const d = new Date(Date.UTC(parseInt(yyyy, 10), parseInt(month, 10) - 1, parseInt(day || '1', 10)));
+        const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const yyyyStr = String(d.getUTCFullYear());
+        period = `${yyyyStr}-${mm}`;
       }
     }
   }
@@ -74,8 +104,8 @@ export function parseAlpineTXT(txtContent: string, reportDate: string): ParsedAl
 
 
     // Check if this is a customer line (starts with customer number and description)
-    // Updated regex to handle both 4-digit and 5-digit customer numbers
-    const customerMatch = line.match(/^\s*(\d{4,5}-\d{3})\s+(.+)/);
+    // Updated regex to handle 4–6 digit customer prefixes (e.g., 60127-001, 120075-001)
+    const customerMatch = line.match(/^\s*(\d{4,6}-\d{3})\s+(.+)/);
     if (customerMatch) {
       const [, customerId, customerDescription] = customerMatch;
       currentCustomer = customerDescription.trim();
@@ -84,74 +114,111 @@ export function parseAlpineTXT(txtContent: string, reportDate: string): ParsedAl
       continue;
     }
 
-    // Check if this is a product line (indented with spaces at the beginning)
-    // Use a more flexible approach to handle variable spacing
+    // Check if this is a product line (indented) and parse using fixed columns if available
     if (originalLine.startsWith('    ') && /^\s+\d+/.test(originalLine) && currentCustomer) {
-      // Don't trim the line yet - we need to preserve the original spacing for parsing
-      const parts = originalLine.split(/\s+/);
-      
-      // Look for pattern: itemNumber productName size cases pieces netLbs revenue mfgItemNumber
-      // Use the same logic that worked for the June file
-      if (parts.length >= 7 && /^\d+$/.test(parts[1])) {
-        const itemNumber = parts[1];
-        
-        // Find the size field (look for patterns like "12 CT", "12/4 OZ", etc.)
-        let sizeIndex = -1;
-        for (let i = 2; i < parts.length; i++) {
-          if (parts[i].match(/^\d+/) && (parts[i+1] === 'CT' || parts[i+1] === 'OZ' || parts[i].includes('/'))) {
-            sizeIndex = i;
-            break;
-          }
-        }
-        
-        if (sizeIndex === -1) continue; // Skip if we can't find size
-        
-        const productName = parts.slice(2, sizeIndex).join(' ');
-        const size = parts[sizeIndex] + (parts[sizeIndex + 1] && (parts[sizeIndex + 1] === 'CT' || parts[sizeIndex + 1] === 'OZ') ? ' ' + parts[sizeIndex + 1] : '');
-        
-        // Find the cases field (first numeric field after size)
-        let casesIndex = sizeIndex + (parts[sizeIndex + 1] && (parts[sizeIndex + 1] === 'CT' || parts[sizeIndex + 1] === 'OZ') ? 2 : 1);
-        const cases = parts[casesIndex] || '0';
-        
-        // Find pieces field (next numeric field)
-        let piecesIndex = casesIndex + 1;
-        const pieces = parts[piecesIndex] || '0';
-        
-        // Find revenue field (next numeric field - there's no separate netLbs field)
-        let revenueIndex = piecesIndex + 1;
-        let revenue = parts[revenueIndex] || '0';
-        if (revenue.endsWith('-')) {
-          revenue = '-' + revenue.slice(0, -1);
-        }
-        
-        // Find mfg item number (everything after revenue)
-        const mfgItemNumber = parts.slice(revenueIndex + 1).join(' ').trim();
-        
-        // Set netLbs to 0 since it's not in the file format
-        const netLbs = '0';
-        
-        
+      const lineForParse = originalLine;
+
+      // Prefer header-sliced parsing to mirror June exactly
+      if (headerPositions) {
+        const h = headerPositions;
+        const slice = (start: number, end: number) =>
+          (lineForParse.length > start ? lineForParse.slice(start, end).trim() : '').trim();
+
+        const itemNumber = slice(h.itemStart, h.descriptionStart).split(/\s+/).filter(Boolean).pop() || '';
+        const description = slice(h.descriptionStart, h.sizeStart);
+        const size = slice(h.sizeStart, h.casesStart) || slice(h.sizeStart, h.piecesStart); // some rows may omit CASES
+        const casesStr = slice(h.casesStart, h.piecesStart);
+        const piecesStr = slice(h.piecesStart, h.netLbsStart);
+        const netLbsStr = slice(h.netLbsStart, h.salesStart);
+        let salesStr = slice(h.salesStart, h.mfgStart);
+        const mfg = slice(h.mfgStart, undefined as unknown as number); // to end
+
+        // Normalize trailing minus on sales
+        if (salesStr.endsWith('-')) salesStr = '-' + salesStr.slice(0, -1);
+
+        const parseNum = (v: string) => {
+          const t = v.replace(/,/g, '').trim();
+          if (!t || t === '.') return 0;
+          return parseFloat(t) || 0;
+        };
+
         const record: AlpineSalesRecord = {
-          period: period,
+          period,
           customerName: currentCustomer,
-          productName: productName.trim(),
-          size: size.trim(),
+          productName: description,
+          size: size,
           customerId: currentCustomerId,
-          productCode: itemNumber.trim(),
-          cases: parseInt(cases) || 0,
-          pieces: parseFloat(pieces) || 0,
-          netLbs: parseFloat(netLbs) || 0,
-          revenue: parseFloat(revenue) || 0,
-          mfgItemNumber: mfgItemNumber.trim()
+          productCode: itemNumber,
+          cases: parseInt(casesStr || '0') || 0,
+          pieces: parseNum(piecesStr),
+          netLbs: parseNum(netLbsStr),
+          revenue: parseNum(salesStr),
+          mfgItemNumber: mfg
         };
 
         records.push(record);
-        
-        if (!currentProducts.includes(productName.trim())) {
-          currentProducts.push(productName.trim());
+        if (!currentProducts.includes(record.productName)) currentProducts.push(record.productName);
+        continue;
+      }
+
+      // Regex-first approach to mirror June format with optional numeric columns
+      // 1:itemNumber 2:productName 3:size 4:cases? 5:pieces? 6:netLbs? 7:sales 8:mfgItem# (rest)
+      // Allow size to be either "12 CT", "12/8 OZ", tokenized alt, or a bare number like "1"
+      const productRegex = /^\s*(\d+)\s+(.+?)\s+((?:\d+(?:\/\d+)?\s*(?:CT|OZ))|(?:\d+))\s*(\d+)?\s*(\d+(?:\.\d+)?)?\s*(\d+(?:\.\d+)?)?\s*([\d.]+-?)\s*(.*)$/;
+      let match = lineForParse.match(productRegex);
+
+      if (!match) {
+        // Fallback: allow size tokens like "12/8 OZ" split in tokens (same capture intent)
+        const altRegex = /^\s*(\d+)\s+(.+?)\s+(\d+(?:\/\d+)?)\s*(CT|OZ)\s*(\d+)?\s*(\d+(?:\.\d+)?)?\s*(\d+(?:\.\d+)?)?\s*([\d.]+-?)\s*(.*)$/;
+        const m = lineForParse.match(altRegex);
+        if (m) {
+          // Rebuild to productRegex groups
+          match = [
+            m[0],           // full
+            m[1],           // itemNumber
+            m[2],           // productName
+            `${m[3]} ${m[4]}`, // size combined
+            m[5],           // cases
+            m[6],           // pieces
+            m[7],           // netLbs
+            m[8],           // sales
+            m[9] || ''      // mfg
+          ] as unknown as RegExpMatchArray;
+        }
+      }
+
+      if (match) {
+        const [, itemNumber, productNameRaw, sizeRaw, casesRaw, piecesRaw, netLbsRaw, salesRaw, mfgRaw] = match;
+        const normalizeNum = (v?: string) => {
+          if (!v) return 0;
+          let t = v.trim();
+          if (t.endsWith('-')) t = '-' + t.slice(0, -1);
+          return parseFloat(t) || 0;
+        };
+
+        const record: AlpineSalesRecord = {
+          period: period,
+          customerName: currentCustomer,
+          productName: productNameRaw.trim(),
+          size: sizeRaw.trim(),
+          customerId: currentCustomerId,
+          productCode: itemNumber.trim(),
+          cases: parseInt(casesRaw || '0') || 0,
+          pieces: normalizeNum(piecesRaw),
+          netLbs: normalizeNum(netLbsRaw),
+          revenue: normalizeNum(salesRaw),
+          mfgItemNumber: (mfgRaw || '').trim()
+        };
+
+        records.push(record);
+        if (!currentProducts.includes(record.productName)) {
+          currentProducts.push(record.productName);
         }
         continue;
       }
+
+      // If regex parsing fails entirely, skip the line to avoid mis-mapping columns
+      continue;
     }
 
     // Check if this is a customer total line (skip it)

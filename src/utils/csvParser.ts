@@ -353,28 +353,53 @@ function parseCurrencyValue(str: string, currencySymbol: string): number | null 
 
 function parseDate(str: string): string | null {
   if (!str) return null;
-  
-  // Try different date formats
-  const formats = [
-    /^\d{4}-\d{2}-\d{2}$/, // YYYY-MM-DD
-    /^\d{2}\/\d{2}\/\d{4}$/, // MM/DD/YYYY
-    /^\d{4}\/\d{2}\/\d{2}$/, // YYYY/MM/DD
-    /^\d{2}-\d{2}-\d{4}$/, // MM-DD-YYYY
-  ];
 
-  const cleanDate = str.trim().replace(/"/g, '');
-  
-  // Check if it's already in YYYY-MM-DD format
-  if (formats[0].test(cleanDate)) {
-    return cleanDate;
+  const clean = str.trim().replace(/"/g, '');
+
+  // Already normalized YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+    return clean;
   }
-  
-  // Try to parse other formats
-  const date = new Date(cleanDate);
-  if (!isNaN(date.getTime())) {
-    return date.toISOString().split('T')[0];
+
+  // MM/DD/YYYY or M/D/YYYY
+  const mdyyyySlash = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+  const m1 = clean.match(mdyyyySlash);
+  if (m1) {
+    const mm = m1[1].padStart(2, '0');
+    const dd = m1[2].padStart(2, '0');
+    const yyyy = m1[3];
+    return `${yyyy}-${mm}-${dd}`;
   }
-  
+
+  // YYYY/MM/DD
+  const yyyyslash = /^(\d{4})\/(\d{1,2})\/(\d{1,2})$/;
+  const m2 = clean.match(yyyyslash);
+  if (m2) {
+    const yyyy = m2[1];
+    const mm = m2[2].padStart(2, '0');
+    const dd = m2[3].padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  // MM-DD-YYYY or M-D-YYYY
+  const mdyyyyDash = /^(\d{1,2})-(\d{1,2})-(\d{4})$/;
+  const m3 = clean.match(mdyyyyDash);
+  if (m3) {
+    const mm = m3[1].padStart(2, '0');
+    const dd = m3[2].padStart(2, '0');
+    const yyyy = m3[3];
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  // Last resort: construct UTC to avoid timezone shifts
+  const d = new Date(clean);
+  if (!isNaN(d.getTime())) {
+    const yyyy = d.getUTCFullYear();
+    const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(d.getUTCDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
   return null;
 }
 
