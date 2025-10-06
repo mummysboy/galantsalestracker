@@ -128,10 +128,13 @@ const PeriodComparison: React.FC<PeriodComparisonProps> = ({ alpineData, selecte
       console.log(`PeriodComparison - Customer ${customerName} has periods:`, availableForCustomer);
       console.log(`PeriodComparison - Looking for periods:`, firstPeriod, secondPeriod);
 
-      // Only include customers that have data in both selected periods
-      if (availableForCustomer.includes(firstPeriod) && availableForCustomer.includes(secondPeriod)) {
-        const firstPeriodData = periods[firstPeriod] || [];
-        const secondPeriodData = periods[secondPeriod] || [];
+      // Include customers that have data in either selected period; default missing to 0
+      const hasFirst = availableForCustomer.includes(firstPeriod);
+      const hasSecond = availableForCustomer.includes(secondPeriod);
+
+      if (hasFirst || hasSecond) {
+        const firstPeriodData = hasFirst ? (periods[firstPeriod] || []) : [];
+        const secondPeriodData = hasSecond ? (periods[secondPeriod] || []) : [];
 
         const firstPeriodSummary = {
           period: firstPeriod,
@@ -192,8 +195,19 @@ const PeriodComparison: React.FC<PeriodComparisonProps> = ({ alpineData, selecte
     // Sort comparisons
     comparisons.sort((a, b) => {
       switch (sortBy) {
-        case 'revenue':
-          return Math.abs(b.changeFromPrevious.revenueChange) - Math.abs(a.changeFromPrevious.revenueChange);
+        case 'revenue': {
+          const aDelta = a.changeFromPrevious.revenueChange;
+          const bDelta = b.changeFromPrevious.revenueChange;
+          const aPos = aDelta >= 0 ? 1 : 0;
+          const bPos = bDelta >= 0 ? 1 : 0;
+          // Positives first
+          if (aPos !== bPos) return bPos - aPos;
+          // Within positives: larger gains first; within negatives: more negative later (i.e., closer to zero last)
+          if (aPos === 1) return bDelta - aDelta;
+          // For negatives, sort by change ascending (e.g., -10 before -100? Or the opposite?)
+          // Show larger magnitude losses later to keep worst at the bottom when positives first
+          return aDelta - bDelta;
+        }
         case 'cases':
           return Math.abs(b.changeFromPrevious.caseChange) - Math.abs(a.changeFromPrevious.caseChange);
         case 'change':
