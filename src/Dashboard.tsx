@@ -250,7 +250,8 @@ const Dashboard: React.FC = () => {
 
   // Add "All" option to periods, with most recent first
   const allPeriodOptions = useMemo(() => {
-    return ['all', ...availablePeriods.reverse()];
+    // IMPORTANT: reverse() mutates; use a copy to keep availablePeriods sorted ascending for charts
+    return ['all', ...[...availablePeriods].reverse()];
   }, [availablePeriods]);
 
   // Filter data based on selected month
