@@ -5,6 +5,7 @@ import { AlpineSalesRecord } from '../utils/alpineParser';
 
 interface PeriodComparisonProps {
   alpineData: AlpineSalesRecord[];
+  selectedMonth?: string; // YYYY-MM from Dashboard month selector
 }
 
 interface CustomerComparison {
@@ -25,7 +26,7 @@ interface CustomerComparison {
   };
 }
 
-const PeriodComparison: React.FC<PeriodComparisonProps> = ({ alpineData }) => {
+const PeriodComparison: React.FC<PeriodComparisonProps> = ({ alpineData, selectedMonth }) => {
   const [sortBy, setSortBy] = useState<'revenue' | 'cases' | 'change'>('change');
 
   const availablePeriods = useMemo(() => {
@@ -35,23 +36,50 @@ const PeriodComparison: React.FC<PeriodComparisonProps> = ({ alpineData }) => {
   // Set default periods based on available data (most recent vs previous)
   const [selectedPeriods, setSelectedPeriods] = useState<string[]>([]);
 
-  // Set default periods when data changes
+  // Helper to compute previous period string (YYYY-MM)
+  const getPreviousPeriod = (period: string) => {
+    if (!period) return null;
+    const [y, m] = period.split('-').map(Number);
+    if (!y || !m) return null;
+    const d = new Date(y, m - 2, 1); // previous month
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    return `${yyyy}-${mm}`;
+  };
+
+  // Set default periods when data or dashboard-selected month changes
   useEffect(() => {
     console.log('PeriodComparison - Available periods:', availablePeriods);
     console.log('PeriodComparison - Current selected periods:', selectedPeriods);
-    
+
+    // If Dashboard provided a selected month, prefer it with its previous month
+    if (selectedMonth) {
+      const prev = getPreviousPeriod(selectedMonth);
+      const sorted = [...availablePeriods].sort();
+      const hasCurrent = sorted.includes(selectedMonth);
+      const hasPrev = prev ? sorted.includes(prev) : false;
+
+      if (hasCurrent && hasPrev) {
+        const newSel = [prev as string, selectedMonth];
+        if (JSON.stringify(newSel) !== JSON.stringify(selectedPeriods)) {
+          console.log('PeriodComparison - Syncing to dashboard months:', newSel);
+          setSelectedPeriods(newSel);
+          return;
+        }
+      }
+    }
+
+    // Fallbacks when no dashboard month or missing data
     if (availablePeriods.length >= 2 && selectedPeriods.length === 0) {
-      // Compare the two most recent periods
       const sortedPeriods = [...availablePeriods].sort();
       const newPeriods = [sortedPeriods[sortedPeriods.length - 2], sortedPeriods[sortedPeriods.length - 1]];
       console.log('PeriodComparison - Setting default periods:', newPeriods);
       setSelectedPeriods(newPeriods);
     } else if (availablePeriods.length === 1 && selectedPeriods.length === 0) {
-      // If only one period, compare it with itself (will show no change)
       console.log('PeriodComparison - Only one period available, comparing with itself');
       setSelectedPeriods([availablePeriods[0], availablePeriods[0]]);
     }
-  }, [availablePeriods, selectedPeriods]);
+  }, [availablePeriods, selectedPeriods, selectedMonth]);
 
   // Define helper function inside the component
   const groupProductsByRevenue = (records: AlpineSalesRecord[]) => {
@@ -169,8 +197,18 @@ const PeriodComparison: React.FC<PeriodComparisonProps> = ({ alpineData }) => {
         case 'cases':
           return Math.abs(b.changeFromPrevious.caseChange) - Math.abs(a.changeFromPrevious.caseChange);
         case 'change':
-        default:
-          return Math.abs(b.changeFromPrevious.revenuePercentChange) - Math.abs(a.changeFromPrevious.revenuePercentChange);
+        default: {
+          const aPct = a.changeFromPrevious.revenuePercentChange;
+          const bPct = b.changeFromPrevious.revenuePercentChange;
+          const aPos = aPct >= 0 ? 1 : 0;
+          const bPos = bPct >= 0 ? 1 : 0;
+          // Positives first
+          if (aPos !== bPos) return bPos - aPos;
+          // Within positives: descending (largest gains first)
+          if (aPos === 1) return bPct - aPct;
+          // Within negatives: ascending (most negative first)
+          return aPct - bPct;
+        }
       }
     });
 

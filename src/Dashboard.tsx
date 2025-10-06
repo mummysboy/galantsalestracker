@@ -235,6 +235,7 @@ const Dashboard: React.FC = () => {
   const [currentCustomerProgressions, setCurrentCustomerProgressions] = useState<Map<string, any>>(customerProgressions);
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
+  const [lastUploadedInvoiceMonth, setLastUploadedInvoiceMonth] = useState<string | null>(null);
 
   // Get available periods and set default to most recent
   const availablePeriods = useMemo(() => {
@@ -341,6 +342,11 @@ const Dashboard: React.FC = () => {
     });
     
     setCurrentCustomerProgressions(updatedCustomerProgressions);
+    // If new periods were uploaded, select the most recent one to reflect upload
+    const newestUploadedPeriod = Array.from(newPeriods).sort().slice(-1)[0];
+    if (newestUploadedPeriod) {
+      setSelectedMonth(newestUploadedPeriod);
+    }
     // Don't hide upload section immediately - let user see the results
     // setShowUploadSection(false); // Hide upload section after successful upload
   };
@@ -352,8 +358,23 @@ const Dashboard: React.FC = () => {
   };
 
   const handleCSVDataUploaded = (data: { currentInvoices: any[]; previousInvoices: any[] }) => {
-    // Handle CSV data if needed
     console.log('CSV data uploaded:', data);
+    // Derive month from latest date in current invoices
+    const parseToMonthYear = (isoDate: string) => {
+      const d = new Date(isoDate);
+      if (isNaN(d.getTime())) return null;
+      const formatter = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' });
+      return formatter.format(d);
+    };
+    const latestDate = data.currentInvoices
+      .map(i => i.date)
+      .filter(Boolean)
+      .sort()
+      .slice(-1)[0];
+    const monthYear = latestDate ? parseToMonthYear(latestDate) : null;
+    if (monthYear) {
+      setLastUploadedInvoiceMonth(monthYear);
+    }
   };
 
   const handleClearCSVData = () => {
@@ -506,6 +527,9 @@ const Dashboard: React.FC = () => {
               <p className="text-sm text-gray-500 mt-1">
                 {filteredAlpineData.length} sales records{selectedMonth !== 'all' ? ` for ${selectedMonth === 'all' ? 'all periods' : getMonthName(selectedMonth)}` : ` from ${availablePeriods.join(', ')} periods`}
               </p>
+              {lastUploadedInvoiceMonth && (
+                <p className="text-sm text-green-700 mt-1">Last uploaded invoice month: {lastUploadedInvoiceMonth}</p>
+              )}
             </div>
             <Button
               onClick={() => setShowUploadSection(!showUploadSection)}
@@ -700,7 +724,7 @@ const Dashboard: React.FC = () => {
             <p className="text-sm text-gray-600">Compare customer performance between any two periods</p>
           </CardHeader>
           <CardContent>
-            <PeriodComparison alpineData={currentAlpineData} />
+            <PeriodComparison alpineData={currentAlpineData} selectedMonth={selectedMonth} />
           </CardContent>
         </Card>
 
