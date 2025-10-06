@@ -181,10 +181,14 @@ const AlpineReportUpload: React.FC<AlpineReportUploadProps> = ({
                 type="file"
                 accept=".txt"
                 onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    const period = getPeriodFromFileName(file.name);
-                    handleFileUpload(file, period);
+                  const files = Array.from(e.target.files || []);
+                  if (files.length > 0) {
+                    files.forEach((file) => {
+                      const period = getPeriodFromFileName(file.name);
+                      handleFileUpload(file, period);
+                    });
+                    // Reset the input so the same files can be selected again if needed
+                    e.currentTarget.value = '';
                   }
                 }}
                 className="hidden"

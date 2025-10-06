@@ -125,7 +125,10 @@ export function parseAlpineTXT(txtContent: string, reportDate: string): ParsedAl
           (lineForParse.length > start ? lineForParse.slice(start, end).trim() : '').trim();
 
         const itemNumber = slice(h.itemStart, h.descriptionStart).split(/\s+/).filter(Boolean).pop() || '';
-        const description = slice(h.descriptionStart, h.sizeStart);
+        // Derive description start based on actual item number end on this line to avoid clipping
+        const itemTokenMatch = lineForParse.match(/^(\s*\d+\s+)/);
+        const descriptionStartOnLine = itemTokenMatch ? itemTokenMatch[0].length : h.descriptionStart;
+        const description = lineForParse.slice(descriptionStartOnLine, h.sizeStart).trim();
         const size = slice(h.sizeStart, h.casesStart) || slice(h.sizeStart, h.piecesStart); // some rows may omit CASES
         const casesStr = slice(h.casesStart, h.piecesStart);
         const piecesStr = slice(h.piecesStart, h.netLbsStart);
@@ -161,63 +164,7 @@ export function parseAlpineTXT(txtContent: string, reportDate: string): ParsedAl
         continue;
       }
 
-      // Regex-first approach to mirror June format with optional numeric columns
-      // 1:itemNumber 2:productName 3:size 4:cases? 5:pieces? 6:netLbs? 7:sales 8:mfgItem# (rest)
-      // Allow size to be either "12 CT", "12/8 OZ", tokenized alt, or a bare number like "1"
-      const productRegex = /^\s*(\d+)\s+(.+?)\s+((?:\d+(?:\/\d+)?\s*(?:CT|OZ))|(?:\d+))\s*(\d+)?\s*(\d+(?:\.\d+)?)?\s*(\d+(?:\.\d+)?)?\s*([\d.]+-?)\s*(.*)$/;
-      let match = lineForParse.match(productRegex);
-
-      if (!match) {
-        // Fallback: allow size tokens like "12/8 OZ" split in tokens (same capture intent)
-        const altRegex = /^\s*(\d+)\s+(.+?)\s+(\d+(?:\/\d+)?)\s*(CT|OZ)\s*(\d+)?\s*(\d+(?:\.\d+)?)?\s*(\d+(?:\.\d+)?)?\s*([\d.]+-?)\s*(.*)$/;
-        const m = lineForParse.match(altRegex);
-        if (m) {
-          // Rebuild to productRegex groups
-          match = [
-            m[0],           // full
-            m[1],           // itemNumber
-            m[2],           // productName
-            `${m[3]} ${m[4]}`, // size combined
-            m[5],           // cases
-            m[6],           // pieces
-            m[7],           // netLbs
-            m[8],           // sales
-            m[9] || ''      // mfg
-          ] as unknown as RegExpMatchArray;
-        }
-      }
-
-      if (match) {
-        const [, itemNumber, productNameRaw, sizeRaw, casesRaw, piecesRaw, netLbsRaw, salesRaw, mfgRaw] = match;
-        const normalizeNum = (v?: string) => {
-          if (!v) return 0;
-          let t = v.trim();
-          if (t.endsWith('-')) t = '-' + t.slice(0, -1);
-          return parseFloat(t) || 0;
-        };
-
-        const record: AlpineSalesRecord = {
-          period: period,
-          customerName: currentCustomer,
-          productName: productNameRaw.trim(),
-          size: sizeRaw.trim(),
-          customerId: currentCustomerId,
-          productCode: itemNumber.trim(),
-          cases: parseInt(casesRaw || '0') || 0,
-          pieces: normalizeNum(piecesRaw),
-          netLbs: normalizeNum(netLbsRaw),
-          revenue: normalizeNum(salesRaw),
-          mfgItemNumber: (mfgRaw || '').trim()
-        };
-
-        records.push(record);
-        if (!currentProducts.includes(record.productName)) {
-          currentProducts.push(record.productName);
-        }
-        continue;
-      }
-
-      // If regex parsing fails entirely, skip the line to avoid mis-mapping columns
+      // No header-based positions available; skip to avoid inconsistent parsing
       continue;
     }
 

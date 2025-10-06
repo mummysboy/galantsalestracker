@@ -10,6 +10,7 @@ import {
   PieChart,
   Pie,
   Cell,
+  ReferenceLine,
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card';
 import { Button } from './components/ui/button';
@@ -17,9 +18,11 @@ import CustomerDetailModal from './components/CustomerDetailModal';
 import PeriodComparison from './components/PeriodComparison';
 import AlpineReportUpload from './components/AlpineReportUpload';
 import CSVUpload from './components/CSVUpload';
+import InvoiceList from './components/InvoiceList';
 import { AlpineSalesRecord, analyzeCustomerProgress } from './utils/alpineParser';
-import { alpineData, customerProgressions } from './data/alpineData';
-import { Upload, BarChart3, ChevronDown } from 'lucide-react';
+// Removed hardcoded June seed; start empty and let uploads populate
+import { Upload, BarChart3, ChevronDown, Trash2 } from 'lucide-react';
+import { toTitleCase } from './lib/utils';
 
 // Revenue by Customer Component
 interface RevenueByCustomerProps {
@@ -72,8 +75,8 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
             title={isComparisonMode ? "Click to see detailed comparison" : "Customer revenue"}
           >
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-gray-900 truncate">
-                  {customer.customer}
+              <div className="text-sm font-medium text-gray-900 break-words">
+                  {toTitleCase(customer.customer)}
                 </div>
               {customer.customerId && (
                 <div className="text-xs text-blue-600 font-medium">ID: {customer.customerId}</div>
@@ -102,8 +105,8 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
                   title={isComparisonMode ? "Click to see detailed comparison" : "Customer revenue"}
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-900 truncate">
-                    {customer.customer}
+                    <div className="text-sm font-medium text-gray-900 break-words">
+                    {toTitleCase(customer.customer)}
                   </div>
                   {customer.customerId && (
                     <div className="text-xs text-blue-600 font-medium">ID: {customer.customerId}</div>
@@ -165,8 +168,8 @@ const RevenueByProductComponent: React.FC<RevenueByProductProps> = ({ revenueByP
             className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
           >
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-gray-900 truncate">
-                  {product.product}
+              <div className="text-sm font-medium text-gray-900 break-words">
+                  {toTitleCase(product.product)}
                 </div>
               <div className="text-xs text-gray-500">{getPercentage(product.revenue)}% of total</div>
               </div>
@@ -188,8 +191,8 @@ const RevenueByProductComponent: React.FC<RevenueByProductProps> = ({ revenueByP
                   className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-900 truncate">
-                    {product.product}
+                    <div className="text-sm font-medium text-gray-900 break-words">
+                    {toTitleCase(product.product)}
                   </div>
                   <div className="text-xs text-gray-500">{getPercentage(product.revenue)}% of total</div>
                 </div>
@@ -231,11 +234,13 @@ const Dashboard: React.FC = () => {
   const [selectedCustomerForModal, setSelectedCustomerForModal] = useState<string | null>(null);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [showUploadSection, setShowUploadSection] = useState(false);
-  const [currentAlpineData, setCurrentAlpineData] = useState<AlpineSalesRecord[]>(alpineData);
-  const [currentCustomerProgressions, setCurrentCustomerProgressions] = useState<Map<string, any>>(customerProgressions);
+  const [currentAlpineData, setCurrentAlpineData] = useState<AlpineSalesRecord[]>([]);
+  const [currentCustomerProgressions, setCurrentCustomerProgressions] = useState<Map<string, any>>(new Map());
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
   const [lastUploadedInvoiceMonth, setLastUploadedInvoiceMonth] = useState<string | null>(null);
+  // Removed Period Management toggle button; keep feature accessible via dropdown trash icons
+  const [pendingDeletePeriod, setPendingDeletePeriod] = useState<string | null>(null);
 
   // Get available periods and set default to most recent
   const availablePeriods = useMemo(() => {
@@ -352,9 +357,9 @@ const Dashboard: React.FC = () => {
   };
 
   const handleClearAlpineData = () => {
-    console.log('Clearing Alpine data, resetting to original state');
-    setCurrentAlpineData(alpineData);
-    setCurrentCustomerProgressions(customerProgressions);
+    console.log('Clearing Alpine data');
+    setCurrentAlpineData([]);
+    setCurrentCustomerProgressions(new Map());
   };
 
   const handleCSVDataUploaded = (data: { currentInvoices: any[]; previousInvoices: any[] }) => {
@@ -380,6 +385,32 @@ const Dashboard: React.FC = () => {
   const handleClearCSVData = () => {
     // Clear CSV data if needed
     console.log('CSV data cleared');
+  };
+
+
+  // Delete entire period/month of data
+  const handleDeletePeriod = (periodToDelete: string) => {
+    const updatedData = currentAlpineData.filter(record => record.period !== periodToDelete);
+    
+    setCurrentAlpineData(updatedData);
+    
+    // Recalculate customer progressions
+    const allCustomers = Array.from(new Set(updatedData.map(r => r.customerName)));
+    const updatedCustomerProgressions = new Map();
+    allCustomers.forEach(customer => {
+      const progress = analyzeCustomerProgress(updatedData, customer);
+      updatedCustomerProgressions.set(customer, progress);
+    });
+    
+    setCurrentCustomerProgressions(updatedCustomerProgressions);
+    
+    // If the deleted period was selected, switch to 'all' or the most recent period
+    if (selectedMonth === periodToDelete) {
+      const remainingPeriods = Array.from(new Set(updatedData.map(r => r.period))).sort();
+      setSelectedMonth(remainingPeriods.length > 0 ? remainingPeriods[remainingPeriods.length - 1] : 'all');
+    }
+    
+    console.log('Period deleted:', periodToDelete);
   };
 
   // Calculate KPIs based on filtered data
@@ -409,21 +440,28 @@ const Dashboard: React.FC = () => {
     };
   }, [filteredAlpineData]);
 
-  // Revenue over time data (grouped by periods)
+  // Revenue over time data (grouped by periods) - ALWAYS use all uploaded months
   const revenueOverTime = useMemo(() => {
-    const periodRevenue = filteredAlpineData.reduce((acc, record) => {
+    const periodRevenue = currentAlpineData.reduce((acc, record) => {
       const period = record.period;
       acc[period] = (acc[period] || 0) + record.revenue;
       return acc;
     }, {} as Record<string, number>);
 
-    return Object.entries(periodRevenue)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([period, revenue]) => ({
-        period,
-        revenue: Math.round(revenue * 100) / 100,
-      }));
-  }, [filteredAlpineData]);
+    // Ensure we return an entry for every available period in order
+    const periods = [...availablePeriods];
+    return periods.map((period) => ({
+      period,
+      revenue: Math.round((periodRevenue[period] || 0) * 100) / 100,
+    }));
+  }, [currentAlpineData, availablePeriods]);
+
+  // Determine which period to highlight on the chart
+  const highlightedPeriod = useMemo(() => {
+    if (selectedMonth && selectedMonth !== 'all') return selectedMonth;
+    // Default to most recent available period when "All Periods" is selected
+    return availablePeriods.length ? availablePeriods[availablePeriods.length - 1] : '';
+  }, [selectedMonth, availablePeriods]);
 
   // Revenue by customer data
   const revenueByCustomer = useMemo(() => {
@@ -441,7 +479,7 @@ const Dashboard: React.FC = () => {
       .sort(([,a], [,b]) => b - a)
       .map(([customer, revenue], index) => ({
         id: `${customer}-${index}`,
-        customer: customer.length > 20 ? customer.substring(0, 20) + '...' : customer,
+        customer: customer,
         fullCustomerName: customer,
         customerId: customerIds[customer] || '',
         revenue: Math.round(revenue * 100) / 100,
@@ -459,7 +497,7 @@ const Dashboard: React.FC = () => {
       .sort(([,a], [,b]) => b - a)
       .map(([product, revenue], index) => ({
         id: `${product}-${index}`,
-        product: product.length > 20 ? product.substring(0, 20) + '...' : product,
+        product: product,
         fullProduct: product,
         revenue: Math.round(revenue * 100) / 100,
       }));
@@ -473,6 +511,7 @@ const Dashboard: React.FC = () => {
       .slice(0, 8) // Top 8 products
       .map((product) => ({
         name: product.product.length > 12 ? product.product.substring(0, 12) + '...' : product.product,
+        fullName: toTitleCase(product.fullProduct),
         value: Math.round((product.revenue / total) * 100 * 100) / 100,
       }));
   }, [revenueByProduct, filteredAlpineData]);
@@ -501,23 +540,42 @@ const Dashboard: React.FC = () => {
                   </Button>
                   
                   {isMonthDropdownOpen && (
-                    <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                    <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
                       <div className="py-1">
                         {allPeriodOptions.map((period) => (
-                          <button
+                          <div
                             key={period}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setSelectedMonth(period);
-                              setIsMonthDropdownOpen(false);
-                            }}
-                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
-                              selectedMonth === period ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'
+                            className={`flex items-center justify-between gap-2 px-2 ${
+                              selectedMonth === period ? 'bg-blue-50' : ''
                             }`}
                           >
-                            {period === 'all' ? 'All Periods' : getMonthName(period)}
-                          </button>
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setSelectedMonth(period);
+                                setIsMonthDropdownOpen(false);
+                              }}
+                              className={`flex-1 text-left px-2 py-2 text-sm rounded hover:bg-gray-50 ${
+                                selectedMonth === period ? 'text-blue-700 font-medium' : 'text-gray-700'
+                              }`}
+                            >
+                              {period === 'all' ? 'All Periods' : getMonthName(period)}
+                            </button>
+                            {period !== 'all' && (
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setPendingDeletePeriod(period);
+                                }}
+                                title={`Delete ${getMonthName(period)}`}
+                                className="p-2 rounded text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -531,14 +589,16 @@ const Dashboard: React.FC = () => {
                 <p className="text-sm text-green-700 mt-1">Last uploaded invoice month: {lastUploadedInvoiceMonth}</p>
               )}
             </div>
-            <Button
-              onClick={() => setShowUploadSection(!showUploadSection)}
-              className="flex items-center gap-2"
-              variant={showUploadSection ? "default" : "outline"}
-            >
-              {showUploadSection ? <BarChart3 className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
-              {showUploadSection ? 'View Dashboard' : 'Upload Data'}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setShowUploadSection(!showUploadSection)}
+                className="flex items-center gap-2"
+                variant={showUploadSection ? "default" : "outline"}
+              >
+                {showUploadSection ? <BarChart3 className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
+                {showUploadSection ? 'View Dashboard' : 'Upload Data'}
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -562,7 +622,7 @@ const Dashboard: React.FC = () => {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-600">Total Revenue</p>
                   <p className="text-2xl font-bold text-gray-900">
                 ${kpis.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -578,7 +638,7 @@ const Dashboard: React.FC = () => {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-600">Total Cases</p>
                   <p className="text-2xl font-bold text-gray-900">
                     {kpis.totalCases.toFixed(0)}
@@ -594,7 +654,7 @@ const Dashboard: React.FC = () => {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-600">Top Customer</p>
                   <p className="text-lg font-bold text-gray-900 truncate" title={kpis.topCustomer}>
                 {kpis.topCustomer}
@@ -610,7 +670,7 @@ const Dashboard: React.FC = () => {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-600">Top Product</p>
                   <p className="text-lg font-bold text-gray-900 truncate" title={kpis.topProduct}>
                 {kpis.topProduct}
@@ -634,10 +694,24 @@ const Dashboard: React.FC = () => {
             <CardContent>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={revenueOverTime}>
+                <LineChart data={revenueOverTime} margin={{ top: 5, right: 20, bottom: 20, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="period" />
+                    <XAxis 
+                      dataKey="period" 
+                      interval={0} 
+                      tickMargin={8}
+                      tick={(props: any) => {
+                        const { x, y, payload } = props;
+                        const isHighlighted = payload && payload.value === highlightedPeriod;
+                        return (
+                          <text x={x} y={y} dy={16} textAnchor="middle" fill={isHighlighted ? '#1D4ED8' : '#374151'} style={{ fontWeight: isHighlighted ? 700 as any : 500 as any, fontSize: 12 }}>
+                            {payload.value}
+                          </text>
+                        );
+                      }}
+                    />
                     <YAxis />
+                  <ReferenceLine x={highlightedPeriod} stroke="#93C5FD" strokeDasharray="4 4" />
                   <Tooltip 
                       formatter={(value: number) => [`$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Revenue']}
                       labelFormatter={(label) => `Period: ${label}`}
@@ -647,7 +721,17 @@ const Dashboard: React.FC = () => {
                     dataKey="revenue" 
                     stroke="#3B82F6" 
                     strokeWidth={2}
-                      dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
+                      dot={(props: any) => {
+                        const { cx, cy, payload } = props;
+                        const isHighlighted = payload && payload.period === highlightedPeriod;
+                        const radius = isHighlighted ? 6 : 4;
+                        const fill = isHighlighted ? '#1D4ED8' : '#3B82F6';
+                        const stroke = isHighlighted ? '#1D4ED8' : '#3B82F6';
+                        return (
+                          <circle cx={cx} cy={cy} r={radius} fill={fill} stroke={stroke} strokeWidth={2} />
+                        );
+                      }}
+                      activeDot={{ r: 7 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -676,7 +760,19 @@ const Dashboard: React.FC = () => {
                       <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
                     ))}
                   </Pie>
-                    <Tooltip formatter={(value: number) => [`${value}%`, 'Percentage']} />
+                    <Tooltip 
+                      content={(props: any) => {
+                        const { active, payload } = props || {};
+                        if (!active || !payload || payload.length === 0) return null;
+                        const p = payload[0].payload;
+                        return (
+                          <div className="bg-white border border-gray-200 rounded-md shadow-md p-2 text-xs">
+                            <div className="font-medium text-gray-900 mb-1">{p.fullName}</div>
+                            <div className="text-gray-600">{p.value}% of total</div>
+                          </div>
+                        );
+                      }}
+                    />
                 </PieChart>
               </ResponsiveContainer>
               </div>
@@ -726,6 +822,66 @@ const Dashboard: React.FC = () => {
           <CardContent>
             <PeriodComparison alpineData={currentAlpineData} selectedMonth={selectedMonth} />
           </CardContent>
+        </Card>
+
+        {/* Period Management removed (use dropdown trash icons instead) */}
+
+        {/* Delete Period Confirmation Modal */}
+        {pendingDeletePeriod && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[10002]">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+              <div className="p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Period</h3>
+                <p className="text-sm text-gray-600 mb-4">Are you sure you want to delete all data for <span className="font-medium">{getMonthName(pendingDeletePeriod)}</span>? This action cannot be undone.</p>
+
+                <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded">
+                  {(() => {
+                    const periodRecords = currentAlpineData.filter(r => r.period === pendingDeletePeriod);
+                    const totalRevenue = periodRecords.reduce((s, r) => s + r.revenue, 0);
+                    const totalCases = periodRecords.reduce((s, r) => s + r.cases, 0);
+                    const customers = new Set(periodRecords.map(r => r.customerName)).size;
+                    const products = new Set(periodRecords.map(r => r.productName)).size;
+                    return (
+                      <div className="text-xs text-gray-700 grid grid-cols-2 gap-2">
+                        <div><span className="text-gray-500">Records:</span> {periodRecords.length}</div>
+                        <div><span className="text-gray-500">Revenue:</span> ${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                        <div><span className="text-gray-500">Cases:</span> {totalCases.toLocaleString()}</div>
+                        <div><span className="text-gray-500">Customers:</span> {customers}</div>
+                        <div><span className="text-gray-500">Products:</span> {products}</div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setPendingDeletePeriod(null)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      handleDeletePeriod(pendingDeletePeriod);
+                      setPendingDeletePeriod(null);
+                      setIsMonthDropdownOpen(false);
+                    }}
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Invoice List */}
+        <Card className="mb-8">
+          <InvoiceList 
+            records={filteredAlpineData}
+            title={`Sales Records${selectedMonth !== 'all' ? ` for ${getMonthName(selectedMonth)}` : ''}`}
+          />
         </Card>
 
         {/* Customer Detail Modal */}

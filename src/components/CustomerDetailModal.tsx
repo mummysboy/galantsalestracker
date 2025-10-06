@@ -1,4 +1,5 @@
 import React from 'react';
+import { toTitleCase } from '../lib/utils';
 import { X, TrendingUp, TrendingDown, Package, Calendar, Users } from 'lucide-react';
 import { Button } from './ui/button';
 import { AlpineSalesRecord, CustomerProgressAnalysis } from '../utils/alpineParser';
@@ -30,15 +31,16 @@ function calculateAlpineCustomerData(alpineData: AlpineSalesRecord[], customerNa
     productData[record.productName].periods[record.period].push(record);
   });
 
-  // Sort periods chronologically
-  const sortedPeriods = Object.keys(productData[Object.keys(productData)[0]]?.periods || {})
-    .sort((a, b) => a.localeCompare(b));
+  // Determine available periods across ALL records for this customer (not just first product)
+  const allPeriodsSet = new Set<string>();
+  customerRecords.forEach(r => allPeriodsSet.add(r.period));
+  const sortedPeriods = Array.from(allPeriodsSet).sort((a, b) => a.localeCompare(b));
 
   const purchaseRecords: CustomerPurchaseRecord[] = [];
 
   Object.entries(productData).forEach(([productName, data]) => {
     const currentPeriod = sortedPeriods[sortedPeriods.length - 1];
-    const previousPeriod = sortedPeriods[sortedPeriods.length - 2];
+    const previousPeriod = sortedPeriods.length >= 2 ? sortedPeriods[sortedPeriods.length - 2] : currentPeriod;
 
     const currentRecords = data.periods[currentPeriod] || [];
     const previousRecords = data.periods[previousPeriod] || [];
@@ -106,7 +108,7 @@ function calculateAlpineCustomerData(alpineData: AlpineSalesRecord[], customerNa
     .filter(r => r.period === sortedPeriods[sortedPeriods.length - 1])
     .reduce((sum, r) => sum + r.revenue, 0);
   const totalPreviousRevenue = customerRecords
-    .filter(r => r.period === sortedPeriods[sortedPeriods.length - 2])
+    .filter(r => r.period === (sortedPeriods.length >= 2 ? sortedPeriods[sortedPeriods.length - 2] : sortedPeriods[sortedPeriods.length - 1]))
     .reduce((sum, r) => sum + r.revenue, 0);
   const totalRevenueChange = totalCurrentRevenue - totalPreviousRevenue;
   const totalRevenueChangePercent = totalPreviousRevenue > 0 ? (totalRevenueChange / totalPreviousRevenue) * 100 : 0;
@@ -115,14 +117,14 @@ function calculateAlpineCustomerData(alpineData: AlpineSalesRecord[], customerNa
     .filter(r => r.period === sortedPeriods[sortedPeriods.length - 1])
     .reduce((sum, r) => sum + r.pieces, 0);
   const totalPreviousQuantity = customerRecords
-    .filter(r => r.period === sortedPeriods[sortedPeriods.length - 2])
+    .filter(r => r.period === (sortedPeriods.length >= 2 ? sortedPeriods[sortedPeriods.length - 2] : sortedPeriods[sortedPeriods.length - 1]))
     .reduce((sum, r) => sum + r.pieces, 0);
 
   const currentProductCount = new Set(customerRecords
     .filter(r => r.period === sortedPeriods[sortedPeriods.length - 1])
     .map(r => r.productName)).size;
   const previousProductCount = new Set(customerRecords
-    .filter(r => r.period === sortedPeriods[sortedPeriods.length - 2])
+    .filter(r => r.period === (sortedPeriods.length >= 2 ? sortedPeriods[sortedPeriods.length - 2] : sortedPeriods[sortedPeriods.length - 1]))
     .map(r => r.productName)).size;
 
   return {
@@ -178,6 +180,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   alpineData,
   progressAnalysis
 }) => {
+
   // Calculate customer-specific data
   const customerData = React.useMemo(() => {
     // Handle Alpine data vs CSV invoice data
@@ -323,7 +326,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[10000]">
-      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
@@ -474,7 +477,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       {getTrendIcon(record.status, record.changePercentage)}
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold truncate">{record.productName}</h4>
+                        <h4 className="font-semibold break-words">{toTitleCase(record.productName)}</h4>
                         {(record.size || record.productCode || record.mfgItemNumber) && (
                           <div className="text-xs text-gray-500 flex gap-2 mt-1">
                             {record.size && <span>Size: {record.size}</span>}
@@ -562,6 +565,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           </div>
         </div>
       </div>
+
     </div>
   );
 };

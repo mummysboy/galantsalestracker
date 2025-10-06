@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { toTitleCase } from '../lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { TrendingUp, TrendingDown, Minus, Package, Users } from 'lucide-react';
 import { AlpineSalesRecord } from '../utils/alpineParser';
@@ -33,11 +34,23 @@ const PeriodComparison: React.FC<PeriodComparisonProps> = ({ alpineData, selecte
     return Array.from(new Set(alpineData.map(record => record.period))).sort();
   }, [alpineData]);
 
+  // Include dashboard-selected previous month in options even if no data exists for it
+  const selectOptions = useMemo(() => {
+    const opts = new Set<string>(availablePeriods);
+    if (selectedMonth) {
+      const prev = getPreviousPeriod(selectedMonth);
+      if (prev) opts.add(prev);
+      opts.add(selectedMonth);
+    }
+    return Array.from(opts).sort();
+  }, [availablePeriods, selectedMonth]);
+
   // Set default periods based on available data (most recent vs previous)
   const [selectedPeriods, setSelectedPeriods] = useState<string[]>([]);
+  const lastSelectedMonthRef = React.useRef<string | null>(null);
 
   // Helper to compute previous period string (YYYY-MM)
-  const getPreviousPeriod = (period: string) => {
+  function getPreviousPeriod(period: string): string | null {
     if (!period) return null;
     const [y, m] = period.split('-').map(Number);
     if (!y || !m) return null;
@@ -45,28 +58,23 @@ const PeriodComparison: React.FC<PeriodComparisonProps> = ({ alpineData, selecte
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     return `${yyyy}-${mm}`;
-  };
+  }
 
   // Set default periods when data or dashboard-selected month changes
   useEffect(() => {
     console.log('PeriodComparison - Available periods:', availablePeriods);
     console.log('PeriodComparison - Current selected periods:', selectedPeriods);
 
-    // If Dashboard provided a selected month, prefer it with its previous month
+    // If Dashboard provided a selected month, set defaults ONLY when it changes
     if (selectedMonth) {
-      const prev = getPreviousPeriod(selectedMonth);
-      const sorted = [...availablePeriods].sort();
-      const hasCurrent = sorted.includes(selectedMonth);
-      const hasPrev = prev ? sorted.includes(prev) : false;
-
-      if (hasCurrent && hasPrev) {
-        const newSel = [prev as string, selectedMonth];
-        if (JSON.stringify(newSel) !== JSON.stringify(selectedPeriods)) {
-          console.log('PeriodComparison - Syncing to dashboard months:', newSel);
-          setSelectedPeriods(newSel);
-          return;
-        }
+      if (lastSelectedMonthRef.current !== selectedMonth) {
+        lastSelectedMonthRef.current = selectedMonth;
+        const prev = getPreviousPeriod(selectedMonth) || selectedMonth;
+        const newSel = [prev, selectedMonth];
+        console.log('PeriodComparison - Syncing to dashboard months:', newSel);
+        setSelectedPeriods(newSel);
       }
+      return; // Do not override manual changes while a month is selected
     }
 
     // Fallbacks when no dashboard month or missing data
@@ -291,7 +299,7 @@ const PeriodComparison: React.FC<PeriodComparisonProps> = ({ alpineData, selecte
                 onChange={(e) => setSelectedPeriods([e.target.value, selectedPeriods[1]])}
                 className="border border-gray-300 rounded px-3 py-1 text-sm"
               >
-                {availablePeriods.map(period => (
+                {selectOptions.map(period => (
                   <option key={period} value={period}>
                     {formatDate(period)}
                   </option>
@@ -303,7 +311,7 @@ const PeriodComparison: React.FC<PeriodComparisonProps> = ({ alpineData, selecte
                 onChange={(e) => setSelectedPeriods([selectedPeriods[0], e.target.value])}
                 className="border border-gray-300 rounded px-3 py-1 text-sm"
               >
-                {availablePeriods.map(period => (
+                {selectOptions.map(period => (
                   <option key={period} value={period}>
                     {formatDate(period)}
                   </option>
@@ -461,7 +469,7 @@ const PeriodComparison: React.FC<PeriodComparisonProps> = ({ alpineData, selecte
                       <div className="space-y-1">
                         {firstPeriod.topProducts.map((product, index) => (
                           <div key={index} className="flex justify-between text-sm">
-                            <span className="truncate">{product.productName}</span>
+                            <span className="break-words">{toTitleCase(product.productName)}</span>
                             <span>{formatCurrency(product.revenue)}</span>
                           </div>
                         ))}
@@ -472,7 +480,7 @@ const PeriodComparison: React.FC<PeriodComparisonProps> = ({ alpineData, selecte
                       <div className="space-y-1">
                         {secondPeriod.topProducts.map((product, index) => (
                           <div key={index} className="flex justify-between text-sm">
-                            <span className="truncate">{product.productName}</span>
+                            <span className="break-words">{toTitleCase(product.productName)}</span>
                             <span>{formatCurrency(product.revenue)}</span>
                           </div>
                         ))}
