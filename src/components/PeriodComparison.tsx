@@ -216,8 +216,18 @@ const PeriodComparison: React.FC<PeriodComparisonProps> = ({ alpineData, selecte
           // Show larger magnitude losses later to keep worst at the bottom when positives first
           return aDelta - bDelta;
         }
-        case 'cases':
-          return Math.abs(b.changeFromPrevious.caseChange) - Math.abs(a.changeFromPrevious.caseChange);
+        case 'cases': {
+          const aDelta = a.changeFromPrevious.caseChange;
+          const bDelta = b.changeFromPrevious.caseChange;
+          const aPos = aDelta >= 0 ? 1 : 0;
+          const bPos = bDelta >= 0 ? 1 : 0;
+          // Positives first
+          if (aPos !== bPos) return bPos - aPos;
+          // Within positives: larger gains first
+          if (aPos === 1) return bDelta - aDelta;
+          // Within negatives: most negative at the bottom
+          return aDelta - bDelta;
+        }
         case 'change':
         default: {
           const aPct = a.changeFromPrevious.revenuePercentChange;
@@ -236,6 +246,49 @@ const PeriodComparison: React.FC<PeriodComparisonProps> = ({ alpineData, selecte
 
     return comparisons;
   }, [alpineData, selectedPeriods, sortBy]);
+
+  // Sorted lists for hover popouts
+  const growingList = useMemo(() => {
+    return comparisons
+      .filter(c => c.latestTrend === 'increasing')
+      .sort((a, b) => Math.abs(b.changeFromPrevious.revenueChange) - Math.abs(a.changeFromPrevious.revenueChange));
+  }, [comparisons]);
+
+  const decliningList = useMemo(() => {
+    return comparisons
+      .filter(c => c.latestTrend === 'decreasing')
+      .sort((a, b) => Math.abs(b.changeFromPrevious.revenueChange) - Math.abs(a.changeFromPrevious.revenueChange));
+  }, [comparisons]);
+
+  const HoverPopover: React.FC<{ title: string; items: CustomerComparison[]; positive?: boolean; align?: 'left' | 'right' }> = ({ title, items, positive, align = 'left' }) => {
+    const fmt = (amount: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
+    return (
+      <div className={`hidden group-hover:block absolute ${align === 'right' ? 'right-0' : 'left-0'} top-full mt-2 w-72 sm:w-96 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-3`}
+      >
+        <div className="text-xs font-medium text-gray-700 mb-2">
+          {title} ({items.length})
+        </div>
+        {items.length === 0 ? (
+          <div className="text-xs text-gray-500">None</div>
+        ) : (
+          <ul className="max-h-64 overflow-auto divide-y divide-gray-100">
+            {items.slice(0, 50).map((c) => {
+              const change = c.changeFromPrevious.revenueChange;
+              const sign = change >= 0 ? '+' : '-';
+              return (
+                <li key={c.customerName} className="py-1 flex items-center justify-between">
+                  <span className="truncate mr-3 text-sm" title={c.customerName}>{c.customerName}</span>
+                  <span className={`${positive ? 'text-green-600' : 'text-red-600'} text-xs font-semibold tabular-nums whitespace-nowrap`}>
+                    {sign} {fmt(Math.abs(change))}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    );
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -351,28 +404,34 @@ const PeriodComparison: React.FC<PeriodComparisonProps> = ({ alpineData, selecte
 
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-green-500" />
-              <div>
-                <div className="text-sm text-gray-600">Growing Customers</div>
-                <div className="text-lg font-bold text-green-600">
-                  {comparisons.filter(c => c.latestTrend === 'increasing').length}
+            <div className="relative group">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-green-500" />
+                <div>
+                  <div className="text-sm text-gray-600">Growing Customers</div>
+                  <div className="text-lg font-bold text-green-600">
+                    {growingList.length}
+                  </div>
                 </div>
               </div>
+              <HoverPopover title="Growing Customers" items={growingList} positive align="left" />
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <TrendingDown className="w-5 h-5 text-red-500" />
-              <div>
-                <div className="text-sm text-gray-600">Declining Customers</div>
-                <div className="text-lg font-bold text-red-600">
-                  {comparisons.filter(c => c.latestTrend === 'decreasing').length}
+            <div className="relative group">
+              <div className="flex items-center gap-2">
+                <TrendingDown className="w-5 h-5 text-red-500" />
+                <div>
+                  <div className="text-sm text-gray-600">Declining Customers</div>
+                  <div className="text-lg font-bold text-red-600">
+                    {decliningList.length}
+                  </div>
                 </div>
               </div>
+              <HoverPopover title="Declining Customers" items={decliningList} align="right" />
             </div>
           </CardContent>
         </Card>
