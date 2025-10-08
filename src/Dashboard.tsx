@@ -15,13 +15,14 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card';
 import { Button } from './components/ui/button';
 import CustomerDetailModal from './components/CustomerDetailModal';
+import CustomerCsvPivotModal from './components/CustomerCsvPivotModal';
 import PeriodComparison from './components/PeriodComparison';
 import AlpineReportUpload from './components/AlpineReportUpload';
 import CSVUpload from './components/CSVUpload';
 import InvoiceList from './components/InvoiceList';
 import { AlpineSalesRecord, analyzeCustomerProgress } from './utils/alpineParser';
 // Removed hardcoded June seed; start empty and let uploads populate
-import { Upload, BarChart3, ChevronDown, Trash2 } from 'lucide-react';
+import { Upload, BarChart3, ChevronDown, Trash2, X } from 'lucide-react';
 import { toTitleCase } from './lib/utils';
 
 // Revenue by Customer Component
@@ -39,6 +40,15 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
   isComparisonMode = false 
 }) => {
   const [showAll, setShowAll] = useState(false);
+  const [openCsvForCustomer, setOpenCsvForCustomer] = useState<string | null>(null);
+  const [csvSearch, setCsvSearch] = useState('');
+  const [pivotMode, setPivotMode] = useState<'month' | 'quarter'>('month');
+
+  React.useEffect(() => {
+    if (!openCsvForCustomer) {
+      setCsvSearch('');
+    }
+  }, [openCsvForCustomer]);
   
   const topCustomers = revenueByCustomer.slice(0, 5);
   const remainingCustomers = revenueByCustomer.slice(5);
@@ -54,25 +64,72 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
 
 
   const handleCustomerClick = (fullCustomerName: string) => {
-    if (onCustomerClick && isComparisonMode) {
-      onCustomerClick(fullCustomerName);
+    if (isComparisonMode) {
+      setOpenCsvForCustomer(prev => prev === fullCustomerName ? null : fullCustomerName);
+      return;
     }
+    if (onCustomerClick) onCustomerClick(fullCustomerName);
+  };
+
+  // Helpers to build month-by-month pivot by product for a customer
+  const buildCustomerRows = (customerName: string) => {
+    return alpineData
+      .filter(r => r.customerName === customerName)
+      .sort((a, b) => {
+        if (a.period !== b.period) return a.period.localeCompare(b.period);
+        if ((a.productName || '') !== (b.productName || '')) return (a.productName || '').localeCompare(b.productName || '');
+        return (a.productCode || '').localeCompare(b.productCode || '');
+      });
+  };
+
+  const getCustomerPivot = (customerName: string) => {
+    const rows = buildCustomerRows(customerName);
+    const periodToQuarter = (p: string) => {
+      const [y, mStr] = p.split('-');
+      const m = parseInt(mStr, 10);
+      const q = Math.floor((m - 1) / 3) + 1;
+      return `${y}-Q${q}`;
+    };
+    const compareQuarter = (a: string, b: string) => {
+      const [ya, qa] = a.split('-Q');
+      const [yb, qb] = b.split('-Q');
+      const yi = parseInt(ya, 10); const yj = parseInt(yb, 10);
+      if (yi !== yj) return yi - yj;
+      return parseInt(qa, 10) - parseInt(qb, 10);
+    };
+
+    const labels = Array.from(new Set(rows.map(r => pivotMode === 'month' ? r.period : periodToQuarter(r.period))));
+    labels.sort(pivotMode === 'month' ? undefined : compareQuarter);
+
+    const byProduct = new Map<string, { productName: string; productCode: string; values: Record<string, number> }>();
+    rows.forEach(r => {
+      const key = `${r.productCode || ''}|${r.productName}`;
+      if (!byProduct.has(key)) {
+        const init: Record<string, number> = {};
+        labels.forEach(l => { init[l] = 0; });
+        byProduct.set(key, { productName: r.productName, productCode: r.productCode || '', values: init });
+      }
+      const obj = byProduct.get(key)!;
+      const label = pivotMode === 'month' ? r.period : periodToQuarter(r.period);
+      obj.values[label] = (obj.values[label] || 0) + (r.cases || 0);
+    });
+    return { columns: labels, products: Array.from(byProduct.values()) };
   };
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-gray-900">Top Customers</h3>
+      {/* Removed subheading per request */}
       
       {/* Top 5 Customers */}
       <div className="space-y-3">
         {topCustomers.map((customer) => (
           <div 
             key={customer.id}
-            className={`flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors ${
+            className={`relative flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors ${
               isComparisonMode ? 'cursor-pointer' : ''
             }`}
             onClick={() => handleCustomerClick(customer.fullCustomerName)}
-            title={isComparisonMode ? "Click to see detailed comparison" : "Customer revenue"}
+            title={isComparisonMode ? "Click to view CSV breakdown" : "Customer revenue"}
           >
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-gray-900 break-words">
@@ -86,6 +143,91 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
             <div className="text-sm font-semibold text-gray-900">
               {formatRevenue(customer.revenue)}
             </div>
+
+            {openCsvForCustomer === customer.fullCustomerName && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpenCsvForCustomer(null); }} />
+                <div 
+                  className="fixed left-1/2 top-20 -translate-x-1/2 w-[90vw] max-w-3xl bg-white border border-gray-200 rounded-lg shadow-xl z-50"
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between px-3 py-2 border-b bg-gray-50 rounded-t-lg">
+                    <div className="text-sm font-medium">{toTitleCase(customer.customer)} • All Invoices</div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={csvSearch}
+                        onChange={(e) => setCsvSearch(e.target.value)}
+                        placeholder="Filter by product, code or period"
+                        className="px-2 py-1 text-xs border rounded"
+                      />
+                      <button className="h-7 px-2" onClick={(e) => { e.stopPropagation(); setOpenCsvForCustomer(null); }}>
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="max-h-[70vh] overflow-auto">
+                    {(() => {
+                      const pivot = getCustomerPivot(customer.fullCustomerName);
+                      const monthsFiltered = pivot.columns.filter(m => !csvSearch || m.toLowerCase().includes(csvSearch.toLowerCase()));
+                      const productsFiltered = pivot.products.filter(p => {
+                        if (!csvSearch) return true;
+                        const q = csvSearch.toLowerCase();
+                        return (
+                          (p.productName || '').toLowerCase().includes(q) ||
+                          (p.productCode || '').toLowerCase().includes(q)
+                        );
+                      });
+                      return (
+                        <table className="w-full text-xs">
+                          <thead className="bg-gray-50 sticky top-0">
+                            <tr>
+                              <th className="p-2 text-left">Product</th>
+                              <th className="p-2 text-left">Code</th>
+                              {monthsFiltered.map(m => (
+                                <th key={m} className="p-2 text-right whitespace-nowrap">{m}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {productsFiltered.map((p, idx) => (
+                              <tr key={`${p.productCode}-${idx}`} className="border-t">
+                                <td className="p-2">{toTitleCase(p.productName)}</td>
+                                <td className="p-2 whitespace-nowrap">{p.productCode}</td>
+                                {monthsFiltered.map(m => (
+                                  <td key={m} className="p-2 text-right tabular-nums">{(p as any).values[m] || 0}</td>
+                                ))}
+                              </tr>
+                            ))}
+                            {(() => {
+                              const monthTotals = monthsFiltered.map(m =>
+                                pivot.products.reduce((sum, p) => sum + ((p as any).values[m] || 0), 0)
+                              );
+                              return (
+                                <tr className="border-t bg-gray-50 font-semibold">
+                                  <td className="p-2" colSpan={2}>Total</td>
+                                  {monthTotals.map((t, i) => (
+                                    <td key={i} className="p-2 text-right tabular-nums">{t}</td>
+                                  ))}
+                                </tr>
+                              );
+                            })()}
+                          </tbody>
+                        </table>
+                      );
+                    })()}
+                  </div>
+                  <div className="px-3 py-2 text-[11px] text-gray-500 border-t rounded-b-lg flex items-center gap-2">
+                    <span>Sum of Cases by Product • Columns = {pivotMode === 'month' ? 'Months' : 'Quarters'}</span>
+                    <div className="ml-auto flex items-center gap-1 text-xs">
+                      <button className={`px-2 py-1 rounded ${pivotMode === 'month' ? 'bg-blue-600 text-white' : 'bg-gray-100'}`} onClick={() => setPivotMode('month')}>Month</button>
+                      <button className={`px-2 py-1 rounded ${pivotMode === 'quarter' ? 'bg-blue-600 text-white' : 'bg-gray-100'}`} onClick={() => setPivotMode('quarter')}>Quarter</button>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         ))}
       </div>
@@ -98,11 +240,11 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
               {remainingCustomers.map((customer) => (
                 <div 
                   key={customer.id}
-                  className={`flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors ${
+                  className={`relative flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors ${
                     isComparisonMode ? 'cursor-pointer' : ''
                   }`}
                   onClick={() => handleCustomerClick(customer.fullCustomerName)}
-                  title={isComparisonMode ? "Click to see detailed comparison" : "Customer revenue"}
+                  title={isComparisonMode ? "Click to view CSV breakdown" : "Customer revenue"}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-gray-900 break-words">
@@ -116,6 +258,87 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
                   <div className="text-sm font-semibold text-gray-900">
                     {formatRevenue(customer.revenue)}
               </div>
+
+                  {openCsvForCustomer === customer.fullCustomerName && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpenCsvForCustomer(null); }} />
+                      <div 
+                        className="fixed left-1/2 top-20 -translate-x-1/2 w-[90vw] max-w-3xl bg-white border border-gray-200 rounded-lg shadow-xl z-50"
+                        onClick={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-center justify-between px-3 py-2 border-b bg-gray-50 rounded-t-lg">
+                          <div className="text-sm font-medium">{toTitleCase(customer.customer)} • All Invoices</div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={csvSearch}
+                              onChange={(e) => setCsvSearch(e.target.value)}
+                              placeholder="Filter by product, code or period"
+                              className="px-2 py-1 text-xs border rounded"
+                            />
+                            <button className="h-7 px-2" onClick={(e) => { e.stopPropagation(); setOpenCsvForCustomer(null); }}>
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="max-h-[70vh] overflow-auto">
+                          {(() => {
+                            const pivot = getCustomerPivot(customer.fullCustomerName);
+                            const monthsFiltered = pivot.columns.filter((m: string) => !csvSearch || m.toLowerCase().includes(csvSearch.toLowerCase()));
+                            const productsFiltered = pivot.products.filter(p => {
+                              if (!csvSearch) return true;
+                              const q = csvSearch.toLowerCase();
+                              return (
+                                (p.productName || '').toLowerCase().includes(q) ||
+                                (p.productCode || '').toLowerCase().includes(q)
+                              );
+                            });
+                            return (
+                              <table className="w-full text-xs">
+                                <thead className="bg-gray-50 sticky top-0">
+                                  <tr>
+                                    <th className="p-2 text-left">Product</th>
+                                    <th className="p-2 text-left">Code</th>
+                                    {monthsFiltered.map(m => (
+                                      <th key={m} className="p-2 text-right whitespace-nowrap">{m}</th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {productsFiltered.map((p, idx) => (
+                                    <tr key={`${p.productCode}-${idx}`} className="border-t">
+                                      <td className="p-2">{toTitleCase(p.productName)}</td>
+                                      <td className="p-2 whitespace-nowrap">{p.productCode}</td>
+                                      {monthsFiltered.map((m: string) => (
+                                        <td key={m} className="p-2 text-right tabular-nums">{(p as any).values[m] || 0}</td>
+                                      ))}
+                                    </tr>
+                                  ))}
+                                  {(() => {
+                                    const monthTotals = monthsFiltered.map((m: string) =>
+                                      pivot.products.reduce((sum: number, p: any) => sum + (p.values[m] || 0), 0)
+                                    );
+                                    return (
+                                      <tr className="border-t bg-gray-50 font-semibold">
+                                        <td className="p-2" colSpan={2}>Total</td>
+                                        {monthTotals.map((t: number, i: number) => (
+                                          <td key={i} className="p-2 text-right tabular-nums">{t}</td>
+                                        ))}
+                                      </tr>
+                                    );
+                                  })()}
+                                </tbody>
+                              </table>
+                            );
+                          })()}
+                        </div>
+                        <div className="px-3 py-2 text-[11px] text-gray-500 border-t rounded-b-lg">
+                          Sum of Cases by Product • Columns = Months
+                        </div>
+                      </div>
+                    </>
+                  )}
             </div>
           ))}
         </div>
@@ -158,7 +381,7 @@ const RevenueByProductComponent: React.FC<RevenueByProductProps> = ({ revenueByP
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-gray-900">Top Products</h3>
+      {/* Removed subheading per request */}
       
       {/* Top 5 Products */}
       <div className="space-y-3">
@@ -239,8 +462,27 @@ const Dashboard: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
   const [lastUploadedInvoiceMonth, setLastUploadedInvoiceMonth] = useState<string | null>(null);
+  const [pivotCustomerName, setPivotCustomerName] = useState<string | null>(null);
+  const [isPivotOpen, setIsPivotOpen] = useState(false);
   // Removed Period Management toggle button; keep feature accessible via dropdown trash icons
   const [pendingDeletePeriod, setPendingDeletePeriod] = useState<string | null>(null);
+  const [showMonthlySummary, setShowMonthlySummary] = useState(false);
+  const [openNewAccountsTooltipMonth, setOpenNewAccountsTooltipMonth] = useState<string | null>(null);
+  const [openDeltaTooltipMonth, setOpenDeltaTooltipMonth] = useState<string | null>(null);
+  const tooltipTimerRef = React.useRef<number | null>(null);
+  const cancelTooltipClose = () => {
+    if (tooltipTimerRef.current) {
+      window.clearTimeout(tooltipTimerRef.current);
+      tooltipTimerRef.current = null;
+    }
+  };
+  const scheduleTooltipClose = (which: 'new' | 'delta') => {
+    cancelTooltipClose();
+    tooltipTimerRef.current = window.setTimeout(() => {
+      if (which === 'new') setOpenNewAccountsTooltipMonth(null);
+      else setOpenDeltaTooltipMonth(null);
+    }, 200);
+  };
 
   // Get available periods and set default to most recent
   const availablePeriods = useMemo(() => {
@@ -305,6 +547,15 @@ const Dashboard: React.FC = () => {
       '2026-08': 'August 2026'
     };
     return monthMap[period] || period;
+  };
+
+  // Short month label, e.g., Jan-25
+  const getShortMonthLabel = (period: string) => {
+    const [yearStr, monthStr] = period.split('-');
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const yy = yearStr.slice(-2);
+    const mmIdx = Math.max(0, Math.min(11, parseInt(monthStr || '1') - 1));
+    return `${monthNames[mmIdx]}-${yy}`;
   };
 
   // Upload handlers
@@ -519,6 +770,80 @@ const Dashboard: React.FC = () => {
 
   const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#F97316', '#06B6D4', '#84CC16'];
 
+  // Monthly accounts/cases summary pivot
+  const monthlySummary = useMemo(() => {
+    const months = Array.from(new Set(currentAlpineData.map(r => r.period))).sort();
+    const firstPurchaseByCustomer = new Map<string, string>();
+    // Determine first purchase month per customer
+    const byCustomer = new Map<string, string[]>();
+    currentAlpineData.forEach(r => {
+      if (!byCustomer.has(r.customerName)) byCustomer.set(r.customerName, []);
+      byCustomer.get(r.customerName)!.push(r.period);
+    });
+    byCustomer.forEach((periods, customer) => {
+      firstPurchaseByCustomer.set(customer, periods.sort()[0]);
+    });
+
+    const accountsOrderedByMonth: Record<string, number> = {};
+    const newAccountsByMonth: Record<string, number> = {};
+    const newAccountNamesByMonth: Record<string, string[]> = {};
+    const totalCasesByMonth: Record<string, number> = {};
+    const customersByMonth: Record<string, Set<string>> = {};
+
+    months.forEach(m => {
+      const records = currentAlpineData.filter(r => r.period === m);
+      const orderedAccountSet = new Set(records.map(r => r.customerName));
+      const newAccounts = Array.from(new Set(records
+        .filter(r => firstPurchaseByCustomer.get(r.customerName) === m)
+        .map(r => r.customerName)));
+      accountsOrderedByMonth[m] = orderedAccountSet.size;
+      newAccountsByMonth[m] = newAccounts.length;
+      newAccountNamesByMonth[m] = newAccounts.sort((a, b) => a.localeCompare(b));
+      totalCasesByMonth[m] = records.reduce((s, r) => s + (r.cases || 0), 0);
+      customersByMonth[m] = orderedAccountSet;
+    });
+
+    const deltaAccountsByMonth: Record<string, number> = {};
+    const gainedVsPrevByMonth: Record<string, string[]> = {};
+    const lostVsPrevByMonth: Record<string, string[]> = {};
+    months.forEach((m, idx) => {
+      const prev = idx > 0 ? accountsOrderedByMonth[months[idx - 1]] : 0;
+      deltaAccountsByMonth[m] = accountsOrderedByMonth[m] - prev;
+      if (idx > 0) {
+        const prevMonth = months[idx - 1];
+        const prevSet = customersByMonth[prevMonth] || new Set();
+        const curSet = customersByMonth[m] || new Set();
+        const gained: string[] = [];
+        const lost: string[] = [];
+        curSet.forEach(c => { if (!prevSet.has(c)) gained.push(c); });
+        prevSet.forEach(c => { if (!curSet.has(c)) lost.push(c); });
+        gainedVsPrevByMonth[m] = gained.sort((a, b) => a.localeCompare(b));
+        lostVsPrevByMonth[m] = lost.sort((a, b) => a.localeCompare(b));
+      } else {
+        gainedVsPrevByMonth[m] = [];
+        lostVsPrevByMonth[m] = [];
+      }
+    });
+
+    const avgCasesPerAccountByMonth: Record<string, number> = {};
+    months.forEach(m => {
+      const acct = accountsOrderedByMonth[m] || 0;
+      avgCasesPerAccountByMonth[m] = acct > 0 ? totalCasesByMonth[m] / acct : 0;
+    });
+
+    return {
+      months,
+      newAccountsByMonth,
+      newAccountNamesByMonth,
+      accountsOrderedByMonth,
+      deltaAccountsByMonth,
+      gainedVsPrevByMonth,
+      lostVsPrevByMonth,
+      totalCasesByMonth,
+      avgCasesPerAccountByMonth
+    };
+  }, [currentAlpineData]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto p-6">
@@ -592,6 +917,14 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="flex gap-2">
               <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowMonthlySummary(true)}
+                className="flex items-center gap-2"
+              >
+                View Monthly Summary
+              </Button>
+              <Button
                 onClick={() => setShowUploadSection(!showUploadSection)}
                 className="flex items-center gap-2"
                 variant={showUploadSection ? "default" : "outline"}
@@ -602,6 +935,158 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
         </div>
+
+      {/* Monthly Summary Popout */}
+      {showMonthlySummary && (
+        <>
+          <div className="fixed inset-0 z-[10001]" onClick={() => setShowMonthlySummary(false)} />
+          <div
+            className="fixed left-1/2 top-24 -translate-x-1/2 w-[95vw] max-w-5xl bg-white border border-gray-200 rounded-lg shadow-2xl z-[10002]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50 rounded-t-lg">
+              <div className="text-sm font-medium">Monthly Accounts & Cases Summary</div>
+              <Button variant="ghost" size="sm" onClick={() => setShowMonthlySummary(false)} className="h-7 px-2">✕</Button>
+            </div>
+            <div className="max-h-[70vh] overflow-auto">
+              <table className="w-full text-xs">
+                <thead className="bg-gray-50 sticky top-0">
+                  <tr>
+                    <th className="p-2 text-left w-56">Metric</th>
+                    {monthlySummary.months.map((m) => (
+                      <th key={m} className="p-2 text-right whitespace-nowrap">{getShortMonthLabel(m)}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className="p-2 font-medium">New Accounts</td>
+                    {monthlySummary.months.map((m) => (
+                      <td key={m} className="p-2 text-right">
+                        <div 
+                          className="relative inline-block group"
+                          onMouseEnter={() => { cancelTooltipClose(); setOpenNewAccountsTooltipMonth(m); }}
+                          onMouseLeave={() => scheduleTooltipClose('new')}
+                        >
+                          <span className="tabular-nums inline-block px-1 rounded hover:bg-blue-50 hover:text-blue-700 transition-colors">{monthlySummary.newAccountsByMonth[m] || 0}</span>
+                          {(monthlySummary.newAccountsByMonth[m] || 0) > 0 && openNewAccountsTooltipMonth === m && (
+                            <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-xl z-[10003] p-2"
+                              onMouseEnter={(e) => { e.stopPropagation(); cancelTooltipClose(); }}
+                              onMouseLeave={() => scheduleTooltipClose('new')}
+                            >
+                              <div className="text-[11px] font-medium text-gray-700 mb-1">New accounts in {getShortMonthLabel(m)}</div>
+                              <ul className="max-h-48 overflow-auto text-[11px] leading-5 text-gray-800">
+                                {(monthlySummary.newAccountNamesByMonth[m] || []).map((name) => (
+                                  <li
+                                    key={name}
+                                    className="truncate py-0.5 cursor-pointer hover:text-blue-700"
+                                    onClick={() => {
+                                      setPivotCustomerName(name);
+                                      setIsPivotOpen(true);
+                                    }}
+                                  >
+                                    {name}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td className="p-2 font-medium">Total Accounts Ordered</td>
+                    {monthlySummary.months.map((m) => (
+                      <td key={m} className="p-2 text-right tabular-nums">{monthlySummary.accountsOrderedByMonth[m] || 0}</td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td className="p-2 font-medium">Δ</td>
+                    {monthlySummary.months.map((m, idx) => (
+                      <td key={m} className="p-2 text-right">
+                        <div 
+                          className="relative inline-block group"
+                          onMouseEnter={() => { cancelTooltipClose(); setOpenDeltaTooltipMonth(m); }}
+                          onMouseLeave={() => scheduleTooltipClose('delta')}
+                        >
+                          <span className={`tabular-nums inline-block px-1 rounded ${((monthlySummary.deltaAccountsByMonth[m] || 0) >= 0) ? 'hover:bg-green-50 hover:text-green-700' : 'hover:bg-red-50 hover:text-red-700'} transition-colors`}>
+                            {monthlySummary.deltaAccountsByMonth[m] || 0}
+                          </span>
+                          {(idx > 0) && openDeltaTooltipMonth === m && (
+                            <div className="absolute right-0 top-full mt-1 w-72 bg-white border border-gray-200 rounded-lg shadow-xl z-[10003] p-2"
+                              onMouseEnter={(e) => { e.stopPropagation(); cancelTooltipClose(); }}
+                              onMouseLeave={() => scheduleTooltipClose('delta')}
+                            >
+                              <div className="text-[11px] font-medium text-gray-700 mb-1 flex items-center justify-between">
+                                <span>Change vs {getShortMonthLabel(monthlySummary.months[idx - 1])}</span>
+                                <span className={`${((monthlySummary.deltaAccountsByMonth[m] || 0) >= 0) ? 'text-green-700' : 'text-red-700'} font-semibold`}>
+                                  {monthlySummary.deltaAccountsByMonth[m] || 0}
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                                <div>
+                                  <div className="font-medium text-green-700 mb-1">Gained</div>
+                                  <ul className="max-h-40 overflow-auto">
+                                    {(monthlySummary.gainedVsPrevByMonth[m] || []).length === 0 && <li className="text-gray-500 italic">None</li>}
+                                    {(monthlySummary.gainedVsPrevByMonth[m] || []).map((name) => (
+                                      <li
+                                        key={`g-${name}`}
+                                        className="truncate cursor-pointer hover:text-blue-700"
+                                        onClick={() => {
+                                          setPivotCustomerName(name);
+                                          setIsPivotOpen(true);
+                                        }}
+                                      >
+                                        {name}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                                <div>
+                                  <div className="font-medium text-red-700 mb-1">Lost</div>
+                                  <ul className="max-h-40 overflow-auto">
+                                    {(monthlySummary.lostVsPrevByMonth[m] || []).length === 0 && <li className="text-gray-500 italic">None</li>}
+                                    {(monthlySummary.lostVsPrevByMonth[m] || []).map((name) => (
+                                      <li
+                                        key={`l-${name}`}
+                                        className="truncate cursor-pointer hover:text-blue-700"
+                                        onClick={() => {
+                                          setPivotCustomerName(name);
+                                          setIsPivotOpen(true);
+                                        }}
+                                      >
+                                        {name}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td className="p-2 font-medium">Total Cases Sold</td>
+                    {monthlySummary.months.map((m) => (
+                      <td key={m} className="p-2 text-right tabular-nums">{monthlySummary.totalCasesByMonth[m] || 0}</td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td className="p-2 font-medium">Average Cases / Account</td>
+                    {monthlySummary.months.map((m) => (
+                      <td key={m} className="p-2 text-right tabular-nums">{(monthlySummary.avgCasesPerAccountByMonth[m] || 0).toFixed(1)}</td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div className="px-4 py-2 text-[11px] text-gray-500 border-t rounded-b-lg">All uploaded periods</div>
+          </div>
+        </>
+      )}
 
         {/* Upload Section */}
         {showUploadSection && (
@@ -791,7 +1276,7 @@ const Dashboard: React.FC = () => {
             <CardContent>
               <RevenueByCustomerComponent
                 revenueByCustomer={revenueByCustomer}
-                alpineData={filteredAlpineData}
+                alpineData={currentAlpineData}
                 onCustomerClick={handleCustomerClick}
                 isComparisonMode={true}
               />
@@ -821,7 +1306,15 @@ const Dashboard: React.FC = () => {
             <p className="text-sm text-gray-600">Compare customer performance between any two periods</p>
           </CardHeader>
           <CardContent>
-            <PeriodComparison alpineData={currentAlpineData} selectedMonth={selectedMonth} />
+            <PeriodComparison 
+              alpineData={currentAlpineData} 
+              selectedMonth={selectedMonth}
+              onCustomerView={(name) => {
+                if (!name) return;
+                setPivotCustomerName(name);
+                setIsPivotOpen(true);
+              }}
+            />
           </CardContent>
         </Card>
 
@@ -885,11 +1378,23 @@ const Dashboard: React.FC = () => {
           />
         </Card>
 
-        {/* Customer Detail Modal */}
+        {/* Customer CSV Pivot Modal (hover) */}
+        {pivotCustomerName && (
+          <CustomerCsvPivotModal
+            customerName={pivotCustomerName}
+            alpineData={currentAlpineData}
+            isOpen={isPivotOpen}
+            onClose={() => { setIsPivotOpen(false); setPivotCustomerName(null); }}
+            suppressOverlay
+            ensureInView
+          />
+        )}
+
+        {/* Customer Detail Modal (click-through analysis) */}
         {selectedCustomerForModal && (
           <CustomerDetailModal
             customerName={selectedCustomerForModal}
-            currentInvoices={[]} // Alpine data doesn't use invoice format
+            currentInvoices={[]}
             previousInvoices={[]}
             isOpen={isCustomerModalOpen}
             onClose={handleCloseCustomerModal}

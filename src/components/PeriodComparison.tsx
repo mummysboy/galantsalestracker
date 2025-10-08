@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { toTitleCase } from '../lib/utils';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+ 
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { TrendingUp, TrendingDown, Minus, Package, Users } from 'lucide-react';
 import { AlpineSalesRecord } from '../utils/alpineParser';
@@ -7,6 +7,7 @@ import { AlpineSalesRecord } from '../utils/alpineParser';
 interface PeriodComparisonProps {
   alpineData: AlpineSalesRecord[];
   selectedMonth?: string; // YYYY-MM from Dashboard month selector
+  onCustomerView?: (customerName: string) => void; // open CSV on explicit click
 }
 
 interface CustomerComparison {
@@ -27,7 +28,7 @@ interface CustomerComparison {
   };
 }
 
-const PeriodComparison: React.FC<PeriodComparisonProps> = ({ alpineData, selectedMonth }) => {
+const PeriodComparison: React.FC<PeriodComparisonProps> = ({ alpineData, selectedMonth, onCustomerView }) => {
   const [sortBy, setSortBy] = useState<'revenue' | 'cases' | 'change'>('change');
 
   const availablePeriods = useMemo(() => {
@@ -260,10 +261,13 @@ const PeriodComparison: React.FC<PeriodComparisonProps> = ({ alpineData, selecte
       .sort((a, b) => Math.abs(b.changeFromPrevious.revenueChange) - Math.abs(a.changeFromPrevious.revenueChange));
   }, [comparisons]);
 
-  const HoverPopover: React.FC<{ title: string; items: CustomerComparison[]; positive?: boolean; align?: 'left' | 'right' }> = ({ title, items, positive, align = 'left' }) => {
+  const HoverPopover: React.FC<{ title: string; items: CustomerComparison[]; positive?: boolean; align?: 'left' | 'right'; onViewClick?: (customerName: string) => void; onRequestClose?: () => void }> = ({ title, items, positive, align = 'left', onViewClick, onRequestClose }) => {
     const fmt = (amount: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
     return (
-      <div className={`hidden group-hover:block absolute ${align === 'right' ? 'right-0' : 'left-0'} top-full mt-2 w-72 sm:w-96 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-3`}
+      <div 
+        className={`absolute ${align === 'right' ? 'right-0' : 'left-0'} top-full mt-2 w-72 sm:w-96 bg-white border border-gray-200 rounded-lg shadow-lg z-50 p-3`}
+        onMouseEnter={(e) => e.stopPropagation()}
+        onMouseOver={(e) => e.stopPropagation()}
       >
         <div className="text-xs font-medium text-gray-700 mb-2">
           {title} ({items.length})
@@ -276,11 +280,23 @@ const PeriodComparison: React.FC<PeriodComparisonProps> = ({ alpineData, selecte
               const change = c.changeFromPrevious.revenueChange;
               const sign = change >= 0 ? '+' : '-';
               return (
-                <li key={c.customerName} className="py-1 flex items-center justify-between">
+                <li 
+                  key={c.customerName} 
+                  className="group py-1 px-2 flex items-center justify-between rounded hover:bg-gray-50 cursor-pointer"
+                  onClick={(e) => { e.stopPropagation(); onViewClick && onViewClick(c.customerName); onRequestClose && onRequestClose(); }}
+                >
                   <span className="truncate mr-3 text-sm" title={c.customerName}>{c.customerName}</span>
-                  <span className={`${positive ? 'text-green-600' : 'text-red-600'} text-xs font-semibold tabular-nums whitespace-nowrap`}>
-                    {sign} {fmt(Math.abs(change))}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`${positive ? 'text-green-600' : 'text-red-600'} text-xs font-semibold tabular-nums whitespace-nowrap`}>
+                      {sign} {fmt(Math.abs(change))}
+                    </span>
+                    <button
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-xs px-2 py-1 rounded border bg-white hover:bg-gray-100"
+                      onClick={(e) => { e.stopPropagation(); onViewClick && onViewClick(c.customerName); onRequestClose && onRequestClose(); }}
+                    >
+                      View
+                    </button>
+                  </div>
                 </li>
               );
             })}
@@ -332,6 +348,23 @@ const PeriodComparison: React.FC<PeriodComparisonProps> = ({ alpineData, selecte
       default:
         return 'text-gray-600 bg-gray-100';
     }
+  };
+
+  // Popover open state with small hover grace period
+  const [showGrowingPopover, setShowGrowingPopover] = useState(false);
+  const [showDecliningPopover, setShowDecliningPopover] = useState(false);
+  const hoverTimerRef = useRef<number | null>(null);
+
+  const cancelHoverClose = () => {
+    if (hoverTimerRef.current) {
+      window.clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+  };
+
+  const scheduleHoverClose = (setter: (v: boolean) => void) => {
+    cancelHoverClose();
+    hoverTimerRef.current = window.setTimeout(() => setter(false), 150);
   };
 
   return (
@@ -404,7 +437,15 @@ const PeriodComparison: React.FC<PeriodComparisonProps> = ({ alpineData, selecte
 
         <Card>
           <CardContent className="p-4">
-            <div className="relative group">
+            <div 
+              className="relative"
+              onMouseEnter={() => { 
+                cancelHoverClose(); 
+                setShowGrowingPopover(true); 
+                setShowDecliningPopover(false); // ensure only one open
+              }}
+              onMouseLeave={() => scheduleHoverClose(setShowGrowingPopover)}
+            >
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-green-500" />
                 <div>
@@ -414,14 +455,26 @@ const PeriodComparison: React.FC<PeriodComparisonProps> = ({ alpineData, selecte
                   </div>
                 </div>
               </div>
-              <HoverPopover title="Growing Customers" items={growingList} positive align="left" />
+              {showGrowingPopover && (
+                <div onMouseEnter={() => { cancelHoverClose(); setShowGrowingPopover(true); }} onMouseLeave={() => scheduleHoverClose(setShowGrowingPopover)}>
+                  <HoverPopover title="Growing Customers" items={growingList} positive align="left" onViewClick={onCustomerView} onRequestClose={() => setShowGrowingPopover(false)} />
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="p-4">
-            <div className="relative group">
+            <div 
+              className="relative"
+              onMouseEnter={() => { 
+                cancelHoverClose(); 
+                setShowDecliningPopover(true);
+                setShowGrowingPopover(false); // ensure only one open
+              }}
+              onMouseLeave={() => scheduleHoverClose(setShowDecliningPopover)}
+            >
               <div className="flex items-center gap-2">
                 <TrendingDown className="w-5 h-5 text-red-500" />
                 <div>
@@ -431,7 +484,11 @@ const PeriodComparison: React.FC<PeriodComparisonProps> = ({ alpineData, selecte
                   </div>
                 </div>
               </div>
-              <HoverPopover title="Declining Customers" items={decliningList} align="right" />
+              {showDecliningPopover && (
+                <div onMouseEnter={() => { cancelHoverClose(); setShowDecliningPopover(true); }} onMouseLeave={() => scheduleHoverClose(setShowDecliningPopover)}>
+                  <HoverPopover title="Declining Customers" items={decliningList} align="right" onViewClick={onCustomerView} onRequestClose={() => setShowDecliningPopover(false)} />
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -519,34 +576,7 @@ const PeriodComparison: React.FC<PeriodComparisonProps> = ({ alpineData, selecte
                   </div>
                 </div>
 
-                {/* Top Products Comparison */}
-                <div className="mt-4">
-                  <h5 className="font-medium mb-2">Top Products</h5>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <div className="text-sm font-medium text-gray-600 mb-2">{formatDate(firstPeriod.period)}</div>
-                      <div className="space-y-1">
-                        {firstPeriod.topProducts.map((product, index) => (
-                          <div key={index} className="flex justify-between text-sm">
-                            <span className="break-words">{toTitleCase(product.productName)}</span>
-                            <span>{formatCurrency(product.revenue)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium text-gray-600 mb-2">{formatDate(secondPeriod.period)}</div>
-                      <div className="space-y-1">
-                        {secondPeriod.topProducts.map((product, index) => (
-                          <div key={index} className="flex justify-between text-sm">
-                            <span className="break-words">{toTitleCase(product.productName)}</span>
-                            <span>{formatCurrency(product.revenue)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+ 
               </CardContent>
             </Card>
           );
