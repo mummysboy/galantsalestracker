@@ -464,6 +464,7 @@ const Dashboard: React.FC = () => {
   const [currentKeHeData, setCurrentKeHeData] = useState<AlpineSalesRecord[]>([]);
   const [currentCustomerProgressions, setCurrentCustomerProgressions] = useState<Map<string, any>>(new Map());
   const [currentPetesCustomerProgressions, setCurrentPetesCustomerProgressions] = useState<Map<string, any>>(new Map());
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [currentKeHeCustomerProgressions, setCurrentKeHeCustomerProgressions] = useState<Map<string, any>>(new Map());
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
