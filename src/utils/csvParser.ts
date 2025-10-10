@@ -4,6 +4,7 @@ export interface InvoiceRecord {
   quantity: number;
   revenue: number;
   date: string;
+  invoiceNumber?: string;
 }
 
 export interface ParsedCSVData {
@@ -43,6 +44,7 @@ export function parseInvoiceCSV(
       quantityColumn: string;
       revenueColumn: string;
       dateColumn?: string;
+      invoiceColumn?: string;
     };
     defaultDate?: string;
     currencySymbol?: string;
@@ -100,6 +102,21 @@ export function parseInvoiceCSV(
     h.toLowerCase().includes('date') ||
     h.toLowerCase().includes('invoice')
   ) : -1;
+  const invoiceIndex = (() => {
+    const target = columnMappings.invoiceColumn?.toLowerCase();
+    return headers.findIndex(h => {
+      const hl = h.toLowerCase();
+      return (
+        (target ? hl.includes(target) : false) ||
+        hl === 'invoice' ||
+        hl === 'invoice #' ||
+        hl === 'invoice number' ||
+        hl.includes('invoice') ||
+        hl === 'inv' ||
+        hl.includes('inv #')
+      );
+    });
+  })();
 
   // Validate required columns
   if (customerIndex === -1) {
@@ -153,6 +170,7 @@ export function parseInvoiceCSV(
       const quantityStr = columns[quantityIndex];
       const revenueStr = columns[revenueIndex];
       const dateStr = dateIndex >= 0 ? columns[dateIndex] : defaultDate;
+      const invoiceNumberStr = invoiceIndex >= 0 ? columns[invoiceIndex] : '';
 
       // Validate and parse quantity
       if (!customerName) {
@@ -213,7 +231,8 @@ export function parseInvoiceCSV(
         productName,
         quantity,
         revenue,
-        date
+        date,
+        invoiceNumber: cleanString(invoiceNumberStr) || undefined
       });
 
     } catch (error) {

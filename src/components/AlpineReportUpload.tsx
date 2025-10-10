@@ -110,6 +110,43 @@ const AlpineReportUpload: React.FC<AlpineReportUploadProps> = ({
         records: data.records,
         customerProgressions
       });
+
+      // Push parsed Alpine records to Google Sheets via Apps Script
+      try {
+        const webAppUrl = (process.env.REACT_APP_GS_WEBAPP_URL || '').trim();
+        const token = (process.env.REACT_APP_GS_TOKEN || '').trim();
+        if (webAppUrl && token && data.records.length > 0) {
+          // Map Alpine record to the same row schema used for CSV upload
+          const rows = data.records.map(r => {
+            // Convert period (YYYY-MM) to a mid-month date for the first column
+            const dateStr = `${r.period}-15`;
+            // Synthetic key for Alpine since no invoice number exists
+            const base = `${dateStr.replace(/-/g,'')}|${r.customerName}|${r.productName}|${r.cases}|${(Math.round(r.revenue*100)/100).toFixed(2)}`.toUpperCase();
+            let hash = 5381;
+            for (let i = 0; i < base.length; i++) { hash = ((hash << 5) + hash) + base.charCodeAt(i); hash = hash >>> 0; }
+            const syntheticKey = `SYN-${dateStr.replace(/-/g,'')}-${hash.toString(36).toUpperCase()}`;
+            return [
+              dateStr,
+              r.customerName,
+              r.productName,
+              r.cases,
+              Math.round(r.revenue * 100) / 100,
+              syntheticKey,
+              'Alpine TXT',
+              new Date().toISOString()
+            ];
+          });
+
+          await fetch(webAppUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            // Simple request to bypass browser CORS preflight
+            body: JSON.stringify({ token, rows })
+          });
+        }
+      } catch (_e) {
+        // Ignore network errors silently for now
+      }
       
       console.log('=== PROCESSING COMPLETED ===');
       setIsProcessingComplete(true);

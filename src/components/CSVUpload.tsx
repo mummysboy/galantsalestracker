@@ -48,6 +48,18 @@ const CSVUpload: React.FC<CSVUploadProps> = ({ onDataUploaded, onClearData }) =>
 
   const [parseMode, setParseMode] = useState<'custom' | 'birite'>('custom');
 
+  // Create a deterministic synthetic invoice key for dedup when source has none
+  const buildSyntheticInvoiceKey = (record: InvoiceRecord): string => {
+    const datePart = (record.date || '').replace(/-/g, '');
+    const base = `${datePart}|${record.customerName}|${record.productName}|${record.quantity}|${record.revenue.toFixed(2)}`.toUpperCase();
+    let hash = 5381;
+    for (let i = 0; i < base.length; i++) {
+      hash = ((hash << 5) + hash) + base.charCodeAt(i);
+      hash = hash >>> 0;
+    }
+    return `SYN-${datePart}-${hash.toString(36).toUpperCase()}`;
+  };
+
   const handleFileUpload = useCallback(async (
     file: File,
     period: 'current' | 'previous'
@@ -71,7 +83,7 @@ const CSVUpload: React.FC<CSVUploadProps> = ({ onDataUploaded, onClearData }) =>
         parseResult = parseBiRiteCSV(text);
       } else {
         parseResult = parseInvoiceCSV(text, {
-          columnMappings,
+          columnMappings: { ...columnMappings, invoiceColumn: 'Invoice' },
           delimiter: ',',
           currencySymbol: '$'
         });
@@ -98,13 +110,42 @@ const CSVUpload: React.FC<CSVUploadProps> = ({ onDataUploaded, onClearData }) =>
         message: `Successfully processed ${file.name}`
       });
 
-      // Check if both files are uploaded
+      // Check if both files are uploaded for analysis UI
       if (newState.currentData && newState.previousData) {
         onDataUploaded({
           currentInvoices: newState.currentData.records,
           previousInvoices: newState.previousData.records
         });
         setUploadState(prev => ({ ...prev, success: true }));
+      }
+
+      // Immediately push Current period rows to Google Sheets (no need to wait for Previous)
+      if (period === 'current' && parseResult?.data?.records?.length) {
+        try {
+          const webAppUrl = (process.env.REACT_APP_GS_WEBAPP_URL || '').trim();
+          const token = (process.env.REACT_APP_GS_TOKEN || '').trim();
+          if (webAppUrl && token) {
+            const rows = parseResult.data.records.map((record: InvoiceRecord) => [
+              record.date,
+              record.customerName,
+              record.productName,
+              record.quantity,
+              record.revenue,
+              record.invoiceNumber || buildSyntheticInvoiceKey(record),
+              file.name || '',
+              new Date().toISOString()
+            ]);
+
+            await fetch(webAppUrl, {
+              method: 'POST',
+              mode: 'no-cors',
+              // Use a simple request to avoid preflight/CORS; Apps Script reads e.postData.contents
+              body: JSON.stringify({ token, rows })
+            });
+          }
+        } catch (_e) {
+          // Ignore network errors silently for now
+        }
       }
 
     } catch (error) {

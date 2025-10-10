@@ -18,12 +18,12 @@ import CustomerDetailModal from './components/CustomerDetailModal';
 import CustomerCsvPivotModal from './components/CustomerCsvPivotModal';
 import PeriodComparison from './components/PeriodComparison';
 import AlpineReportUpload from './components/AlpineReportUpload';
-import CSVUpload from './components/CSVUpload';
 import InvoiceList from './components/InvoiceList';
 import { AlpineSalesRecord, analyzeCustomerProgress } from './utils/alpineParser';
 // Removed hardcoded June seed; start empty and let uploads populate
 import { Upload, BarChart3, ChevronDown, Trash2, X } from 'lucide-react';
 import { toTitleCase } from './lib/utils';
+import PetesReportUpload from './components/PetesReportUpload';
 
 // Revenue by Customer Component
 interface RevenueByCustomerProps {
@@ -458,10 +458,13 @@ const Dashboard: React.FC = () => {
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [showUploadSection, setShowUploadSection] = useState(false);
   const [currentAlpineData, setCurrentAlpineData] = useState<AlpineSalesRecord[]>([]);
+  const [currentPetesData, setCurrentPetesData] = useState<AlpineSalesRecord[]>([]);
   const [currentCustomerProgressions, setCurrentCustomerProgressions] = useState<Map<string, any>>(new Map());
+  const [currentPetesCustomerProgressions, setCurrentPetesCustomerProgressions] = useState<Map<string, any>>(new Map());
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
-  const [lastUploadedInvoiceMonth, setLastUploadedInvoiceMonth] = useState<string | null>(null);
+  // Removed CSV invoice upload; no longer tracking last uploaded invoice month
+  // const [lastUploadedInvoiceMonth, setLastUploadedInvoiceMonth] = useState<string | null>(null);
   const [pivotCustomerName, setPivotCustomerName] = useState<string | null>(null);
   const [isPivotOpen, setIsPivotOpen] = useState(false);
   // Removed Period Management toggle button; keep feature accessible via dropdown trash icons
@@ -469,6 +472,8 @@ const Dashboard: React.FC = () => {
   const [showMonthlySummary, setShowMonthlySummary] = useState(false);
   const [openNewAccountsTooltipMonth, setOpenNewAccountsTooltipMonth] = useState<string | null>(null);
   const [openDeltaTooltipMonth, setOpenDeltaTooltipMonth] = useState<string | null>(null);
+  const [selectedDistributor, setSelectedDistributor] = useState<'ALPINE' | 'PETES' | 'ALL'>('ALPINE');
+  const [isDistributorDropdownOpen, setIsDistributorDropdownOpen] = useState(false);
   const tooltipTimerRef = React.useRef<number | null>(null);
   const cancelTooltipClose = () => {
     if (tooltipTimerRef.current) {
@@ -484,11 +489,20 @@ const Dashboard: React.FC = () => {
     }, 200);
   };
 
+  // Determine current dataset based on distributor
+  const currentData = useMemo(() => (
+    selectedDistributor === 'ALPINE' 
+      ? currentAlpineData 
+      : selectedDistributor === 'PETES' 
+        ? currentPetesData 
+        : [...currentAlpineData, ...currentPetesData]
+  ), [selectedDistributor, currentAlpineData, currentPetesData]);
+
   // Get available periods and set default to most recent
   const availablePeriods = useMemo(() => {
-    const periods = Array.from(new Set(currentAlpineData.map(r => r.period))).sort();
+    const periods = Array.from(new Set(currentData.map(r => r.period))).sort();
     return periods;
-  }, [currentAlpineData]);
+  }, [currentData]);
 
   // Add "All" option to periods, with most recent first
   const allPeriodOptions = useMemo(() => {
@@ -497,10 +511,10 @@ const Dashboard: React.FC = () => {
   }, [availablePeriods]);
 
   // Filter data based on selected month
-  const filteredAlpineData = useMemo(() => {
-    if (!selectedMonth || selectedMonth === 'all') return currentAlpineData;
-    return currentAlpineData.filter(record => record.period === selectedMonth);
-  }, [currentAlpineData, selectedMonth]);
+  const filteredData = useMemo(() => {
+    if (!selectedMonth || selectedMonth === 'all') return currentData;
+    return currentData.filter(record => record.period === selectedMonth);
+  }, [currentData, selectedMonth]);
 
   // Set default month to most recent when data changes
   React.useEffect(() => {
@@ -509,23 +523,34 @@ const Dashboard: React.FC = () => {
     }
   }, [availablePeriods, selectedMonth]);
 
-  // Close dropdown when clicking outside
+  // Adjust selected month when switching distributors
+  React.useEffect(() => {
+    if (selectedMonth === 'all') return; // preserve All Periods selection
+    if (availablePeriods.length > 0 && !availablePeriods.includes(selectedMonth)) {
+      setSelectedMonth(availablePeriods[availablePeriods.length - 1]);
+    }
+  }, [selectedDistributor, availablePeriods, selectedMonth]);
+
+  // Close dropdowns when clicking outside
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
       if (isMonthDropdownOpen && !target.closest('.month-dropdown')) {
         setIsMonthDropdownOpen(false);
       }
+      if (isDistributorDropdownOpen && !target.closest('.distributor-dropdown')) {
+        setIsDistributorDropdownOpen(false);
+      }
     };
 
-    if (isMonthDropdownOpen) {
+    if (isMonthDropdownOpen || isDistributorDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isMonthDropdownOpen]);
+  }, [isMonthDropdownOpen, isDistributorDropdownOpen]);
 
   // Month name mapping
   const getMonthName = (period: string) => {
@@ -608,77 +633,91 @@ const Dashboard: React.FC = () => {
     // setShowUploadSection(false); // Hide upload section after successful upload
   };
 
+  const handlePetesDataParsed = (data: { records: AlpineSalesRecord[]; customerProgressions: Map<string, any> }) => {
+    const newPeriods = new Set(data.records.map(r => r.period));
+
+    const filteredExistingData = currentPetesData.filter(record => !newPeriods.has(record.period));
+    const mergedData = [...filteredExistingData, ...data.records];
+
+    setCurrentPetesData(mergedData);
+
+    const allCustomers = Array.from(new Set(mergedData.map(r => r.customerName)));
+    const updatedCustomerProgressions = new Map();
+    allCustomers.forEach(customer => {
+      const progress = analyzeCustomerProgress(mergedData, customer);
+      updatedCustomerProgressions.set(customer, progress);
+    });
+    setCurrentPetesCustomerProgressions(updatedCustomerProgressions);
+
+    const newestUploadedPeriod = Array.from(newPeriods).sort().slice(-1)[0];
+    if (newestUploadedPeriod) {
+      setSelectedMonth(newestUploadedPeriod);
+    }
+  };
+
   const handleClearAlpineData = () => {
     console.log('Clearing Alpine data');
     setCurrentAlpineData([]);
     setCurrentCustomerProgressions(new Map());
   };
 
-  const handleCSVDataUploaded = (data: { currentInvoices: any[]; previousInvoices: any[] }) => {
-    console.log('CSV data uploaded:', data);
-    // Derive month from latest date in current invoices
-    const parseToMonthYear = (isoDate: string) => {
-      const d = new Date(isoDate);
-      if (isNaN(d.getTime())) return null;
-      const formatter = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' });
-      return formatter.format(d);
-    };
-    const latestDate = data.currentInvoices
-      .map(i => i.date)
-      .filter(Boolean)
-      .sort()
-      .slice(-1)[0];
-    const monthYear = latestDate ? parseToMonthYear(latestDate) : null;
-    if (monthYear) {
-      setLastUploadedInvoiceMonth(monthYear);
-    }
+  const handleClearPetesData = () => {
+    console.log("Clearing Pete's data");
+    setCurrentPetesData([]);
+    setCurrentPetesCustomerProgressions(new Map());
   };
 
-  const handleClearCSVData = () => {
-    // Clear CSV data if needed
-    console.log('CSV data cleared');
-  };
+  // Removed CSV invoice upload handlers
 
 
   // Delete entire period/month of data
   const handleDeletePeriod = (periodToDelete: string) => {
-    const updatedData = currentAlpineData.filter(record => record.period !== periodToDelete);
-    
-    setCurrentAlpineData(updatedData);
-    
-    // Recalculate customer progressions
-    const allCustomers = Array.from(new Set(updatedData.map(r => r.customerName)));
-    const updatedCustomerProgressions = new Map();
-    allCustomers.forEach(customer => {
-      const progress = analyzeCustomerProgress(updatedData, customer);
-      updatedCustomerProgressions.set(customer, progress);
-    });
-    
-    setCurrentCustomerProgressions(updatedCustomerProgressions);
-    
-    // If the deleted period was selected, switch to 'all' or the most recent period
+    // Guard: do not allow deletes in ALL view
+    if (selectedDistributor === 'ALL') return;
+    if (selectedDistributor === 'ALPINE') {
+      const updatedData = currentAlpineData.filter(record => record.period !== periodToDelete);
+      setCurrentAlpineData(updatedData);
+      const allCustomers = Array.from(new Set(updatedData.map(r => r.customerName)));
+      const updatedCustomerProgressions = new Map();
+      allCustomers.forEach(customer => {
+        const progress = analyzeCustomerProgress(updatedData, customer);
+        updatedCustomerProgressions.set(customer, progress);
+      });
+      setCurrentCustomerProgressions(updatedCustomerProgressions);
+    } else {
+      const updatedData = currentPetesData.filter(record => record.period !== periodToDelete);
+      setCurrentPetesData(updatedData);
+      const allCustomers = Array.from(new Set(updatedData.map(r => r.customerName)));
+      const updatedCustomerProgressions = new Map();
+      allCustomers.forEach(customer => {
+        const progress = analyzeCustomerProgress(updatedData, customer);
+        updatedCustomerProgressions.set(customer, progress);
+      });
+      setCurrentPetesCustomerProgressions(updatedCustomerProgressions);
+    }
+
     if (selectedMonth === periodToDelete) {
-      const remainingPeriods = Array.from(new Set(updatedData.map(r => r.period))).sort();
+      const remainingPeriods = Array.from(new Set(currentData.filter(r => r.period !== periodToDelete).map(r => r.period))).sort();
       setSelectedMonth(remainingPeriods.length > 0 ? remainingPeriods[remainingPeriods.length - 1] : 'all');
     }
-    
+
     console.log('Period deleted:', periodToDelete);
   };
 
   // Calculate KPIs based on filtered data
   const kpis = useMemo(() => {
-    const totalRevenue = filteredAlpineData.reduce((sum, record) => sum + record.revenue, 0);
-    const totalCases = filteredAlpineData.reduce((sum, record) => sum + record.cases, 0);
+    const totalRevenue = filteredData.reduce((sum, record) => sum + record.revenue, 0);
+    const totalCases = filteredData.reduce((sum, record) => sum + record.cases, 0);
     
     // Top customer by revenue
-    const customerRevenue = filteredAlpineData.reduce((acc, record) => {
+    const customerRevenue = filteredData.reduce((acc, record) => {
       acc[record.customerName] = (acc[record.customerName] || 0) + record.revenue;
       return acc;
     }, {} as Record<string, number>);
     const topCustomer = Object.entries(customerRevenue).sort(([,a], [,b]) => b - a)[0];
 
     // Top product by revenue
-    const productRevenue = filteredAlpineData.reduce((acc, record) => {
+    const productRevenue = filteredData.reduce((acc, record) => {
       acc[record.productName] = (acc[record.productName] || 0) + record.revenue;
       return acc;
     }, {} as Record<string, number>);
@@ -690,11 +729,11 @@ const Dashboard: React.FC = () => {
       topCustomer: topCustomer ? topCustomer[0] : 'N/A',
       topProduct: topProduct ? topProduct[0] : 'N/A',
     };
-  }, [filteredAlpineData]);
+  }, [filteredData]);
 
   // Revenue over time data (grouped by periods) - ALWAYS use all uploaded months
   const revenueOverTime = useMemo(() => {
-    const periodRevenue = currentAlpineData.reduce((acc, record) => {
+    const periodRevenue = currentData.reduce((acc, record) => {
       const period = record.period;
       acc[period] = (acc[period] || 0) + record.revenue;
       return acc;
@@ -706,7 +745,7 @@ const Dashboard: React.FC = () => {
       period,
       revenue: Math.round((periodRevenue[period] || 0) * 100) / 100,
     }));
-  }, [currentAlpineData, availablePeriods]);
+  }, [currentData, availablePeriods]);
 
   // Determine which period to highlight on the chart
   const highlightedPeriod = useMemo(() => {
@@ -717,12 +756,12 @@ const Dashboard: React.FC = () => {
 
   // Revenue by customer data
   const revenueByCustomer = useMemo(() => {
-    const customerRevenue = filteredAlpineData.reduce((acc, record) => {
+    const customerRevenue = filteredData.reduce((acc, record) => {
       acc[record.customerName] = (acc[record.customerName] || 0) + record.revenue;
       return acc;
     }, {} as Record<string, number>);
 
-    const customerIds = filteredAlpineData.reduce((acc, record) => {
+    const customerIds = filteredData.reduce((acc, record) => {
       acc[record.customerName] = record.customerId || '';
       return acc;
     }, {} as Record<string, string>);
@@ -736,11 +775,11 @@ const Dashboard: React.FC = () => {
         customerId: customerIds[customer] || '',
         revenue: Math.round(revenue * 100) / 100,
       }));
-  }, [filteredAlpineData]);
+  }, [filteredData]);
 
   // Revenue by product data
   const revenueByProduct = useMemo(() => {
-    const productRevenue = filteredAlpineData.reduce((acc, record) => {
+    const productRevenue = filteredData.reduce((acc, record) => {
       acc[record.productName] = (acc[record.productName] || 0) + record.revenue;
       return acc;
     }, {} as Record<string, number>);
@@ -753,11 +792,11 @@ const Dashboard: React.FC = () => {
         fullProduct: product,
         revenue: Math.round(revenue * 100) / 100,
       }));
-  }, [filteredAlpineData]);
+  }, [filteredData]);
 
   // Product mix pie chart data
   const productMix = useMemo(() => {
-    const total = filteredAlpineData.reduce((sum, record) => sum + record.revenue, 0);
+    const total = filteredData.reduce((sum, record) => sum + record.revenue, 0);
 
     return revenueByProduct
       .slice(0, 8) // Top 8 products
@@ -766,17 +805,32 @@ const Dashboard: React.FC = () => {
         fullName: toTitleCase(product.fullProduct),
         value: Math.round((product.revenue / total) * 100 * 100) / 100,
       }));
-  }, [revenueByProduct, filteredAlpineData]);
+  }, [revenueByProduct, filteredData]);
 
   const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#F97316', '#06B6D4', '#84CC16'];
 
+  // Combined progressions for ALL view
+  const combinedCustomerProgressions = useMemo(() => {
+    const data = [...currentAlpineData, ...currentPetesData];
+    const customers = Array.from(new Set(data.map(r => r.customerName)));
+    const map = new Map<string, any>();
+    customers.forEach(c => {
+      map.set(c, analyzeCustomerProgress(data, c));
+    });
+    return map;
+  }, [currentAlpineData, currentPetesData]);
+
+  const getDistributorLabel = (d: 'ALPINE' | 'PETES' | 'ALL' = selectedDistributor) => (
+    d === 'ALPINE' ? 'Alpine' : d === 'PETES' ? "Pete's Coffee" : 'All Businesses'
+  );
+
   // Monthly accounts/cases summary pivot
   const monthlySummary = useMemo(() => {
-    const months = Array.from(new Set(currentAlpineData.map(r => r.period))).sort();
+    const months = Array.from(new Set(currentData.map(r => r.period))).sort();
     const firstPurchaseByCustomer = new Map<string, string>();
     // Determine first purchase month per customer
     const byCustomer = new Map<string, string[]>();
-    currentAlpineData.forEach(r => {
+    currentData.forEach(r => {
       if (!byCustomer.has(r.customerName)) byCustomer.set(r.customerName, []);
       byCustomer.get(r.customerName)!.push(r.period);
     });
@@ -791,7 +845,7 @@ const Dashboard: React.FC = () => {
     const customersByMonth: Record<string, Set<string>> = {};
 
     months.forEach(m => {
-      const records = currentAlpineData.filter(r => r.period === m);
+      const records = currentData.filter(r => r.period === m);
       const orderedAccountSet = new Set(records.map(r => r.customerName));
       const newAccounts = Array.from(new Set(records
         .filter(r => firstPurchaseByCustomer.get(r.customerName) === m)
@@ -842,7 +896,7 @@ const Dashboard: React.FC = () => {
       totalCasesByMonth,
       avgCasesPerAccountByMonth
     };
-  }, [currentAlpineData]);
+  }, [currentData]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -851,9 +905,42 @@ const Dashboard: React.FC = () => {
         <div className="mb-8">
           <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Alpine Sales Dashboard</h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-3xl font-bold text-gray-900">{getDistributorLabel()} Sales Dashboard</h1>
+                <div className="relative distributor-dropdown">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsDistributorDropdownOpen(!isDistributorDropdownOpen)}
+                    className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
+                  >
+                    {getDistributorLabel()}
+                    <ChevronDown className={`w-4 h-4 transition-transform ${isDistributorDropdownOpen ? 'rotate-180' : ''}`} />
+                  </Button>
+                  {isDistributorDropdownOpen && (
+                    <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                      <div className="py-1">
+                        {(['ALPINE','PETES','ALL'] as const).map((d) => (
+                          <button
+                            key={d}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setSelectedDistributor(d);
+                              setIsDistributorDropdownOpen(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${selectedDistributor === d ? 'text-blue-700 font-medium' : 'text-gray-700'}`}
+                          >
+                            {getDistributorLabel(d)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
               <div className="flex items-center gap-3 mt-2">
-                <p className="text-gray-600">Alpine distributor sales analysis for</p>
+                <p className="text-gray-600">{getDistributorLabel()} sales analysis for</p>
                 <div className="relative month-dropdown">
                   <Button
                     variant="outline"
@@ -888,7 +975,7 @@ const Dashboard: React.FC = () => {
                             >
                               {period === 'all' ? 'All Periods' : getMonthName(period)}
                             </button>
-                            {period !== 'all' && (
+                            {period !== 'all' && selectedDistributor !== 'ALL' && (
                               <button
                                 onClick={(e) => {
                                   e.preventDefault();
@@ -909,11 +996,9 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
               <p className="text-sm text-gray-500 mt-1">
-                {filteredAlpineData.length} sales records{selectedMonth !== 'all' ? ` for ${selectedMonth === 'all' ? 'all periods' : getMonthName(selectedMonth)}` : ` from ${availablePeriods.join(', ')} periods`}
+                {filteredData.length} sales records{selectedMonth !== 'all' ? ` for ${selectedMonth === 'all' ? 'all periods' : getMonthName(selectedMonth)}` : ` from ${availablePeriods.join(', ')} periods`}
               </p>
-              {lastUploadedInvoiceMonth && (
-                <p className="text-sm text-green-700 mt-1">Last uploaded invoice month: {lastUploadedInvoiceMonth}</p>
-              )}
+              {/* Last uploaded invoice month removed with CSV uploader */}
             </div>
             <div className="flex gap-2">
               <Button
@@ -1091,15 +1176,32 @@ const Dashboard: React.FC = () => {
         {/* Upload Section */}
         {showUploadSection && (
           <div className="mb-8 space-y-6">
-            <AlpineReportUpload
-              onDataParsed={handleAlpineDataParsed}
-              onClearData={handleClearAlpineData}
-              onProcessingComplete={() => setShowUploadSection(false)}
-            />
-            <CSVUpload
-              onDataUploaded={handleCSVDataUploaded}
-              onClearData={handleClearCSVData}
-            />
+            {selectedDistributor === 'ALPINE' ? (
+              <AlpineReportUpload
+                onDataParsed={handleAlpineDataParsed}
+                onClearData={handleClearAlpineData}
+                onProcessingComplete={() => setShowUploadSection(false)}
+              />
+            ) : selectedDistributor === 'PETES' ? (
+              <PetesReportUpload
+                onDataParsed={handlePetesDataParsed}
+                onClearData={handleClearPetesData}
+                onProcessingComplete={() => setShowUploadSection(false)}
+              />
+            ) : (
+              <>
+                <AlpineReportUpload
+                  onDataParsed={handleAlpineDataParsed}
+                  onClearData={handleClearAlpineData}
+                  onProcessingComplete={() => setShowUploadSection(false)}
+                />
+                <PetesReportUpload
+                  onDataParsed={handlePetesDataParsed}
+                  onClearData={handleClearPetesData}
+                  onProcessingComplete={() => setShowUploadSection(false)}
+                />
+              </>
+            )}
           </div>
         )}
 
@@ -1276,7 +1378,7 @@ const Dashboard: React.FC = () => {
             <CardContent>
               <RevenueByCustomerComponent
                 revenueByCustomer={revenueByCustomer}
-                alpineData={currentAlpineData}
+                alpineData={currentData}
                 onCustomerClick={handleCustomerClick}
                 isComparisonMode={true}
               />
@@ -1291,7 +1393,7 @@ const Dashboard: React.FC = () => {
             <CardContent>
               <RevenueByProductComponent
                 revenueByProduct={revenueByProduct}
-                alpineData={filteredAlpineData}
+                alpineData={filteredData}
               />
             </CardContent>
           </Card>
@@ -1307,7 +1409,7 @@ const Dashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <PeriodComparison 
-              alpineData={currentAlpineData} 
+              alpineData={currentData} 
               selectedMonth={selectedMonth}
               onCustomerView={(name) => {
                 if (!name) return;
@@ -1373,7 +1475,7 @@ const Dashboard: React.FC = () => {
         {/* Invoice List */}
         <Card className="mb-8">
           <InvoiceList 
-            records={filteredAlpineData}
+            records={filteredData}
             title={`Sales Records${selectedMonth !== 'all' ? ` for ${getMonthName(selectedMonth)}` : ''}`}
           />
         </Card>
@@ -1382,7 +1484,7 @@ const Dashboard: React.FC = () => {
         {pivotCustomerName && (
           <CustomerCsvPivotModal
             customerName={pivotCustomerName}
-            alpineData={currentAlpineData}
+            alpineData={currentData}
             isOpen={isPivotOpen}
             onClose={() => { setIsPivotOpen(false); setPivotCustomerName(null); }}
             suppressOverlay
@@ -1398,8 +1500,12 @@ const Dashboard: React.FC = () => {
             previousInvoices={[]}
             isOpen={isCustomerModalOpen}
             onClose={handleCloseCustomerModal}
-            alpineData={currentAlpineData}
-            progressAnalysis={currentCustomerProgressions.get(selectedCustomerForModal)}
+            alpineData={currentData}
+            progressAnalysis={(selectedDistributor === 'ALPINE' 
+              ? currentCustomerProgressions 
+              : selectedDistributor === 'PETES' 
+                ? currentPetesCustomerProgressions 
+                : combinedCustomerProgressions).get(selectedCustomerForModal)}
           />
         )}
       </div>
