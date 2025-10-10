@@ -19,11 +19,13 @@ import CustomerCsvPivotModal from './components/CustomerCsvPivotModal';
 import PeriodComparison from './components/PeriodComparison';
 import AlpineReportUpload from './components/AlpineReportUpload';
 import InvoiceList from './components/InvoiceList';
+import CustomReportModal from './components/CustomReportModal';
 import { AlpineSalesRecord, analyzeCustomerProgress } from './utils/alpineParser';
 // Removed hardcoded June seed; start empty and let uploads populate
 import { Upload, BarChart3, ChevronDown, Trash2, X } from 'lucide-react';
 import { toTitleCase } from './lib/utils';
 import PetesReportUpload from './components/PetesReportUpload';
+import KeHeReportUpload from './components/KeHeReportUpload';
 
 // Revenue by Customer Component
 interface RevenueByCustomerProps {
@@ -459,8 +461,10 @@ const Dashboard: React.FC = () => {
   const [showUploadSection, setShowUploadSection] = useState(false);
   const [currentAlpineData, setCurrentAlpineData] = useState<AlpineSalesRecord[]>([]);
   const [currentPetesData, setCurrentPetesData] = useState<AlpineSalesRecord[]>([]);
+  const [currentKeHeData, setCurrentKeHeData] = useState<AlpineSalesRecord[]>([]);
   const [currentCustomerProgressions, setCurrentCustomerProgressions] = useState<Map<string, any>>(new Map());
   const [currentPetesCustomerProgressions, setCurrentPetesCustomerProgressions] = useState<Map<string, any>>(new Map());
+  const [currentKeHeCustomerProgressions, setCurrentKeHeCustomerProgressions] = useState<Map<string, any>>(new Map());
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
   // Removed CSV invoice upload; no longer tracking last uploaded invoice month
@@ -472,8 +476,9 @@ const Dashboard: React.FC = () => {
   const [showMonthlySummary, setShowMonthlySummary] = useState(false);
   const [openNewAccountsTooltipMonth, setOpenNewAccountsTooltipMonth] = useState<string | null>(null);
   const [openDeltaTooltipMonth, setOpenDeltaTooltipMonth] = useState<string | null>(null);
-  const [selectedDistributor, setSelectedDistributor] = useState<'ALPINE' | 'PETES' | 'ALL'>('ALPINE');
+  const [selectedDistributor, setSelectedDistributor] = useState<'ALPINE' | 'PETES' | 'KEHE' | 'ALL'>('ALPINE');
   const [isDistributorDropdownOpen, setIsDistributorDropdownOpen] = useState(false);
+  const [showCustomReport, setShowCustomReport] = useState(false);
   const tooltipTimerRef = React.useRef<number | null>(null);
   const cancelTooltipClose = () => {
     if (tooltipTimerRef.current) {
@@ -495,8 +500,10 @@ const Dashboard: React.FC = () => {
       ? currentAlpineData 
       : selectedDistributor === 'PETES' 
         ? currentPetesData 
-        : [...currentAlpineData, ...currentPetesData]
-  ), [selectedDistributor, currentAlpineData, currentPetesData]);
+        : selectedDistributor === 'KEHE'
+          ? currentKeHeData
+          : [...currentAlpineData, ...currentPetesData, ...currentKeHeData]
+  ), [selectedDistributor, currentAlpineData, currentPetesData, currentKeHeData]);
 
   // Get available periods and set default to most recent
   const availablePeriods = useMemo(() => {
@@ -667,6 +674,34 @@ const Dashboard: React.FC = () => {
     setCurrentPetesCustomerProgressions(new Map());
   };
 
+  const handleKeHeDataParsed = (data: { records: AlpineSalesRecord[]; customerProgressions: Map<string, any> }) => {
+    const newPeriods = new Set(data.records.map(r => r.period));
+
+    const filteredExistingData = currentKeHeData.filter(record => !newPeriods.has(record.period));
+    const mergedData = [...filteredExistingData, ...data.records];
+
+    setCurrentKeHeData(mergedData);
+
+    const allCustomers = Array.from(new Set(mergedData.map(r => r.customerName)));
+    const updatedCustomerProgressions = new Map();
+    allCustomers.forEach(customer => {
+      const progress = analyzeCustomerProgress(mergedData, customer);
+      updatedCustomerProgressions.set(customer, progress);
+    });
+    setCurrentKeHeCustomerProgressions(updatedCustomerProgressions);
+
+    const newestUploadedPeriod = Array.from(newPeriods).sort().slice(-1)[0];
+    if (newestUploadedPeriod) {
+      setSelectedMonth(newestUploadedPeriod);
+    }
+  };
+
+  const handleClearKeHeData = () => {
+    console.log('Clearing KeHe data');
+    setCurrentKeHeData([]);
+    setCurrentKeHeCustomerProgressions(new Map());
+  };
+
   // Removed CSV invoice upload handlers
 
 
@@ -684,7 +719,7 @@ const Dashboard: React.FC = () => {
         updatedCustomerProgressions.set(customer, progress);
       });
       setCurrentCustomerProgressions(updatedCustomerProgressions);
-    } else {
+    } else if (selectedDistributor === 'PETES') {
       const updatedData = currentPetesData.filter(record => record.period !== periodToDelete);
       setCurrentPetesData(updatedData);
       const allCustomers = Array.from(new Set(updatedData.map(r => r.customerName)));
@@ -694,6 +729,16 @@ const Dashboard: React.FC = () => {
         updatedCustomerProgressions.set(customer, progress);
       });
       setCurrentPetesCustomerProgressions(updatedCustomerProgressions);
+    } else if (selectedDistributor === 'KEHE') {
+      const updatedData = currentKeHeData.filter(record => record.period !== periodToDelete);
+      setCurrentKeHeData(updatedData);
+      const allCustomers = Array.from(new Set(updatedData.map(r => r.customerName)));
+      const updatedCustomerProgressions = new Map();
+      allCustomers.forEach(customer => {
+        const progress = analyzeCustomerProgress(updatedData, customer);
+        updatedCustomerProgressions.set(customer, progress);
+      });
+      setCurrentKeHeCustomerProgressions(updatedCustomerProgressions);
     }
 
     if (selectedMonth === periodToDelete) {
@@ -811,17 +856,17 @@ const Dashboard: React.FC = () => {
 
   // Combined progressions for ALL view
   const combinedCustomerProgressions = useMemo(() => {
-    const data = [...currentAlpineData, ...currentPetesData];
+    const data = [...currentAlpineData, ...currentPetesData, ...currentKeHeData];
     const customers = Array.from(new Set(data.map(r => r.customerName)));
     const map = new Map<string, any>();
     customers.forEach(c => {
       map.set(c, analyzeCustomerProgress(data, c));
     });
     return map;
-  }, [currentAlpineData, currentPetesData]);
+  }, [currentAlpineData, currentPetesData, currentKeHeData]);
 
-  const getDistributorLabel = (d: 'ALPINE' | 'PETES' | 'ALL' = selectedDistributor) => (
-    d === 'ALPINE' ? 'Alpine' : d === 'PETES' ? "Pete's Coffee" : 'All Businesses'
+  const getDistributorLabel = (d: 'ALPINE' | 'PETES' | 'KEHE' | 'ALL' = selectedDistributor) => (
+    d === 'ALPINE' ? 'Alpine' : d === 'PETES' ? "Pete's Coffee" : d === 'KEHE' ? 'KeHe' : 'All Businesses'
   );
 
   // Monthly accounts/cases summary pivot
@@ -920,7 +965,7 @@ const Dashboard: React.FC = () => {
                   {isDistributorDropdownOpen && (
                     <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
                       <div className="py-1">
-                        {(['ALPINE','PETES','ALL'] as const).map((d) => (
+                        {(['ALPINE','PETES','KEHE','ALL'] as const).map((d) => (
                           <button
                             key={d}
                             onClick={(e) => {
@@ -1008,6 +1053,14 @@ const Dashboard: React.FC = () => {
                 className="flex items-center gap-2"
               >
                 View Monthly Summary
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCustomReport(true)}
+                className="flex items-center gap-2"
+              >
+                Custom Report
               </Button>
               <Button
                 onClick={() => setShowUploadSection(!showUploadSection)}
@@ -1173,6 +1226,16 @@ const Dashboard: React.FC = () => {
         </>
       )}
 
+      {/* Custom Report Modal */}
+      {showCustomReport && (
+        <CustomReportModal
+          isOpen={showCustomReport}
+          onClose={() => setShowCustomReport(false)}
+          data={currentData}
+          availablePeriods={availablePeriods}
+        />
+      )}
+
         {/* Upload Section */}
         {showUploadSection && (
           <div className="mb-8 space-y-6">
@@ -1188,6 +1251,12 @@ const Dashboard: React.FC = () => {
                 onClearData={handleClearPetesData}
                 onProcessingComplete={() => setShowUploadSection(false)}
               />
+            ) : selectedDistributor === 'KEHE' ? (
+              <KeHeReportUpload
+                onDataParsed={handleKeHeDataParsed}
+                onClearData={handleClearKeHeData}
+                onProcessingComplete={() => setShowUploadSection(false)}
+              />
             ) : (
               <>
                 <AlpineReportUpload
@@ -1198,6 +1267,11 @@ const Dashboard: React.FC = () => {
                 <PetesReportUpload
                   onDataParsed={handlePetesDataParsed}
                   onClearData={handleClearPetesData}
+                  onProcessingComplete={() => setShowUploadSection(false)}
+                />
+                <KeHeReportUpload
+                  onDataParsed={handleKeHeDataParsed}
+                  onClearData={handleClearKeHeData}
                   onProcessingComplete={() => setShowUploadSection(false)}
                 />
               </>
