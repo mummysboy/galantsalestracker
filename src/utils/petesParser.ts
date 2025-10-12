@@ -324,6 +324,7 @@ export async function parsePetesXLSX(file: File): Promise<ParsedPetesData> {
       revenue,
       period,
       productCode: codeVal ? String(codeVal) : undefined,
+      excludeFromTotals: true, // Pete's is a sub-distributor; exclude to avoid double-counting
     };
     records.push(rec);
   }
@@ -345,7 +346,8 @@ export async function parsePetesXLSX(file: File): Promise<ParsedPetesData> {
         pieces: 0,
         revenue: revDiff,
         period,
-        productCode: 'ADJ'
+        productCode: 'ADJ',
+        excludeFromTotals: true, // Pete's is a sub-distributor; exclude to avoid double-counting
       });
       // Update computed totals to match targets
       computedRevenue = revTarget;

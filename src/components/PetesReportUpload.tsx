@@ -96,6 +96,12 @@ const PetesReportUpload: React.FC<PetesReportUploadProps> = ({ onDataParsed, onC
         <div className="mt-2 text-sm text-gray-600">
           Upload Pete's Coffee Excel sales report files to analyze like Alpine data
         </div>
+        <div className="mt-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-xs text-blue-800">
+            <span className="font-semibold">Note:</span> Pete's Coffee is a sub-distributor. 
+            Data can be viewed separately but is excluded from "All Businesses" totals to prevent double-counting.
+          </p>
+        </div>
       </CardHeader>
       <CardContent className="p-4 sm:p-6 pt-0">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

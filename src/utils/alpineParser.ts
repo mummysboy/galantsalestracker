@@ -10,6 +10,8 @@ export interface AlpineSalesRecord {
   period: string; // e.g., "2025-06", "2025-07", "2025-08"
   customerId?: string;
   productCode?: string;
+  accountName?: string; // For KeHe: the customer name under a retailer
+  excludeFromTotals?: boolean; // For sub-distributors like Pete's Coffee to avoid double-counting
 }
 
 export interface ParsedAlpineData {

@@ -87,12 +87,12 @@ export async function parseKeHeXLSX(file: File): Promise<ParsedKeHeData> {
     }
   }
 
-  // Find header row (should contain "Customer Name", "Product Description", etc.)
+  // Find header row (should contain "Customer Name" or "Retailer Name", and "Product Description", etc.)
   let headerRowIdx = -1;
   for (let i = 0; i < Math.min(rows.length, 20); i++) {
     const row = rows[i] || [];
     const joined = row.map(c => String(c || '').toLowerCase()).join(' ');
-    if (joined.includes('customer name') && joined.includes('product description')) {
+    if ((joined.includes('customer name') || joined.includes('retailer name')) && joined.includes('product description')) {
       headerRowIdx = i;
       break;
     }
@@ -117,8 +117,24 @@ export async function parseKeHeXLSX(file: File): Promise<ParsedKeHeData> {
   const headers = (rows[headerRowIdx] || []).map(c => String(c || '').trim());
   const headersLc = headers.map(h => h.toLowerCase());
 
-  // Find column indices
-  const customerNameIdx = headersLc.findIndex(h => h.includes('customer name'));
+  // Find column indices - try by name first, then fall back to fixed positions
+  // Level 1: Column B (index 1) - Retailer Name
+  // Level 2: Column C (index 2) - Customer Name  
+  // Level 3: Column D (index 3) - Product Category/Description
+  // Level 4: Column N (index 13) - Individual Product Data
+  let retailerNameIdx = headersLc.findIndex(h => h.includes('retailer name'));
+  let customerNameIdx = headersLc.findIndex(h => h.includes('customer name'));
+  let productCategoryIdx = headersLc.findIndex(h => h.includes('product description') || h.includes('category'));
+  let productDataIdx = headersLc.findIndex(h => h.includes('product') && h.includes('data'));
+  
+  // Fall back to fixed positions if not found by name
+  if (retailerNameIdx === -1) retailerNameIdx = 1; // Column B
+  if (customerNameIdx === -1) customerNameIdx = 2; // Column C
+  if (productCategoryIdx === -1) productCategoryIdx = 3; // Column D
+  if (productDataIdx === -1) productDataIdx = 13; // Column N
+  
+  
+  // Also find other useful columns
   const productDescIdx = headersLc.findIndex(h => h.includes('product description'));
   const brandNameIdx = headersLc.findIndex(h => h.includes('brand name'));
   const productSizeIdx = headersLc.findIndex(h => h.includes('product size'));
@@ -139,7 +155,19 @@ export async function parseKeHeXLSX(file: File): Promise<ParsedKeHeData> {
       continue;
     }
 
-    const customerName = customerNameIdx >= 0 ? String(row[customerNameIdx] || '').trim() : '';
+    // Extract data using the 4-level hierarchy:
+    // Level 1: Column B (index 1) - Retailer Name
+    // Level 2: Column C (index 2) - Customer Name  
+    // Level 3: Column D (index 3) - Product Category/Description
+    // Level 4: Column N (index 13) - Individual Product Data
+    
+    const retailerName = String(row[retailerNameIdx] || '').trim(); // Column B
+    const customerName = String(row[customerNameIdx] || '').trim(); // Column C
+    const productCategory = String(row[productCategoryIdx] || '').trim(); // Column D
+    const productData = String(row[productDataIdx] || '').trim(); // Column N
+    
+    
+    // Also extract other useful data
     const productDesc = productDescIdx >= 0 ? String(row[productDescIdx] || '').trim() : '';
     const brandName = brandNameIdx >= 0 ? String(row[brandNameIdx] || '').trim() : '';
     const productSize = productSizeIdx >= 0 ? String(row[productSizeIdx] || '').trim() : '';
@@ -149,22 +177,22 @@ export async function parseKeHeXLSX(file: File): Promise<ParsedKeHeData> {
     const upc = upcIdx >= 0 ? String(row[upcIdx] || '').trim() : '';
     const addressBookNumber = addressBookNumberIdx >= 0 ? String(row[addressBookNumberIdx] || '').trim() : '';
 
-    // Skip rows without essential data
-    if (!customerName || !productDesc || (qty === 0 && cost === 0)) {
+    // Skip rows without essential data - be more flexible about which columns are required
+    if (!retailerName || (qty === 0 && cost === 0)) {
       continue;
     }
-
-    // Build full product name with brand
-    const fullProductName = brandName 
-      ? `${brandName} ${productDesc}`.trim() 
-      : productDesc;
+    
+    // If we don't have customer name, use a default
+    const finalCustomerName = customerName || 'Unknown Customer';
+    const finalProductCategory = productCategory || 'General';
+    const finalProductData = productData || productDesc || 'Unknown Product';
 
     // Build size string
     const sizeStr = productSize && uom ? `${productSize} ${uom}` : (productSize || uom || '');
 
     const record: AlpineSalesRecord = {
-      customerName,
-      productName: fullProductName,
+      customerName: retailerName, // Level 1: Retailer Name (Column B)
+      productName: finalProductCategory, // Level 3: Product Category (Column D)
       size: sizeStr || undefined,
       cases: Math.round(qty),
       pieces: 0,
@@ -172,6 +200,7 @@ export async function parseKeHeXLSX(file: File): Promise<ParsedKeHeData> {
       period,
       productCode: upc || undefined,
       customerId: addressBookNumber || undefined,
+      accountName: finalCustomerName, // Level 2: Customer Name (Column C)
     };
 
     records.push(record);
@@ -200,4 +229,6 @@ export async function parseKeHeXLSX(file: File): Promise<ParsedKeHeData> {
     }
   };
 }
+
+
 

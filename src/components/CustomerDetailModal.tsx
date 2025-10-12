@@ -129,6 +129,10 @@ function calculateAlpineCustomerData(alpineData: AlpineSalesRecord[], customerNa
 
   return {
     purchaseRecords,
+    periods: {
+      current: sortedPeriods[sortedPeriods.length - 1],
+      previous: sortedPeriods.length >= 2 ? sortedPeriods[sortedPeriods.length - 2] : sortedPeriods[sortedPeriods.length - 1]
+    },
     totals: {
       totalCurrentRevenue,
       totalPreviousRevenue,
@@ -180,6 +184,12 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   alpineData,
   progressAnalysis
 }) => {
+
+  // Helper function to format period as MM/YYYY
+  const formatPeriodAsMMYYYY = (period: string) => {
+    const [year, month] = period.split('-');
+    return `${month}/${year}`;
+  };
 
   // Calculate customer-specific data
   const customerData = React.useMemo(() => {
@@ -271,6 +281,10 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
     return {
       purchaseRecords,
+      periods: {
+        current: "Current",
+        previous: "Previous"
+      },
       totals: {
         totalCurrentRevenue,
         totalPreviousRevenue,
@@ -355,13 +369,23 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               }`}>
                 {formatCurrency(customerData.totals.totalCurrentRevenue)}
               </div>
-              <div className="text-xs text-gray-600">Current Revenue</div>
+              <div className="text-xs text-gray-600">
+                {alpineData && alpineData.length > 0 
+                  ? formatPeriodAsMMYYYY(customerData.periods.current)
+                  : customerData.periods.current
+                }
+              </div>
             </div>
             <div className="text-center">
               <div className="text-lg font-bold text-gray-700">
                 {formatCurrency(customerData.totals.totalPreviousRevenue)}
               </div>
-              <div className="text-xs text-gray-600">Previous Revenue</div>
+              <div className="text-xs text-gray-600">
+                {alpineData && alpineData.length > 0 
+                  ? formatPeriodAsMMYYYY(customerData.periods.previous)
+                  : customerData.periods.previous
+                }
+              </div>
             </div>
             <div className="text-center">
               <div className={`text-lg font-bold ${
@@ -502,14 +526,24 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
-                      <div className="text-gray-600 text-xs mb-1">Current Period</div>
+                      <div className="text-gray-600 text-xs mb-1">
+                        {alpineData && alpineData.length > 0 
+                          ? formatPeriodAsMMYYYY(customerData.periods.current)
+                          : customerData.periods.current
+                        }
+                      </div>
                       <div className="font-medium">{formatNumber(record.currentQuantity)} pieces</div>
                       {record.currentCases > 0 && <div className="text-xs text-gray-500">{formatNumber(record.currentCases, 0)} cases</div>}
                       {record.currentNetLbs > 0 && <div className="text-xs text-gray-500">{formatNumber(record.currentNetLbs)} lbs</div>}
                       <div className="text-xs text-gray-500">{formatCurrency(record.currentRevenue)}</div>
                     </div>
                     <div>
-                      <div className="text-gray-600 text-xs mb-1">Previous Period</div>
+                      <div className="text-gray-600 text-xs mb-1">
+                        {alpineData && alpineData.length > 0 
+                          ? formatPeriodAsMMYYYY(customerData.periods.previous)
+                          : customerData.periods.previous
+                        }
+                      </div>
                       <div className="font-medium">{formatNumber(record.previousQuantity)} pieces</div>
                       {record.previousCases > 0 && <div className="text-xs text-gray-500">{formatNumber(record.previousCases, 0)} cases</div>}
                       {record.previousNetLbs > 0 && <div className="text-xs text-gray-500">{formatNumber(record.previousNetLbs)} lbs</div>}

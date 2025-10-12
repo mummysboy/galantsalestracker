@@ -15,6 +15,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card';
 import { Button } from './components/ui/button';
 import CustomerDetailModal from './components/CustomerDetailModal';
+import KeHeCustomerDetailModal from './components/KeHeCustomerDetailModal';
 import CustomerCsvPivotModal from './components/CustomerCsvPivotModal';
 import PeriodComparison from './components/PeriodComparison';
 import AlpineReportUpload from './components/AlpineReportUpload';
@@ -33,13 +34,15 @@ interface RevenueByCustomerProps {
   alpineData: AlpineSalesRecord[];
   onCustomerClick?: (customerName: string) => void;
   isComparisonMode?: boolean;
+  isKeHeMode?: boolean;
 }
 
 const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({ 
   revenueByCustomer, 
   alpineData,
   onCustomerClick,
-  isComparisonMode = false 
+  isComparisonMode = false,
+  isKeHeMode = false
 }) => {
   const [showAll, setShowAll] = useState(false);
   const [openCsvForCustomer, setOpenCsvForCustomer] = useState<string | null>(null);
@@ -66,6 +69,12 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
 
 
   const handleCustomerClick = (fullCustomerName: string) => {
+    // For KeHe mode, always use the custom modal (bypass comparison mode)
+    if (isKeHeMode) {
+      if (onCustomerClick) onCustomerClick(fullCustomerName);
+      return;
+    }
+    // For other distributors, use comparison mode if enabled
     if (isComparisonMode) {
       setOpenCsvForCustomer(prev => prev === fullCustomerName ? null : fullCustomerName);
       return;
@@ -128,10 +137,10 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
           <div 
             key={customer.id}
             className={`relative flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors ${
-              isComparisonMode ? 'cursor-pointer' : ''
+              (isComparisonMode || isKeHeMode) ? 'cursor-pointer' : ''
             }`}
             onClick={() => handleCustomerClick(customer.fullCustomerName)}
-            title={isComparisonMode ? "Click to view CSV breakdown" : "Customer revenue"}
+            title={isKeHeMode ? "Click to view customer summary" : isComparisonMode ? "Click to view CSV breakdown" : "Customer revenue"}
           >
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-gray-900 break-words">
@@ -243,10 +252,10 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
                 <div 
                   key={customer.id}
                   className={`relative flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors ${
-                    isComparisonMode ? 'cursor-pointer' : ''
+                    (isComparisonMode || isKeHeMode) ? 'cursor-pointer' : ''
                   }`}
                   onClick={() => handleCustomerClick(customer.fullCustomerName)}
-                  title={isComparisonMode ? "Click to view CSV breakdown" : "Customer revenue"}
+                  title={isKeHeMode ? "Click to view customer summary" : isComparisonMode ? "Click to view CSV breakdown" : "Customer revenue"}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-gray-900 break-words">
@@ -496,21 +505,28 @@ const Dashboard: React.FC = () => {
   };
 
   // Determine current dataset based on distributor
-  const currentData = useMemo(() => (
-    selectedDistributor === 'ALPINE' 
-      ? currentAlpineData 
-      : selectedDistributor === 'PETES' 
-        ? currentPetesData 
-        : selectedDistributor === 'KEHE'
-          ? currentKeHeData
-          : [...currentAlpineData, ...currentPetesData, ...currentKeHeData]
-  ), [selectedDistributor, currentAlpineData, currentPetesData, currentKeHeData]);
+  const currentData = useMemo(() => {
+    if (selectedDistributor === 'ALPINE') return currentAlpineData;
+    if (selectedDistributor === 'PETES') return currentPetesData;
+    if (selectedDistributor === 'KEHE') return currentKeHeData;
+    // For 'ALL': combine all data but exclude sub-distributors from totals
+    return [...currentAlpineData, ...currentPetesData, ...currentKeHeData];
+  }, [selectedDistributor, currentAlpineData, currentPetesData, currentKeHeData]);
+
+  // Data for calculations - excludes sub-distributors when viewing "All Businesses"
+  const dataForTotals = useMemo(() => {
+    if (selectedDistributor === 'ALL') {
+      // Exclude Pete's data to avoid double-counting (it's a sub-distributor)
+      return currentData.filter(r => !r.excludeFromTotals);
+    }
+    return currentData;
+  }, [currentData, selectedDistributor]);
 
   // Get available periods and set default to most recent
   const availablePeriods = useMemo(() => {
-    const periods = Array.from(new Set(currentData.map(r => r.period))).sort();
+    const periods = Array.from(new Set(dataForTotals.map(r => r.period))).sort();
     return periods;
-  }, [currentData]);
+  }, [dataForTotals]);
 
   // Add "All" option to periods, with most recent first
   const allPeriodOptions = useMemo(() => {
@@ -520,9 +536,9 @@ const Dashboard: React.FC = () => {
 
   // Filter data based on selected month
   const filteredData = useMemo(() => {
-    if (!selectedMonth || selectedMonth === 'all') return currentData;
-    return currentData.filter(record => record.period === selectedMonth);
-  }, [currentData, selectedMonth]);
+    if (!selectedMonth || selectedMonth === 'all') return dataForTotals;
+    return dataForTotals.filter(record => record.period === selectedMonth);
+  }, [dataForTotals, selectedMonth]);
 
   // Set default month to most recent when data changes
   React.useEffect(() => {
@@ -743,7 +759,7 @@ const Dashboard: React.FC = () => {
     }
 
     if (selectedMonth === periodToDelete) {
-      const remainingPeriods = Array.from(new Set(currentData.filter(r => r.period !== periodToDelete).map(r => r.period))).sort();
+      const remainingPeriods = Array.from(new Set(dataForTotals.filter(r => r.period !== periodToDelete).map(r => r.period))).sort();
       setSelectedMonth(remainingPeriods.length > 0 ? remainingPeriods[remainingPeriods.length - 1] : 'all');
     }
 
@@ -779,7 +795,7 @@ const Dashboard: React.FC = () => {
 
   // Revenue over time data (grouped by periods) - ALWAYS use all uploaded months
   const revenueOverTime = useMemo(() => {
-    const periodRevenue = currentData.reduce((acc, record) => {
+    const periodRevenue = dataForTotals.reduce((acc, record) => {
       const period = record.period;
       acc[period] = (acc[period] || 0) + record.revenue;
       return acc;
@@ -791,7 +807,7 @@ const Dashboard: React.FC = () => {
       period,
       revenue: Math.round((periodRevenue[period] || 0) * 100) / 100,
     }));
-  }, [currentData, availablePeriods]);
+  }, [dataForTotals, availablePeriods]);
 
   // Determine which period to highlight on the chart
   const highlightedPeriod = useMemo(() => {
@@ -857,7 +873,8 @@ const Dashboard: React.FC = () => {
 
   // Combined progressions for ALL view
   const combinedCustomerProgressions = useMemo(() => {
-    const data = [...currentAlpineData, ...currentPetesData, ...currentKeHeData];
+    // Exclude Pete's data to avoid double-counting (it's a sub-distributor)
+    const data = [...currentAlpineData, ...currentPetesData, ...currentKeHeData].filter(r => !r.excludeFromTotals);
     const customers = Array.from(new Set(data.map(r => r.customerName)));
     const map = new Map<string, any>();
     customers.forEach(c => {
@@ -872,11 +889,11 @@ const Dashboard: React.FC = () => {
 
   // Monthly accounts/cases summary pivot
   const monthlySummary = useMemo(() => {
-    const months = Array.from(new Set(currentData.map(r => r.period))).sort();
+    const months = Array.from(new Set(dataForTotals.map(r => r.period))).sort();
     const firstPurchaseByCustomer = new Map<string, string>();
     // Determine first purchase month per customer
     const byCustomer = new Map<string, string[]>();
-    currentData.forEach(r => {
+    dataForTotals.forEach(r => {
       if (!byCustomer.has(r.customerName)) byCustomer.set(r.customerName, []);
       byCustomer.get(r.customerName)!.push(r.period);
     });
@@ -891,7 +908,7 @@ const Dashboard: React.FC = () => {
     const customersByMonth: Record<string, Set<string>> = {};
 
     months.forEach(m => {
-      const records = currentData.filter(r => r.period === m);
+      const records = dataForTotals.filter(r => r.period === m);
       const orderedAccountSet = new Set(records.map(r => r.customerName));
       const newAccounts = Array.from(new Set(records
         .filter(r => firstPurchaseByCustomer.get(r.customerName) === m)
@@ -942,7 +959,7 @@ const Dashboard: React.FC = () => {
       totalCasesByMonth,
       avgCasesPerAccountByMonth
     };
-  }, [currentData]);
+  }, [dataForTotals]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -1044,6 +1061,11 @@ const Dashboard: React.FC = () => {
               <p className="text-sm text-gray-500 mt-1">
                 {filteredData.length} sales records{selectedMonth !== 'all' ? ` for ${selectedMonth === 'all' ? 'all periods' : getMonthName(selectedMonth)}` : ` from ${availablePeriods.join(', ')} periods`}
               </p>
+              {selectedDistributor === 'ALL' && currentPetesData.length > 0 && (
+                <div className="mt-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
+                  <span className="font-semibold">Note:</span> Totals exclude Pete's Coffee data to prevent double-counting (sub-distributor)
+                </div>
+              )}
               {/* Last uploaded invoice month removed with CSV uploader */}
             </div>
             <div className="flex gap-2">
@@ -1455,7 +1477,8 @@ const Dashboard: React.FC = () => {
                 revenueByCustomer={revenueByCustomer}
                 alpineData={currentData}
                 onCustomerClick={handleCustomerClick}
-                isComparisonMode={true}
+                isComparisonMode={selectedDistributor !== 'KEHE'}
+                isKeHeMode={selectedDistributor === 'KEHE'}
               />
             </CardContent>
           </Card>
@@ -1568,7 +1591,17 @@ const Dashboard: React.FC = () => {
         )}
 
         {/* Customer Detail Modal (click-through analysis) */}
-        {selectedCustomerForModal && (
+        {selectedCustomerForModal && selectedDistributor === 'KEHE' && (
+          <KeHeCustomerDetailModal
+            retailerName={selectedCustomerForModal}
+            keheData={currentKeHeData}
+            isOpen={isCustomerModalOpen}
+            onClose={handleCloseCustomerModal}
+          />
+        )}
+
+        {/* Customer Detail Modal for Alpine and Pete's */}
+        {selectedCustomerForModal && selectedDistributor !== 'KEHE' && (
           <CustomerDetailModal
             customerName={selectedCustomerForModal}
             currentInvoices={[]}
