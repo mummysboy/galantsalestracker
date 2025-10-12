@@ -143,6 +143,11 @@ export async function parseKeHeXLSX(file: File): Promise<ParsedKeHeData> {
   const currentYearCostIdx = headersLc.findIndex(h => h.includes('current') && h.includes('year') && h.includes('cost'));
   const upcIdx = headersLc.findIndex(h => h === 'upc');
   const addressBookNumberIdx = headersLc.findIndex(h => h.includes('address') && h.includes('book') && h.includes('number'));
+  
+  // Look for additional company name columns
+  const companyNameIdx = headersLc.findIndex(h => h.includes('company') && h.includes('name'));
+  const storeNameIdx = headersLc.findIndex(h => h.includes('store') && h.includes('name'));
+  const locationNameIdx = headersLc.findIndex(h => h.includes('location') && h.includes('name'));
 
   const records: AlpineSalesRecord[] = [];
   
@@ -176,6 +181,11 @@ export async function parseKeHeXLSX(file: File): Promise<ParsedKeHeData> {
     const cost = currentYearCostIdx >= 0 ? toNumber(row[currentYearCostIdx]) : 0;
     const upc = upcIdx >= 0 ? String(row[upcIdx] || '').trim() : '';
     const addressBookNumber = addressBookNumberIdx >= 0 ? String(row[addressBookNumberIdx] || '').trim() : '';
+    
+    // Extract full company name if available
+    const companyName = companyNameIdx >= 0 ? String(row[companyNameIdx] || '').trim() : '';
+    const storeName = storeNameIdx >= 0 ? String(row[storeNameIdx] || '').trim() : '';
+    const locationName = locationNameIdx >= 0 ? String(row[locationNameIdx] || '').trim() : '';
 
     // Skip rows without essential data - be more flexible about which columns are required
     if (!retailerName || (qty === 0 && cost === 0)) {
@@ -190,6 +200,9 @@ export async function parseKeHeXLSX(file: File): Promise<ParsedKeHeData> {
     // Build size string
     const sizeStr = productSize && uom ? `${productSize} ${uom}` : (productSize || uom || '');
 
+    // Determine the best company name to display
+    const fullCompanyName = companyName || storeName || locationName || retailerName;
+    
     const record: AlpineSalesRecord = {
       customerName: retailerName, // Level 1: Retailer Name (Column B)
       productName: finalProductCategory, // Level 3: Product Category (Column D)
@@ -200,7 +213,7 @@ export async function parseKeHeXLSX(file: File): Promise<ParsedKeHeData> {
       period,
       productCode: upc || undefined,
       customerId: addressBookNumber || undefined,
-      accountName: finalCustomerName, // Level 2: Customer Name (Column C)
+      accountName: fullCompanyName, // Use full company name if available, fallback to original
     };
 
     records.push(record);

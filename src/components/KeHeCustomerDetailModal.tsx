@@ -1,20 +1,41 @@
 import React, { useState, useMemo } from 'react';
-import { X, TrendingUp, TrendingDown, Package, ChevronDown, ChevronRight, Calendar } from 'lucide-react';
+import { X, TrendingUp, TrendingDown, Package, ChevronDown, ChevronRight, Calendar, Download } from 'lucide-react';
 import { Button } from './ui/button';
 import { AlpineSalesRecord } from '../utils/alpineParser';
 import { toTitleCase } from '../lib/utils';
 
-// Calculate customer data for a retailer (Level 1 -> Level 2)
-function calculateRetailerCustomerData(keheData: AlpineSalesRecord[], retailerName: string, selectedPeriod?: string, viewMode: 'month' | 'quarter' = 'month') {
+// Function to format company names for better readability
+const formatCompanyName = (companyName: string): string => {
+  // If it's already a readable name (doesn't contain codes like MPC), return as is
+  if (!companyName.includes('MPC') && !companyName.includes('/')) {
+    return companyName;
+  }
+  
+  // Try to extract meaningful parts from codes like "SPROUTS/MPC 328 DENVER-DELI/CH"
+  const parts = companyName.split('/');
+  if (parts.length >= 2) {
+    const storePart = parts[0]; // "SPROUTS"
+    const locationPart = parts[1].replace(/MPC \d+\s*/, '').replace(/DELI\/CH$/, '').trim(); // Extract location
+    
+    if (locationPart && locationPart !== '') {
+      return `${storePart} - ${locationPart}`;
+    }
+  }
+  
+  // Fallback: clean up the original name
+  return companyName
+    .replace(/MPC \d+\s*/, '') // Remove MPC number
+    .replace(/DELI\/CH$/, '') // Remove DELI/CH suffix
+    .replace(/\s+/g, ' ') // Clean up multiple spaces
+    .trim();
+};
+
+// Calculate customer data for a retailer (Level 1 -> Level 2) with all periods
+function calculateRetailerCustomerDataAllPeriods(keheData: AlpineSalesRecord[], retailerName: string, viewMode: 'month' | 'quarter' = 'month') {
   const retailerRecords = keheData.filter(record => record.customerName === retailerName);
   
   // Get all unique customers for this retailer
-  const customersMap = new Map<string, {
-    currentRevenue: number;
-    previousRevenue: number;
-    currentQuantity: number;
-    previousQuantity: number;
-  }>();
+  const customersMap = new Map<string, Map<string, number>>();
 
   // Determine periods
   const allPeriods = Array.from(new Set(retailerRecords.map(r => r.period))).sort();
@@ -27,69 +48,55 @@ function calculateRetailerCustomerData(keheData: AlpineSalesRecord[], retailerNa
     return `${year}-Q${quarter}`;
   };
 
-  const currentPeriod = selectedPeriod || allPeriods[allPeriods.length - 1];
-  const previousPeriod = allPeriods.length >= 2 ? allPeriods[allPeriods.length - 2] : currentPeriod;
+  // Get processed periods based on view mode
+  const processedPeriods = new Set<string>();
+  retailerRecords.forEach(record => {
+    const recordPeriod = viewMode === 'quarter' ? periodToQuarter(record.period) : record.period;
+    processedPeriods.add(recordPeriod);
+  });
+  
+  const sortedPeriods = Array.from(processedPeriods).sort();
 
   retailerRecords.forEach(record => {
     // Use accountName directly as customer name (Column C)
     const customerName = record.accountName || 'Unknown Customer';
+    const recordPeriod = viewMode === 'quarter' ? periodToQuarter(record.period) : record.period;
     
     if (!customersMap.has(customerName)) {
-      customersMap.set(customerName, {
-        currentRevenue: 0,
-        previousRevenue: 0,
-        currentQuantity: 0,
-        previousQuantity: 0,
-      });
+      customersMap.set(customerName, new Map());
     }
 
     const customerData = customersMap.get(customerName)!;
-    const recordPeriod = viewMode === 'quarter' ? periodToQuarter(record.period) : record.period;
-    
-    if (recordPeriod === currentPeriod) {
-      customerData.currentRevenue += record.revenue;
-      customerData.currentQuantity += record.cases;
-    } else if (recordPeriod === previousPeriod) {
-      customerData.previousRevenue += record.revenue;
-      customerData.previousQuantity += record.cases;
-    }
+    const currentQuantity = customerData.get(recordPeriod) || 0;
+    customerData.set(recordPeriod, currentQuantity + record.cases);
   });
 
-  // Convert to array and calculate changes
-  const customers = Array.from(customersMap.entries()).map(([customerName, data]) => ({
+  // Convert to array format
+  const customers = Array.from(customersMap.entries()).map(([customerName, periodData]) => ({
     customerName,
-    currentRevenue: data.currentRevenue,
-    previousRevenue: data.previousRevenue,
-    currentQuantity: data.currentQuantity,
-    previousQuantity: data.previousQuantity,
-    revenueChange: data.currentRevenue - data.previousRevenue,
-    changePercentage: data.previousRevenue > 0 
-      ? ((data.currentRevenue - data.previousRevenue) / data.previousRevenue) * 100 
-      : (data.currentRevenue > 0 ? 100 : 0),
+    periodData: periodData,
   }));
 
-  // Sort by current revenue
-  customers.sort((a, b) => b.currentRevenue - a.currentRevenue);
+  // Sort by total quantity across all periods
+  customers.sort((a, b) => {
+    const aTotal = Array.from(a.periodData.values()).reduce((sum, qty) => sum + qty, 0);
+    const bTotal = Array.from(b.periodData.values()).reduce((sum, qty) => sum + qty, 0);
+    return bTotal - aTotal;
+  });
 
-  return customers;
+  return { customers, periods: sortedPeriods };
 }
 
-// Calculate product data for a specific customer (Column N data)
-function calculateCustomerProductData(keheData: AlpineSalesRecord[], retailerName: string, customerName: string, selectedPeriod?: string, viewMode: 'month' | 'quarter' = 'month') {
+// Calculate product data for a specific customer (Column N data) with all periods
+function calculateCustomerProductDataAllPeriods(keheData: AlpineSalesRecord[], retailerName: string, customerName: string, viewMode: 'month' | 'quarter' = 'month') {
   const customerRecords = keheData.filter(record => 
     record.customerName === retailerName && 
     record.accountName === customerName
   );
   
   // Get all unique products for this customer
-  const productsMap = new Map<string, {
-    currentRevenue: number;
-    previousRevenue: number;
-    currentCases: number;
-    previousCases: number;
-    size?: string;
-    productCode?: string;
-  }>();
+  const productsMap = new Map<string, Map<string, number>>();
+  const productMetadata = new Map<string, { size?: string; productCode?: string }>();
 
   // Determine periods
   const allPeriods = Array.from(new Set(customerRecords.map(r => r.period))).sort();
@@ -102,56 +109,49 @@ function calculateCustomerProductData(keheData: AlpineSalesRecord[], retailerNam
     return `${year}-Q${quarter}`;
   };
 
-  const currentPeriod = selectedPeriod || allPeriods[allPeriods.length - 1];
-  const previousPeriod = allPeriods.length >= 2 ? allPeriods[allPeriods.length - 2] : currentPeriod;
+  // Get processed periods based on view mode
+  const processedPeriods = new Set<string>();
+  customerRecords.forEach(record => {
+    const recordPeriod = viewMode === 'quarter' ? periodToQuarter(record.period) : record.period;
+    processedPeriods.add(recordPeriod);
+  });
+  
+  const sortedPeriods = Array.from(processedPeriods).sort();
 
   customerRecords.forEach(record => {
     // Use productName directly (Column D) as the product identifier
     const productName = record.productName;
+    const recordPeriod = viewMode === 'quarter' ? periodToQuarter(record.period) : record.period;
     
     if (!productsMap.has(productName)) {
-      productsMap.set(productName, {
-        currentRevenue: 0,
-        previousRevenue: 0,
-        currentCases: 0,
-        previousCases: 0,
+      productsMap.set(productName, new Map());
+      productMetadata.set(productName, {
         size: record.size,
         productCode: record.productCode,
       });
     }
 
     const productData = productsMap.get(productName)!;
-    const recordPeriod = viewMode === 'quarter' ? periodToQuarter(record.period) : record.period;
-    
-    if (recordPeriod === currentPeriod) {
-      productData.currentRevenue += record.revenue;
-      productData.currentCases += record.cases;
-    } else if (recordPeriod === previousPeriod) {
-      productData.previousRevenue += record.revenue;
-      productData.previousCases += record.cases;
-    }
+    const currentQuantity = productData.get(recordPeriod) || 0;
+    productData.set(recordPeriod, currentQuantity + record.cases);
   });
 
-  // Convert to array and calculate changes
-  const products = Array.from(productsMap.entries()).map(([productName, data]) => ({
-      productName,
-      size: data.size,
-      productCode: data.productCode,
-    currentRevenue: data.currentRevenue,
-    previousRevenue: data.previousRevenue,
-    currentCases: data.currentCases,
-    previousCases: data.previousCases,
-    revenueChange: data.currentRevenue - data.previousRevenue,
-    casesChange: data.currentCases - data.previousCases,
-    changePercentage: data.previousRevenue > 0 
-      ? ((data.currentRevenue - data.previousRevenue) / data.previousRevenue) * 100 
-      : (data.currentRevenue > 0 ? 100 : 0),
+  // Convert to array format
+  const products = Array.from(productsMap.entries()).map(([productName, periodData]) => ({
+    productName,
+    periodData: periodData,
+    size: productMetadata.get(productName)?.size,
+    productCode: productMetadata.get(productName)?.productCode,
   }));
 
-  // Sort by current revenue
-  products.sort((a, b) => b.currentRevenue - a.currentRevenue);
+  // Sort by total quantity across all periods
+  products.sort((a, b) => {
+    const aTotal = Array.from(a.periodData.values()).reduce((sum, qty) => sum + qty, 0);
+    const bTotal = Array.from(b.periodData.values()).reduce((sum, qty) => sum + qty, 0);
+    return bTotal - aTotal;
+  });
 
-  return products;
+  return { products, periods: sortedPeriods };
 }
 
 interface KeHeCustomerDetailModalProps {
@@ -223,6 +223,9 @@ const KeHeCustomerDetailModal: React.FC<KeHeCustomerDetailModalProps> = ({
     }
   }, [availablePeriods, selectedPeriod]);
 
+  // Ensure we always have a selected period
+  const effectiveSelectedPeriod = selectedPeriod || (availablePeriods.length > 0 ? availablePeriods[availablePeriods.length - 1] : '');
+
   // Reset selected period when switching view modes
   React.useEffect(() => {
     if (availablePeriods.length > 0) {
@@ -248,341 +251,263 @@ const KeHeCustomerDetailModal: React.FC<KeHeCustomerDetailModalProps> = ({
     };
   }, [isPeriodDropdownOpen]);
 
+  // Function to export customer data as CSV
+  const exportToCSV = () => {
+    const { customers, periods } = calculateRetailerCustomerDataAllPeriods(keheData, retailerName, viewMode);
+    
+    // CSV Headers
+    const headers = ['Company', ...periods];
+    
+    // CSV Rows
+    const rows = customers.map(customer => [
+      customer.customerName,
+      ...periods.map(period => (customer.periodData.get(period) || 0).toString())
+    ]);
+    
+    // Add totals row
+    const totalsRow = ['Total', ...periods.map(period => {
+      const periodTotal = customers.reduce((sum, customer) => {
+        return sum + (customer.periodData.get(period) || 0);
+      }, 0);
+      return periodTotal.toString();
+    })];
+    
+    rows.push(totalsRow);
+    
+    // Convert to CSV format
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => {
+        // Escape cells containing commas, quotes, or newlines
+        const cellStr = String(cell);
+        if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+          return `"${cellStr.replace(/"/g, '""')}"`;
+        }
+        return cellStr;
+      }).join(','))
+    ].join('\n');
+    
+    // Create download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${retailerName}_Cases_By_Company_All_Periods.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (!isOpen) return null;
 
-  // Show customers (Column C) summary for retailer
-  const customers = calculateRetailerCustomerData(keheData, retailerName, selectedPeriod, viewMode);
+  // Show customers (Column C) summary for retailer with all periods
+  const { customers, periods } = calculateRetailerCustomerDataAllPeriods(keheData, retailerName, viewMode);
   
-  // Get the actual periods for labeling
-  const retailerRecords = keheData.filter(record => record.customerName === retailerName);
-  const allPeriods = Array.from(new Set(retailerRecords.map(r => r.period))).sort();
+  // Debug: Log what we found
+  console.log('KeHe Modal Debug:', {
+    retailerName,
+    totalRecords: keheData.length,
+    retailerRecords: keheData.filter(r => r.customerName === retailerName).length,
+    customersFound: customers.length,
+    periods,
+    viewMode,
+    sampleCustomers: customers.slice(0, 3).map(c => ({
+      customerName: c.customerName,
+      periodData: Object.fromEntries(c.periodData)
+    }))
+  });
   
-  // Format period names for display
-  const formatPeriodName = (period: string) => {
-    if (viewMode === 'quarter') {
-      return period; // Already in Q1-2025 format
-    }
-    const [year, month] = period.split('-');
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const monthIndex = parseInt(month) - 1;
-    const monthName = monthNames[monthIndex] || month;
-    const shortYear = year.slice(-2);
-    return `${monthName}-${shortYear}`;
-  };
-  
-  const currentPeriodName = selectedPeriod ? formatPeriodName(selectedPeriod) : 'Current';
-  const previousPeriodName = availablePeriods.length >= 2 ? formatPeriodName(availablePeriods[availablePeriods.length - 2]) : 'Previous';
-    
-    // Debug: Log what we found
-    console.log('KeHe Modal Debug:', {
-      retailerName,
-      totalRecords: keheData.length,
-      retailerRecords: keheData.filter(r => r.customerName === retailerName).length,
-      customersFound: customers.length,
-      selectedPeriod,
-      viewMode,
-      currentPeriodName,
-      previousPeriodName,
-      availablePeriods,
-      sampleRecords: keheData.filter(r => r.customerName === retailerName).slice(0, 3).map(r => ({
-        customerName: r.customerName,
-        accountName: r.accountName,
-        productName: r.productName
-      }))
-    });
-    
-    const totalCurrentRevenue = customers.reduce((sum, c) => sum + c.currentRevenue, 0);
-    const totalPreviousRevenue = customers.reduce((sum, c) => sum + c.previousRevenue, 0);
-  const totalCurrentCases = customers.reduce((sum, c) => sum + c.currentQuantity, 0);
-  const totalPreviousCases = customers.reduce((sum, c) => sum + c.previousQuantity, 0);
-    const totalChange = totalCurrentRevenue - totalPreviousRevenue;
-  const totalCasesChange = totalCurrentCases - totalPreviousCases;
-  const totalChangePercent = totalPreviousRevenue > 0 
-    ? ((totalCurrentRevenue - totalPreviousRevenue) / totalPreviousRevenue) * 100 
-    : (totalCurrentRevenue > 0 ? 100 : 0);
-  const totalCasesChangePercent = totalPreviousCases > 0 
-    ? ((totalCurrentCases - totalPreviousCases) / totalPreviousCases) * 100 
-    : (totalCurrentCases > 0 ? 100 : 0);
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[10000]">
-        <div className="bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[10000]"
+        onClick={onClose}
+      >
+        <div 
+          className="bg-white rounded-lg shadow-xl max-w-5xl w-full h-[90vh] overflow-hidden flex flex-col"
+          onClick={(e) => e.stopPropagation()}
+        >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <div className="flex-1">
-              <h2 className="text-xl font-bold text-gray-900">{retailerName}</h2>
-              <p className="text-sm text-gray-600">Customer Revenue Summary (Column C)</p>
-              
-              {/* Period Selection Controls */}
-              <div className="flex items-center gap-3 mt-3">
-                <div className="relative period-dropdown">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsPeriodDropdownOpen(!isPeriodDropdownOpen)}
-                    className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
-                  >
-                    <Calendar className="w-4 h-4" />
-                    {selectedPeriod ? formatPeriodName(selectedPeriod) : 'Select Period'}
-                    <ChevronDown className={`w-4 h-4 transition-transform ${isPeriodDropdownOpen ? 'rotate-180' : ''}`} />
-                  </Button>
-                  
-                  {isPeriodDropdownOpen && (
-                    <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                      <div className="py-1">
-                        {availablePeriods.map((period) => (
-                          <button
-                            key={period}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setSelectedPeriod(period);
-                              setIsPeriodDropdownOpen(false);
-                            }}
-                            className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${
-                              selectedPeriod === period ? 'text-blue-700 font-medium bg-blue-50' : 'text-gray-700'
-                            }`}
-                          >
-                            {formatPeriodName(period)}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                
-                {/* View Mode Toggle */}
-                <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-                  <button
-                    onClick={() => setViewMode('month')}
-                    className={`px-3 py-1 text-sm rounded transition-colors ${
-                      viewMode === 'month' 
-                        ? 'bg-white text-gray-900 shadow-sm' 
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    Month
-                  </button>
-                  <button
-                    onClick={() => setViewMode('quarter')}
-                    className={`px-3 py-1 text-sm rounded transition-colors ${
-                      viewMode === 'quarter' 
-                        ? 'bg-white text-gray-900 shadow-sm' 
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    Quarter
-                  </button>
-                </div>
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-
-        {/* Summary */}
-        <div className="p-6 border-b border-gray-200 bg-gray-50">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <div className="text-sm font-medium text-gray-700 mb-2">{currentPeriodName} Revenue</div>
-              <div className="text-lg font-bold text-blue-600">
-                {formatCurrency(totalCurrentRevenue)}
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-sm font-medium text-gray-700 mb-2">{currentPeriodName} Cases</div>
-              <div className="text-lg font-bold text-blue-600">
-                {totalCurrentCases.toLocaleString()}
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-sm font-medium text-gray-700 mb-2">Revenue Change</div>
-              <div className={`text-lg font-bold ${
-                totalChange >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}>
-                {totalChange >= 0 ? '+' : ''}{formatCurrency(totalChange)}
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-sm font-medium text-gray-700 mb-2">Cases Change</div>
-              <div className={`text-lg font-bold ${
-                totalCasesChange >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}>
-                {totalCasesChange >= 0 ? '+' : ''}{totalCasesChange.toLocaleString()}
-              </div>
+          <div className="p-6 pb-0">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900">{retailerName} • All Invoices</h3>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-4 h-4" />
+              </Button>
             </div>
           </div>
-        </div>
 
         {/* Customers List */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <h3 className="text-lg font-semibold mb-4">Customers by Revenue ({customers.length})</h3>
+        <div className="flex-1 overflow-y-auto">
+          
           {customers.length > 0 ? (
-            <div className="space-y-3">
-              {customers.map((customer, index) => {
-                const isExpanded = expandedCustomers.has(customer.customerName);
-                const products = calculateCustomerProductData(keheData, retailerName, customer.customerName, selectedPeriod, viewMode);
-                
-                return (
-                  <div
-                    key={`${customer.customerName}-${index}`}
-                    className="border rounded-lg overflow-hidden"
-                  >
-                    {/* Customer Header - Clickable */}
-                    <div 
-                      className="p-4 hover:bg-gray-50 transition-colors cursor-pointer"
-                      onClick={() => toggleCustomerExpansion(customer.customerName)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-semibold text-gray-900">{customer.customerName}</h4>
-                            {products.length > 0 && (
-                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                                {products.length} products
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-4 mt-2 text-sm">
-                            <span className="text-gray-600">
-                              {currentPeriodName}: <span className="font-medium">{formatCurrency(customer.currentRevenue)}</span>
-                            </span>
-                            <span className="text-gray-600">
-                              {currentPeriodName}: <span className="font-medium">{customer.currentQuantity.toLocaleString()}</span>
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
-                            <span>{previousPeriodName}: {formatCurrency(customer.previousRevenue)}</span>
-                            <span>{previousPeriodName}: {customer.previousQuantity.toLocaleString()}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="text-right">
-                            {getTrendIcon(customer.revenueChange)}
-                          </div>
-                          <div className="text-right">
-                            <div className={`font-bold text-sm ${
-                              customer.revenueChange >= 0 ? 'text-green-600' : 'text-red-600'
-                            }`}>
-                              {customer.revenueChange >= 0 ? '+' : ''}{formatCurrency(customer.revenueChange)}
-                            </div>
-                            <div className={`text-xs ${
-                              customer.changePercentage >= 0 ? 'text-green-600' : 'text-red-600'
-                            }`}>
-                              {customer.changePercentage >= 0 ? '+' : ''}{customer.changePercentage.toFixed(1)}%
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className={`font-bold text-sm ${
-                              (customer.currentQuantity - customer.previousQuantity) >= 0 ? 'text-green-600' : 'text-red-600'
-                            }`}>
-                              {(customer.currentQuantity - customer.previousQuantity) >= 0 ? '+' : ''}{(customer.currentQuantity - customer.previousQuantity).toLocaleString()} cases
-                            </div>
-                            <div className={`text-xs ${
-                              customer.previousQuantity > 0 ? 
-                                ((customer.currentQuantity - customer.previousQuantity) / customer.previousQuantity * 100) >= 0 ? 'text-green-600' : 'text-red-600'
-                                : 'text-gray-500'
-                            }`}>
-                              {customer.previousQuantity > 0 ? 
-                                `${((customer.currentQuantity - customer.previousQuantity) / customer.previousQuantity * 100) >= 0 ? '+' : ''}${((customer.currentQuantity - customer.previousQuantity) / customer.previousQuantity * 100).toFixed(1)}%`
-                                : 'N/A'
-                              }
-                            </div>
-                          </div>
-                          {products.length > 0 && (
-                            <div className="ml-2">
-                              {isExpanded ? (
-                                <ChevronDown className="w-5 h-5 text-gray-400" />
-                              ) : (
-                                <ChevronRight className="w-5 h-5 text-gray-400" />
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Product Dropdown */}
-                    {isExpanded && products.length > 0 && (
-                      <div className="border-t bg-gray-50 p-4">
-                        <h5 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-                          <Package className="w-4 h-4" />
-                          Products ({products.length})
-                        </h5>
-                        <div className="space-y-2">
-                          {products.map((product, productIndex) => (
-                            <div
-                              key={`${product.productName}-${productIndex}`}
-                              className="bg-white border rounded-lg p-3"
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1">
-                                  <div className="font-medium text-gray-900">{toTitleCase(product.productName)}</div>
-                      {(product.size || product.productCode) && (
-                        <div className="text-xs text-gray-500 flex gap-2 mt-1">
-                          {product.size && <span>Size: {product.size}</span>}
-                          {product.productCode && <span>Code: {product.productCode}</span>}
-                        </div>
-                      )}
-                    </div>
-                                <div className="flex items-center gap-4 text-sm">
-                                  <div className="text-right">
-                                    <div className="text-gray-600">Cases</div>
-                                    <div className="font-medium">
-                                      {product.currentCases} / {product.previousCases}
-                  </div>
-                                    <div className={`text-xs ${
-                                      product.casesChange >= 0 ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                                      {product.casesChange >= 0 ? '+' : ''}{product.casesChange}
-                  </div>
-                </div>
-                                  <div className="text-right">
-                                    <div className="text-gray-600">Revenue</div>
-                                    <div className="font-medium">
-                                      {formatCurrency(product.currentRevenue)}
-                  </div>
-                                    <div className={`text-xs ${
-                                      product.revenueChange >= 0 ? 'text-green-600' : 'text-red-600'
-                                    }`}>
-                      {product.revenueChange >= 0 ? '+' : ''}{formatCurrency(product.revenueChange)}
-                    </div>
-                    </div>
-                  </div>
-                </div>
+            <div className="px-6 pb-4">
+              <div className="bg-white">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left px-4 py-3 text-sm font-bold text-gray-900">Company</th>
+                      {periods.map((period) => (
+                        <th key={period} className="text-right px-4 py-3 text-sm font-bold text-gray-900">
+                          {period}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {customers.map((customer, index) => {
+                      const isExpanded = expandedCustomers.has(customer.customerName);
+                      const { products } = calculateCustomerProductDataAllPeriods(keheData, retailerName, customer.customerName, viewMode);
+                      
+                      return (
+                        <React.Fragment key={`${customer.customerName}-${index}`}>
+                          <tr 
+                            className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+                            onClick={() => toggleCustomerExpansion(customer.customerName)}
+                          >
+                            <td className="px-4 py-3 text-sm text-gray-900">
+                              <div className="flex items-center gap-2">
+                                {products.length > 0 && (
+                                  <div className="flex items-center gap-1">
+                                    {isExpanded ? (
+                                      <ChevronDown className="w-4 h-4 text-gray-400" />
+                                    ) : (
+                                      <ChevronRight className="w-4 h-4 text-gray-400" />
+                                    )}
+                                  </div>
+                                )}
+                                <span className="font-medium">{formatCompanyName(customer.customerName)}</span>
+                              </div>
+                            </td>
+                            {periods.map((period) => (
+                              <td key={period} className="px-4 py-3 text-sm text-right text-gray-900">
+                                {customer.periodData.get(period) || 0}
+                              </td>
+                            ))}
+                          </tr>
+                          
+                          {/* Product Breakdown Row */}
+                          <tr className="bg-gray-50">
+                            <td colSpan={periods.length + 1} className="p-0">
+                              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                                <div className="px-4 py-4">
+                                  <div className="bg-white border border-gray-200 rounded-lg">
+                                    <table className="w-full border-collapse">
+                                      <thead>
+                                        <tr className="border-b border-gray-200">
+                                          <th className="text-left px-4 py-3 text-sm font-bold text-gray-900 bg-gray-50">Product</th>
+                                          <th className="text-center px-4 py-3 text-sm font-bold text-gray-900 bg-gray-50">Code</th>
+                                          {periods.map((period) => (
+                                            <th key={period} className="text-center px-4 py-3 text-sm font-bold text-gray-900 bg-gray-50">
+                                              {period}
+                                            </th>
+                                          ))}
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {products.map((product, productIndex) => (
+                                          <tr key={`${product.productName}-${productIndex}`} className="border-b border-gray-100">
+                                            <td className="px-4 py-3 text-sm text-gray-900">
+                                              {toTitleCase(product.productName)}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-center text-gray-900">
+                                              {product.productCode || ''}
+                                            </td>
+                                            {periods.map((period) => (
+                                              <td key={period} className="px-4 py-3 text-sm text-right text-gray-900">
+                                                {product.periodData.get(period) || 0}
+                                              </td>
+                                            ))}
+                                          </tr>
+                                        ))}
+                                        {/* Product Totals Row */}
+                                        <tr className="border-t border-gray-300">
+                                          <td className="px-4 py-3 text-sm font-bold text-gray-900">Total</td>
+                                          <td className="px-4 py-3 text-sm font-bold text-center text-gray-900"></td>
+                                          {periods.map((period) => {
+                                            const periodTotal = products.reduce((sum, product) => {
+                                              return sum + (product.periodData.get(period) || 0);
+                                            }, 0);
+                                            return (
+                                              <td key={period} className="px-4 py-3 text-sm font-bold text-right text-gray-900">
+                                                {periodTotal}
+                                              </td>
+                                            );
+                                          })}
+                                        </tr>
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        </React.Fragment>
+                      );
+                    })}
+                    {/* Total Row */}
+                    <tr className="border-t border-gray-200">
+                      <td className="px-4 py-3 text-sm font-bold text-gray-900">Total</td>
+                      {periods.map((period) => {
+                        const periodTotal = customers.reduce((sum, customer) => {
+                          return sum + (customer.periodData.get(period) || 0);
+                        }, 0);
+                        return (
+                          <td key={period} className="px-4 py-3 text-sm font-bold text-right text-gray-900">
+                            {periodTotal}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  </tbody>
+                </table>
               </div>
-            ))}
-          </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-gray-500 px-6">
               <Package className="w-12 h-12 mx-auto mb-4 text-gray-300" />
               <p className="text-lg font-medium">No customer data found</p>
               <p className="text-sm mt-2">Column C (Customer Name) may not be populated in the uploaded data</p>
             </div>
           )}
-        </div>
-
+          
           {/* Footer */}
-          <div className="p-6 border-t border-gray-200 bg-gray-50">
+          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
             <div className="flex justify-between items-center">
-            <div className="text-sm text-gray-600">
-              Click on customers to view their product details (Column N data)
-            </div>
-              <Button onClick={onClose}>Close</Button>
+              <div className="text-sm text-gray-600">
+                Sum of Cases by Company • Click companies to view product breakdown
+              </div>
+              <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setViewMode('month')}
+                  className={`px-3 py-1 text-sm rounded transition-colors ${
+                    viewMode === 'month' 
+                      ? 'bg-blue-600 text-white shadow-sm' 
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Month
+                </button>
+                <button
+                  onClick={() => setViewMode('quarter')}
+                  className={`px-3 py-1 text-sm rounded transition-colors ${
+                    viewMode === 'quarter' 
+                      ? 'bg-blue-600 text-white shadow-sm' 
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Quarter
+                </button>
+              </div>
             </div>
           </div>
+        </div>
       </div>
     </div>
   );
