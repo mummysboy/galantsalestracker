@@ -2110,7 +2110,7 @@ const Dashboard: React.FC = () => {
 
         {selectedCustomerForModal && selectedDistributor === 'TONYS' && (
           <TonysCustomerDetailModal
-            warehouseName={selectedCustomerForModal}
+            customerName={selectedCustomerForModal}
             tonysData={currentTonysData}
             isOpen={isCustomerModalOpen}
             onClose={handleCloseCustomerModal}

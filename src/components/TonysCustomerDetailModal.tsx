@@ -9,69 +9,9 @@ const formatCompanyName = (companyName: string): string => {
   return companyName;
 };
 
-// Calculate store data for a warehouse (Level 1 -> Level 2) with all periods
-function calculateWarehouseStoreDataAllPeriods(tonysData: AlpineSalesRecord[], warehouseName: string, viewMode: 'month' | 'quarter' = 'month') {
-  const warehouseRecords = tonysData.filter(record => record.customerName === warehouseName);
-  
-  // Get all unique stores for this warehouse
-  const storesMap = new Map<string, Map<string, number>>();
-
-  // Determine periods
-  const allPeriods = Array.from(new Set(warehouseRecords.map(r => r.period))).sort();
-  
-  // Convert to quarter format if needed
-  const periodToQuarter = (period: string) => {
-    const [year, monthStr] = period.split('-');
-    const month = parseInt(monthStr, 10);
-    const quarter = Math.floor((month - 1) / 3) + 1;
-    return `${year}-Q${quarter}`;
-  };
-
-  // Get processed periods based on view mode
-  const processedPeriods = new Set<string>();
-  warehouseRecords.forEach(record => {
-    const recordPeriod = viewMode === 'quarter' ? periodToQuarter(record.period) : record.period;
-    processedPeriods.add(recordPeriod);
-  });
-  
-  const sortedPeriods = Array.from(processedPeriods).sort();
-
-  warehouseRecords.forEach(record => {
-    // Use accountName directly as store name
-    const storeName = record.accountName || 'Unknown Store';
-    const recordPeriod = viewMode === 'quarter' ? periodToQuarter(record.period) : record.period;
-    
-    if (!storesMap.has(storeName)) {
-      storesMap.set(storeName, new Map());
-    }
-
-    const storeData = storesMap.get(storeName)!;
-    const currentQuantity = storeData.get(recordPeriod) || 0;
-    storeData.set(recordPeriod, currentQuantity + record.cases);
-  });
-
-  // Convert to array format
-  const stores = Array.from(storesMap.entries()).map(([storeName, periodData]) => ({
-    storeName,
-    periodData: periodData,
-  }));
-
-  // Sort by total quantity across all periods
-  stores.sort((a, b) => {
-    const aTotal = Array.from(a.periodData.values()).reduce((sum, qty) => sum + qty, 0);
-    const bTotal = Array.from(b.periodData.values()).reduce((sum, qty) => sum + qty, 0);
-    return bTotal - aTotal;
-  });
-
-  return { stores, periods: sortedPeriods };
-}
-
-// Calculate product data for a specific store with all periods
-function calculateStoreProductDataAllPeriods(tonysData: AlpineSalesRecord[], warehouseName: string, storeName: string, viewMode: 'month' | 'quarter' = 'month') {
-  const storeRecords = tonysData.filter(record => 
-    record.customerName === warehouseName && 
-    record.accountName === storeName
-  );
+// Calculate product data for a store (Level 3 -> Products) with all periods
+function calculateStoreProductDataAllPeriods(tonysData: AlpineSalesRecord[], storeName: string, viewMode: 'month' | 'quarter' = 'month') {
+  const storeRecords = tonysData.filter(record => record.customerName === storeName);
   
   // Get all unique products for this store
   const productsMap = new Map<string, Map<string, number>>();
@@ -133,8 +73,10 @@ function calculateStoreProductDataAllPeriods(tonysData: AlpineSalesRecord[], war
   return { products, periods: sortedPeriods };
 }
 
+// This function is no longer needed since we're showing products directly for each store
+
 interface TonysCustomerDetailModalProps {
-  warehouseName: string;
+  customerName: string; // This is now the store name (Column C)
   tonysData: AlpineSalesRecord[];
   isOpen: boolean;
   onClose: () => void;
@@ -142,13 +84,12 @@ interface TonysCustomerDetailModalProps {
 }
 
 const TonysCustomerDetailModal: React.FC<TonysCustomerDetailModalProps> = ({
-  warehouseName,
+  customerName,
   tonysData,
   isOpen,
   onClose,
   selectedMonth,
 }) => {
-  const [expandedStores, setExpandedStores] = useState<Set<string>>(new Set());
   const [selectedPeriod, setSelectedPeriod] = useState<string>('');
   const [viewMode, setViewMode] = useState<'month' | 'quarter'>('month');
   const [isPeriodDropdownOpen, setIsPeriodDropdownOpen] = useState(false);
@@ -156,36 +97,10 @@ const TonysCustomerDetailModal: React.FC<TonysCustomerDetailModalProps> = ({
   
   const PERIOD_WINDOW_SIZE = 3;
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2
-    }).format(amount);
-  };
-
-  const getTrendIcon = (change: number) => {
-    if (change > 0) return <TrendingUp className="w-4 h-4 text-green-600" />;
-    if (change < 0) return <TrendingDown className="w-4 h-4 text-red-600" />;
-    return null;
-  };
-
-  const toggleStoreExpansion = (storeName: string) => {
-    setExpandedStores(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(storeName)) {
-        newSet.delete(storeName);
-      } else {
-        newSet.add(storeName);
-      }
-      return newSet;
-    });
-  };
-
-  // Get available periods for this warehouse
+  // Get available periods for this store
   const availablePeriods = useMemo(() => {
-    const warehouseRecords = tonysData.filter(record => record.customerName === warehouseName);
-    const periods = Array.from(new Set(warehouseRecords.map(r => r.period))).sort();
+    const storeRecords = tonysData.filter(record => record.customerName === customerName);
+    const periods = Array.from(new Set(storeRecords.map(r => r.period))).sort();
     
     if (viewMode === 'quarter') {
       const quarterPeriods = Array.from(new Set(periods.map(p => {
@@ -198,7 +113,7 @@ const TonysCustomerDetailModal: React.FC<TonysCustomerDetailModalProps> = ({
     }
     
     return periods;
-  }, [tonysData, warehouseName, viewMode]);
+  }, [tonysData, customerName, viewMode]);
 
   // Set default period when data changes and initialize period range
   React.useEffect(() => {
@@ -281,23 +196,25 @@ const TonysCustomerDetailModal: React.FC<TonysCustomerDetailModalProps> = ({
     };
   }, [isPeriodDropdownOpen]);
 
-  // Function to export store data as CSV
+  // Function to export product data as CSV
   const exportToCSV = () => {
-    const { stores, periods } = calculateWarehouseStoreDataAllPeriods(tonysData, warehouseName, viewMode);
+    const { products, periods } = calculateStoreProductDataAllPeriods(tonysData, customerName, viewMode);
     
     // CSV Headers
-    const headers = ['Store', ...periods];
+    const headers = ['Product', 'Code', 'Size', ...periods];
     
     // CSV Rows
-    const rows = stores.map(store => [
-      store.storeName,
-      ...periods.map(period => (store.periodData.get(period) || 0).toString())
+    const rows = products.map(product => [
+      product.productName,
+      product.productCode || '',
+      product.size || '',
+      ...periods.map(period => (product.periodData.get(period) || 0).toString())
     ]);
     
     // Add totals row
-    const totalsRow = ['Total', ...periods.map(period => {
-      const periodTotal = stores.reduce((sum, store) => {
-        return sum + (store.periodData.get(period) || 0);
+    const totalsRow = ['Total', '', '', ...periods.map(period => {
+      const periodTotal = products.reduce((sum, product) => {
+        return sum + (product.periodData.get(period) || 0);
       }, 0);
       return periodTotal.toString();
     })];
@@ -322,7 +239,7 @@ const TonysCustomerDetailModal: React.FC<TonysCustomerDetailModalProps> = ({
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `${warehouseName}_Cases_By_Store_All_Periods.csv`);
+    link.setAttribute('download', `${customerName}_Cases_By_Product_All_Periods.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -331,23 +248,23 @@ const TonysCustomerDetailModal: React.FC<TonysCustomerDetailModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Show stores summary for warehouse with visible periods only
-  const { stores, periods: allPeriods } = calculateWarehouseStoreDataAllPeriods(tonysData, warehouseName, viewMode);
+  // Show products for this store with visible periods only
+  const { products, periods: allPeriods } = calculateStoreProductDataAllPeriods(tonysData, customerName, viewMode);
   
   // Filter periods to only show visible ones
   const periods = visiblePeriods;
   
   // Debug: Log what we found
   console.log('Tonys Modal Debug:', {
-    warehouseName,
+    customerName,
     totalRecords: tonysData.length,
-    warehouseRecords: tonysData.filter(r => r.customerName === warehouseName).length,
-    storesFound: stores.length,
+    storeRecords: tonysData.filter(r => r.customerName === customerName).length,
+    productsFound: products.length,
     periods,
     viewMode,
-    sampleStores: stores.slice(0, 3).map(s => ({
-      storeName: s.storeName,
-      periodData: Object.fromEntries(s.periodData)
+    sampleProducts: products.slice(0, 3).map(p => ({
+      productName: p.productName,
+      periodData: Object.fromEntries(p.periodData)
     }))
   });
   
@@ -364,7 +281,7 @@ const TonysCustomerDetailModal: React.FC<TonysCustomerDetailModalProps> = ({
           {/* Header */}
           <div className="p-6 pb-0">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">{warehouseName} • All Invoices</h3>
+              <h3 className="text-lg font-bold text-gray-900">{customerName} • All Invoices</h3>
               <div className="flex items-center gap-3">
                 {/* Navigation controls for period range */}
                 {availablePeriods.length > PERIOD_WINDOW_SIZE && (
@@ -403,16 +320,18 @@ const TonysCustomerDetailModal: React.FC<TonysCustomerDetailModalProps> = ({
             </div>
           </div>
 
-        {/* Stores List */}
+        {/* Products List */}
         <div className="flex-1 overflow-y-auto">
           
-          {stores.length > 0 ? (
+          {products.length > 0 ? (
             <div className="px-6 pb-4">
               <div className="bg-white">
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className="text-left px-4 py-3 text-sm font-bold text-gray-900">Store</th>
+                      <th className="text-left px-4 py-3 text-sm font-bold text-gray-900">Product</th>
+                      <th className="text-center px-4 py-3 text-sm font-bold text-gray-900">Code</th>
+                      <th className="text-center px-4 py-3 text-sm font-bold text-gray-900">Size</th>
                       {periods.map((period) => (
                         <th key={period} className="text-right px-4 py-3 text-sm font-bold text-gray-900">
                           {period}
@@ -421,102 +340,32 @@ const TonysCustomerDetailModal: React.FC<TonysCustomerDetailModalProps> = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {stores.map((store, index) => {
-                      const isExpanded = expandedStores.has(store.storeName);
-                      const { products } = calculateStoreProductDataAllPeriods(tonysData, warehouseName, store.storeName, viewMode);
-                      
-                      return (
-                        <React.Fragment key={`${store.storeName}-${index}`}>
-                          <tr 
-                            className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
-                            onClick={() => toggleStoreExpansion(store.storeName)}
-                          >
-                            <td className="px-4 py-3 text-sm text-gray-900">
-                              <div className="flex items-center gap-2">
-                                {products.length > 0 && (
-                                  <div className="flex items-center gap-1">
-                                    {isExpanded ? (
-                                      <ChevronDown className="w-4 h-4 text-gray-400" />
-                                    ) : (
-                                      <ChevronRight className="w-4 h-4 text-gray-400" />
-                                    )}
-                                  </div>
-                                )}
-                                <span className="font-medium">{formatCompanyName(store.storeName)}</span>
-                              </div>
-                            </td>
-                            {periods.map((period) => (
-                              <td key={period} className="px-4 py-3 text-sm text-right text-gray-900">
-                                {store.periodData.get(period) || 0}
-                              </td>
-                            ))}
-                          </tr>
-                          
-                          {/* Product Breakdown Row */}
-                          <tr className="bg-gray-50">
-                            <td colSpan={periods.length + 1} className="p-0">
-                              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[800px] opacity-100' : 'max-h-0 opacity-0'}`}>
-                                <div className="px-4 py-4">
-                                  <div className="bg-white border border-gray-200 rounded-lg">
-                                    <table className="w-full border-collapse">
-                                      <thead>
-                                        <tr className="border-b border-gray-200">
-                                          <th className="text-left px-4 py-3 text-sm font-bold text-gray-900 bg-gray-50">Product</th>
-                                          <th className="text-center px-4 py-3 text-sm font-bold text-gray-900 bg-gray-50">Code</th>
-                                          {periods.map((period) => (
-                                            <th key={period} className="text-center px-4 py-3 text-sm font-bold text-gray-900 bg-gray-50">
-                                              {period}
-                                            </th>
-                                          ))}
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {products.map((product, productIndex) => (
-                                          <tr key={`${product.productName}-${productIndex}`} className="border-b border-gray-100">
-                                            <td className="px-4 py-3 text-sm text-gray-900">
-                                              {toTitleCase(product.productName)}
-                                            </td>
-                                            <td className="px-4 py-3 text-sm text-center text-gray-900">
-                                              {product.productCode || ''}
-                                            </td>
-                                            {periods.map((period) => (
-                                              <td key={period} className="px-4 py-3 text-sm text-right text-gray-900">
-                                                {product.periodData.get(period) || 0}
-                                              </td>
-                                            ))}
-                                          </tr>
-                                        ))}
-                                        {/* Product Totals Row */}
-                                        <tr className="border-t border-gray-300">
-                                          <td className="px-4 py-3 text-sm font-bold text-gray-900">Total</td>
-                                          <td className="px-4 py-3 text-sm font-bold text-center text-gray-900"></td>
-                                          {periods.map((period) => {
-                                            const periodTotal = products.reduce((sum, product) => {
-                                              return sum + (product.periodData.get(period) || 0);
-                                            }, 0);
-                                            return (
-                                              <td key={period} className="px-4 py-3 text-sm font-bold text-right text-gray-900">
-                                                {periodTotal}
-                                              </td>
-                                            );
-                                          })}
-                                        </tr>
-                                      </tbody>
-                                    </table>
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        </React.Fragment>
-                      );
-                    })}
+                    {products.map((product, index) => (
+                      <tr key={`${product.productName}-${index}`} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          <span className="font-medium">{toTitleCase(product.productName)}</span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-center text-gray-900">
+                          {product.productCode || ''}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-center text-gray-900">
+                          {product.size || ''}
+                        </td>
+                        {periods.map((period) => (
+                          <td key={period} className="px-4 py-3 text-sm text-right text-gray-900">
+                            {product.periodData.get(period) || 0}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
                     {/* Total Row */}
                     <tr className="border-t border-gray-200">
                       <td className="px-4 py-3 text-sm font-bold text-gray-900">Total</td>
+                      <td className="px-4 py-3 text-sm font-bold text-center text-gray-900"></td>
+                      <td className="px-4 py-3 text-sm font-bold text-center text-gray-900"></td>
                       {periods.map((period) => {
-                        const periodTotal = stores.reduce((sum, store) => {
-                          return sum + (store.periodData.get(period) || 0);
+                        const periodTotal = products.reduce((sum, product) => {
+                          return sum + (product.periodData.get(period) || 0);
                         }, 0);
                         return (
                           <td key={period} className="px-4 py-3 text-sm font-bold text-right text-gray-900">
@@ -532,8 +381,8 @@ const TonysCustomerDetailModal: React.FC<TonysCustomerDetailModalProps> = ({
           ) : (
             <div className="text-center py-8 text-gray-500 px-6">
               <Package className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p className="text-lg font-medium">No store data found</p>
-              <p className="text-sm mt-2">Store data may not be populated in the uploaded data</p>
+              <p className="text-lg font-medium">No product data found</p>
+              <p className="text-sm mt-2">Product data may not be populated in the uploaded data</p>
             </div>
           )}
           
@@ -541,25 +390,25 @@ const TonysCustomerDetailModal: React.FC<TonysCustomerDetailModalProps> = ({
           <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
             <div className="flex justify-between items-center">
               <div className="text-sm text-gray-600">
-                Sum of Cases by Store • Click stores to view product breakdown
+                Sum of Cases by Product • Store: {customerName}
               </div>
-              <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => setViewMode('month')}
-                  className={`px-3 py-1 text-sm rounded transition-colors ${
+                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
                     viewMode === 'month' 
-                      ? 'bg-orange-600 text-white shadow-sm' 
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
                   Month
                 </button>
                 <button
                   onClick={() => setViewMode('quarter')}
-                  className={`px-3 py-1 text-sm rounded transition-colors ${
+                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
                     viewMode === 'quarter' 
-                      ? 'bg-orange-600 text-white shadow-sm' 
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
                   Quarter

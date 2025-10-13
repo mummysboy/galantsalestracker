@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { AlpineSalesRecord } from './alpineParser';
+import { mapToCanonicalProductName } from './productMapping';
 
 export interface ParsedTonysData {
   records: AlpineSalesRecord[];
@@ -148,16 +149,16 @@ export async function parseTonysXLSX(file: File): Promise<ParsedTonysData> {
     }
 
     const record: AlpineSalesRecord = {
-      customerName: warehouse, // Level 1: Warehouse
-      productName: productName, // Product: Brand + Description
+      customerName: warehouse, // Level 1: Warehouse as primary customer
+      productName: mapToCanonicalProductName(productName), // Product: Brand + Description - normalized
       size: sizeStr || undefined,
       cases: Math.round(qty),
       pieces: 0,
       revenue: 0, // Tony's data doesn't include revenue, set to 0
       period,
       productCode: itemNumber || vendorItem || undefined,
-      customerId: shipToCustomer || undefined,
-      accountName: storeName, // Level 2/3: Store Name (we'll use this for drill-down)
+      customerId: shipToCustomer || undefined, // Level 2: Location ID as customerId
+      accountName: storeName, // Level 3: Store Name for final drill-down
     };
 
     records.push(record);
