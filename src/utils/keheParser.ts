@@ -120,18 +120,13 @@ export async function parseKeHeXLSX(file: File): Promise<ParsedKeHeData> {
   // Find column indices - try by name first, then fall back to fixed positions
   // Level 1: Column B (index 1) - Retailer Name
   // Level 2: Column C (index 2) - Customer Name  
-  // Level 3: Column D (index 3) - Product Category/Description
-  // Level 4: Column N (index 13) - Individual Product Data
+  // Level 3: Column N (index 13) - Individual Product Data
   let retailerNameIdx = headersLc.findIndex(h => h.includes('retailer name'));
   let customerNameIdx = headersLc.findIndex(h => h.includes('customer name'));
-  let productCategoryIdx = headersLc.findIndex(h => h.includes('product description') || h.includes('category'));
-  let productDataIdx = headersLc.findIndex(h => h.includes('product') && h.includes('data'));
   
   // Fall back to fixed positions if not found by name
   if (retailerNameIdx === -1) retailerNameIdx = 1; // Column B
   if (customerNameIdx === -1) customerNameIdx = 2; // Column C
-  if (productCategoryIdx === -1) productCategoryIdx = 3; // Column D
-  if (productDataIdx === -1) productDataIdx = 13; // Column N
   
   
   // Also find other useful columns
@@ -148,6 +143,10 @@ export async function parseKeHeXLSX(file: File): Promise<ParsedKeHeData> {
   const companyNameIdx = headersLc.findIndex(h => h.includes('company') && h.includes('name'));
   const storeNameIdx = headersLc.findIndex(h => h.includes('store') && h.includes('name'));
   const locationNameIdx = headersLc.findIndex(h => h.includes('location') && h.includes('name'));
+  
+  // Find Column N - try by position 13 (N is 14th column, index 13)
+  // Look for product-related data in column N
+  const productDataColIdx = 13; // Column N
 
   const records: AlpineSalesRecord[] = [];
   
@@ -160,17 +159,16 @@ export async function parseKeHeXLSX(file: File): Promise<ParsedKeHeData> {
       continue;
     }
 
-    // Extract data using the 4-level hierarchy:
+    // Extract data using the 3-level hierarchy (as displayed to user):
     // Level 1: Column B (index 1) - Retailer Name
     // Level 2: Column C (index 2) - Customer Name  
-    // Level 3: Column D (index 3) - Product Category/Description
-    // Level 4: Column N (index 13) - Individual Product Data
+    // Level 3: Column N (index 13) - Individual Product Data
     
     const retailerName = String(row[retailerNameIdx] || '').trim(); // Column B
     const customerName = String(row[customerNameIdx] || '').trim(); // Column C
-    const productCategory = String(row[productCategoryIdx] || '').trim(); // Column D
-    const productData = String(row[productDataIdx] || '').trim(); // Column N
     
+    // Try to get product data from Column N (index 13)
+    const productDataFromN = productDataColIdx < row.length ? String(row[productDataColIdx] || '').trim() : '';
     
     // Also extract other useful data
     const productDesc = productDescIdx >= 0 ? String(row[productDescIdx] || '').trim() : '';
@@ -182,7 +180,7 @@ export async function parseKeHeXLSX(file: File): Promise<ParsedKeHeData> {
     const upc = upcIdx >= 0 ? String(row[upcIdx] || '').trim() : '';
     const addressBookNumber = addressBookNumberIdx >= 0 ? String(row[addressBookNumberIdx] || '').trim() : '';
     
-    // Extract full company name if available
+    // Extract full company name if available (for Level 2 display)
     const companyName = companyNameIdx >= 0 ? String(row[companyNameIdx] || '').trim() : '';
     const storeName = storeNameIdx >= 0 ? String(row[storeNameIdx] || '').trim() : '';
     const locationName = locationNameIdx >= 0 ? String(row[locationNameIdx] || '').trim() : '';
@@ -192,20 +190,18 @@ export async function parseKeHeXLSX(file: File): Promise<ParsedKeHeData> {
       continue;
     }
     
-    // If we don't have customer name, use a default
-    const finalCustomerName = customerName || 'Unknown Customer';
-    const finalProductCategory = productCategory || 'General';
-    const finalProductData = productData || productDesc || 'Unknown Product';
+    // Determine the best company name to display (Level 2: Customer Name from Column C or derived)
+    const fullCompanyName = companyName || storeName || locationName || customerName || 'Unknown Customer';
+    
+    // For Level 3, use Column N data, fallback to product description
+    const finalProductName = productDataFromN || productDesc || brandName || 'Unknown Product';
 
     // Build size string
     const sizeStr = productSize && uom ? `${productSize} ${uom}` : (productSize || uom || '');
-
-    // Determine the best company name to display
-    const fullCompanyName = companyName || storeName || locationName || retailerName;
     
     const record: AlpineSalesRecord = {
       customerName: retailerName, // Level 1: Retailer Name (Column B)
-      productName: finalProductCategory, // Level 3: Product Category (Column D)
+      productName: finalProductName, // Level 3: Product Data (Column N)
       size: sizeStr || undefined,
       cases: Math.round(qty),
       pieces: 0,
@@ -213,7 +209,7 @@ export async function parseKeHeXLSX(file: File): Promise<ParsedKeHeData> {
       period,
       productCode: upc || undefined,
       customerId: addressBookNumber || undefined,
-      accountName: fullCompanyName, // Use full company name if available, fallback to original
+      accountName: fullCompanyName, // Level 2: Customer Name (Column C or derived)
     };
 
     records.push(record);
