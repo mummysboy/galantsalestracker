@@ -6,39 +6,19 @@ import { toTitleCase } from '../lib/utils';
 
 // Function to format company names for better readability
 const formatCompanyName = (companyName: string): string => {
-  // If it's already a readable name (doesn't contain codes like MPC), return as is
-  if (!companyName.includes('MPC') && !companyName.includes('/')) {
-    return companyName;
-  }
-  
-  // Try to extract meaningful parts from codes like "SPROUTS/MPC 328 DENVER-DELI/CH"
-  const parts = companyName.split('/');
-  if (parts.length >= 2) {
-    const storePart = parts[0]; // "SPROUTS"
-    const locationPart = parts[1].replace(/MPC \d+\s*/, '').replace(/DELI\/CH$/, '').trim(); // Extract location
-    
-    if (locationPart && locationPart !== '') {
-      return `${storePart} - ${locationPart}`;
-    }
-  }
-  
-  // Fallback: clean up the original name
-  return companyName
-    .replace(/MPC \d+\s*/, '') // Remove MPC number
-    .replace(/DELI\/CH$/, '') // Remove DELI/CH suffix
-    .replace(/\s+/g, ' ') // Clean up multiple spaces
-    .trim();
+  // Return as is for now, can enhance later
+  return companyName;
 };
 
-// Calculate customer data for a retailer (Level 1 -> Level 2) with all periods
-function calculateRetailerCustomerDataAllPeriods(keheData: AlpineSalesRecord[], retailerName: string, viewMode: 'month' | 'quarter' = 'month') {
-  const retailerRecords = keheData.filter(record => record.customerName === retailerName);
+// Calculate customer data for an OPCO (Level 1 -> Level 2) with all periods
+function calculateOpcoCustomerDataAllPeriods(vistarData: AlpineSalesRecord[], opcoName: string, viewMode: 'month' | 'quarter' = 'month') {
+  const opcoRecords = vistarData.filter(record => record.customerName === opcoName);
   
-  // Get all unique customers for this retailer
+  // Get all unique customers for this OPCO
   const customersMap = new Map<string, Map<string, number>>();
 
   // Determine periods
-  const allPeriods = Array.from(new Set(retailerRecords.map(r => r.period))).sort();
+  const allPeriods = Array.from(new Set(opcoRecords.map(r => r.period))).sort();
   
   // Convert to quarter format if needed
   const periodToQuarter = (period: string) => {
@@ -50,15 +30,15 @@ function calculateRetailerCustomerDataAllPeriods(keheData: AlpineSalesRecord[], 
 
   // Get processed periods based on view mode
   const processedPeriods = new Set<string>();
-  retailerRecords.forEach(record => {
+  opcoRecords.forEach(record => {
     const recordPeriod = viewMode === 'quarter' ? periodToQuarter(record.period) : record.period;
     processedPeriods.add(recordPeriod);
   });
   
   const sortedPeriods = Array.from(processedPeriods).sort();
 
-  retailerRecords.forEach(record => {
-    // Use accountName directly as customer name (Column C)
+  opcoRecords.forEach(record => {
+    // Use accountName directly as customer name (Customer Desc)
     const customerName = record.accountName || 'Unknown Customer';
     const recordPeriod = viewMode === 'quarter' ? periodToQuarter(record.period) : record.period;
     
@@ -87,10 +67,10 @@ function calculateRetailerCustomerDataAllPeriods(keheData: AlpineSalesRecord[], 
   return { customers, periods: sortedPeriods };
 }
 
-// Calculate product data for a specific customer (Column N data) with all periods
-function calculateCustomerProductDataAllPeriods(keheData: AlpineSalesRecord[], retailerName: string, customerName: string, viewMode: 'month' | 'quarter' = 'month') {
-  const customerRecords = keheData.filter(record => 
-    record.customerName === retailerName && 
+// Calculate product data for a specific customer with all periods
+function calculateCustomerProductDataAllPeriods(vistarData: AlpineSalesRecord[], opcoName: string, customerName: string, viewMode: 'month' | 'quarter' = 'month') {
+  const customerRecords = vistarData.filter(record => 
+    record.customerName === opcoName && 
     record.accountName === customerName
   );
   
@@ -119,7 +99,7 @@ function calculateCustomerProductDataAllPeriods(keheData: AlpineSalesRecord[], r
   const sortedPeriods = Array.from(processedPeriods).sort();
 
   customerRecords.forEach(record => {
-    // Use productName directly (Column D) as the product identifier
+    // Use productName directly (Item Description) as the product identifier
     const productName = record.productName;
     const recordPeriod = viewMode === 'quarter' ? periodToQuarter(record.period) : record.period;
     
@@ -154,17 +134,17 @@ function calculateCustomerProductDataAllPeriods(keheData: AlpineSalesRecord[], r
   return { products, periods: sortedPeriods };
 }
 
-interface KeHeCustomerDetailModalProps {
-  retailerName: string;
-  keheData: AlpineSalesRecord[];
+interface VistarCustomerDetailModalProps {
+  opcoName: string;
+  vistarData: AlpineSalesRecord[];
   isOpen: boolean;
   onClose: () => void;
   selectedMonth?: string;
 }
 
-const KeHeCustomerDetailModal: React.FC<KeHeCustomerDetailModalProps> = ({
-  retailerName,
-  keheData,
+const VistarCustomerDetailModal: React.FC<VistarCustomerDetailModalProps> = ({
+  opcoName,
+  vistarData,
   isOpen,
   onClose,
   selectedMonth,
@@ -203,10 +183,10 @@ const KeHeCustomerDetailModal: React.FC<KeHeCustomerDetailModalProps> = ({
     });
   };
 
-  // Get available periods for this retailer
+  // Get available periods for this OPCO
   const availablePeriods = useMemo(() => {
-    const retailerRecords = keheData.filter(record => record.customerName === retailerName);
-    const periods = Array.from(new Set(retailerRecords.map(r => r.period))).sort();
+    const opcoRecords = vistarData.filter(record => record.customerName === opcoName);
+    const periods = Array.from(new Set(opcoRecords.map(r => r.period))).sort();
     
     if (viewMode === 'quarter') {
       const quarterPeriods = Array.from(new Set(periods.map(p => {
@@ -219,7 +199,7 @@ const KeHeCustomerDetailModal: React.FC<KeHeCustomerDetailModalProps> = ({
     }
     
     return periods;
-  }, [keheData, retailerName, viewMode]);
+  }, [vistarData, opcoName, viewMode]);
 
   // Set default period when data changes and initialize period range
   React.useEffect(() => {
@@ -304,10 +284,10 @@ const KeHeCustomerDetailModal: React.FC<KeHeCustomerDetailModalProps> = ({
 
   // Function to export customer data as CSV
   const exportToCSV = () => {
-    const { customers, periods } = calculateRetailerCustomerDataAllPeriods(keheData, retailerName, viewMode);
+    const { customers, periods } = calculateOpcoCustomerDataAllPeriods(vistarData, opcoName, viewMode);
     
     // CSV Headers
-    const headers = ['Company', ...periods];
+    const headers = ['Customer', ...periods];
     
     // CSV Rows
     const rows = customers.map(customer => [
@@ -343,7 +323,7 @@ const KeHeCustomerDetailModal: React.FC<KeHeCustomerDetailModalProps> = ({
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `${retailerName}_Cases_By_Company_All_Periods.csv`);
+    link.setAttribute('download', `${opcoName}_Cases_By_Customer_All_Periods.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -352,17 +332,17 @@ const KeHeCustomerDetailModal: React.FC<KeHeCustomerDetailModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Show customers (Column C) summary for retailer with visible periods only
-  const { customers, periods: allPeriods } = calculateRetailerCustomerDataAllPeriods(keheData, retailerName, viewMode);
+  // Show customers (Customer Desc) summary for OPCO with visible periods only
+  const { customers, periods: allPeriods } = calculateOpcoCustomerDataAllPeriods(vistarData, opcoName, viewMode);
   
   // Filter periods to only show visible ones
   const periods = visiblePeriods;
   
   // Debug: Log what we found
-  console.log('KeHe Modal Debug:', {
-    retailerName,
-    totalRecords: keheData.length,
-    retailerRecords: keheData.filter(r => r.customerName === retailerName).length,
+  console.log('Vistar Modal Debug:', {
+    opcoName,
+    totalRecords: vistarData.length,
+    opcoRecords: vistarData.filter(r => r.customerName === opcoName).length,
     customersFound: customers.length,
     periods,
     viewMode,
@@ -385,7 +365,7 @@ const KeHeCustomerDetailModal: React.FC<KeHeCustomerDetailModalProps> = ({
           {/* Header */}
           <div className="p-6 pb-0">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">{retailerName} • All Invoices</h3>
+              <h3 className="text-lg font-bold text-gray-900">{opcoName} • All Invoices</h3>
               <div className="flex items-center gap-3">
                 {/* Navigation controls for period range */}
                 {availablePeriods.length > PERIOD_WINDOW_SIZE && (
@@ -433,7 +413,7 @@ const KeHeCustomerDetailModal: React.FC<KeHeCustomerDetailModalProps> = ({
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className="text-left px-4 py-3 text-sm font-bold text-gray-900">Company</th>
+                      <th className="text-left px-4 py-3 text-sm font-bold text-gray-900">Customer</th>
                       {periods.map((period) => (
                         <th key={period} className="text-right px-4 py-3 text-sm font-bold text-gray-900">
                           {period}
@@ -444,7 +424,7 @@ const KeHeCustomerDetailModal: React.FC<KeHeCustomerDetailModalProps> = ({
                   <tbody>
                     {customers.map((customer, index) => {
                       const isExpanded = expandedCustomers.has(customer.customerName);
-                      const { products } = calculateCustomerProductDataAllPeriods(keheData, retailerName, customer.customerName, viewMode);
+                      const { products } = calculateCustomerProductDataAllPeriods(vistarData, opcoName, customer.customerName, viewMode);
                       
                       return (
                         <React.Fragment key={`${customer.customerName}-${index}`}>
@@ -554,7 +534,7 @@ const KeHeCustomerDetailModal: React.FC<KeHeCustomerDetailModalProps> = ({
             <div className="text-center py-8 text-gray-500 px-6">
               <Package className="w-12 h-12 mx-auto mb-4 text-gray-300" />
               <p className="text-lg font-medium">No customer data found</p>
-              <p className="text-sm mt-2">Column C (Customer Name) may not be populated in the uploaded data</p>
+              <p className="text-sm mt-2">Customer Desc may not be populated in the uploaded data</p>
             </div>
           )}
           
@@ -562,14 +542,14 @@ const KeHeCustomerDetailModal: React.FC<KeHeCustomerDetailModalProps> = ({
           <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
             <div className="flex justify-between items-center">
               <div className="text-sm text-gray-600">
-                Sum of Cases by Company • Click companies to view product breakdown
+                Sum of Cases by Customer • Click customers to view product breakdown
               </div>
               <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
                 <button
                   onClick={() => setViewMode('month')}
                   className={`px-3 py-1 text-sm rounded transition-colors ${
                     viewMode === 'month' 
-                      ? 'bg-blue-600 text-white shadow-sm' 
+                      ? 'bg-purple-600 text-white shadow-sm' 
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
@@ -579,7 +559,7 @@ const KeHeCustomerDetailModal: React.FC<KeHeCustomerDetailModalProps> = ({
                   onClick={() => setViewMode('quarter')}
                   className={`px-3 py-1 text-sm rounded transition-colors ${
                     viewMode === 'quarter' 
-                      ? 'bg-blue-600 text-white shadow-sm' 
+                      ? 'bg-purple-600 text-white shadow-sm' 
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
@@ -594,5 +574,5 @@ const KeHeCustomerDetailModal: React.FC<KeHeCustomerDetailModalProps> = ({
   );
 };
 
-export default KeHeCustomerDetailModal;
+export default VistarCustomerDetailModal;
 

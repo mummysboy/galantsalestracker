@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   LineChart,
   Line,
@@ -20,10 +20,12 @@ import InvoiceList from './components/InvoiceList';
 import CustomReportModal from './components/CustomReportModal';
 import { AlpineSalesRecord, analyzeCustomerProgress } from './utils/alpineParser';
 // Removed hardcoded June seed; start empty and let uploads populate
-import { Upload, BarChart3, ChevronDown, Trash2, X } from 'lucide-react';
+import { Upload, BarChart3, ChevronDown, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toTitleCase } from './lib/utils';
 import PetesReportUpload from './components/PetesReportUpload';
 import KeHeReportUpload from './components/KeHeReportUpload';
+import VistarReportUpload from './components/VistarReportUpload';
+import VistarCustomerDetailModal from './components/VistarCustomerDetailModal';
 
 // Revenue by Customer Component
 interface RevenueByCustomerProps {
@@ -32,6 +34,12 @@ interface RevenueByCustomerProps {
   onCustomerClick?: (customerName: string) => void;
   isComparisonMode?: boolean;
   isKeHeMode?: boolean;
+  isVistarMode?: boolean;
+  customerPivotRange?: { start: number; end: number } | null;
+  setCustomerPivotRange?: (range: { start: number; end: number } | null) => void;
+  navigateCustomerPivot?: (direction: 'left' | 'right', totalPeriods: number) => void;
+  CUSTOMER_PIVOT_WINDOW_SIZE?: number;
+  selectedMonth?: string;
 }
 
 const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({ 
@@ -39,7 +47,13 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
   alpineData,
   onCustomerClick,
   isComparisonMode = false,
-  isKeHeMode = false
+  isKeHeMode = false,
+  isVistarMode = false,
+  customerPivotRange,
+  setCustomerPivotRange,
+  navigateCustomerPivot,
+  CUSTOMER_PIVOT_WINDOW_SIZE = 3,
+  selectedMonth
 }) => {
   const [showAll, setShowAll] = useState(false);
   const [openCsvForCustomer, setOpenCsvForCustomer] = useState<string | null>(null);
@@ -66,8 +80,13 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
 
 
   const handleCustomerClick = (fullCustomerName: string) => {
-    // For KeHe mode, always use the custom modal (bypass comparison mode)
-    if (isKeHeMode) {
+    // Reset customer pivot range when opening a new customer modal
+    if (setCustomerPivotRange) {
+      setCustomerPivotRange(null);
+    }
+    
+    // For KeHe or Vistar mode, always use the custom modal (bypass comparison mode)
+    if (isKeHeMode || isVistarMode) {
       if (onCustomerClick) onCustomerClick(fullCustomerName);
       return;
     }
@@ -90,7 +109,7 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
       });
   };
 
-  const getCustomerPivot = (customerName: string) => {
+  const getCustomerPivot = (customerName: string, currentSelectedMonth?: string) => {
     const rows = buildCustomerRows(customerName);
     const periodToQuarter = (p: string) => {
       const [y, mStr] = p.split('-');
@@ -106,8 +125,31 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
       return parseInt(qa, 10) - parseInt(qb, 10);
     };
 
-    const labels = Array.from(new Set(rows.map(r => pivotMode === 'month' ? r.period : periodToQuarter(r.period))));
-    labels.sort(pivotMode === 'month' ? undefined : compareQuarter);
+    const allLabels = Array.from(new Set(rows.map(r => pivotMode === 'month' ? r.period : periodToQuarter(r.period))));
+    allLabels.sort(pivotMode === 'month' ? undefined : compareQuarter);
+    
+    // Initialize customer pivot range if not set - always show current month on the right
+    if (!customerPivotRange && allLabels.length > CUSTOMER_PIVOT_WINDOW_SIZE && setCustomerPivotRange) {
+      const currentPeriod = currentSelectedMonth && currentSelectedMonth !== 'all' ? currentSelectedMonth : allLabels[allLabels.length - 1];
+      const currentIndex = allLabels.findIndex(label => label === currentPeriod);
+      
+      if (currentIndex >= 0) {
+        // Position current month on the right (last position in the 3-month window)
+        const end = currentIndex;
+        const start = Math.max(0, end - CUSTOMER_PIVOT_WINDOW_SIZE + 1);
+        setCustomerPivotRange({ start, end });
+      } else {
+        // Fallback to showing the most recent months
+        const start = Math.max(0, allLabels.length - CUSTOMER_PIVOT_WINDOW_SIZE);
+        const end = allLabels.length - 1;
+        setCustomerPivotRange({ start, end });
+      }
+    }
+    
+    // Apply sliding window
+    const labels = customerPivotRange && allLabels.length > CUSTOMER_PIVOT_WINDOW_SIZE
+      ? allLabels.slice(customerPivotRange.start, customerPivotRange.end + 1)
+      : allLabels;
 
     const byProduct = new Map<string, { productName: string; productCode: string; values: Record<string, number> }>();
     rows.forEach(r => {
@@ -134,10 +176,10 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
           <div 
             key={customer.id}
             className={`relative flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors ${
-              (isComparisonMode || isKeHeMode) ? 'cursor-pointer' : ''
+              (isComparisonMode || isKeHeMode || isVistarMode) ? 'cursor-pointer' : ''
             }`}
             onClick={() => handleCustomerClick(customer.fullCustomerName)}
-            title={isKeHeMode ? "Click to view customer summary" : isComparisonMode ? "Click to view CSV breakdown" : "Customer revenue"}
+            title={isKeHeMode || isVistarMode ? "Click to view customer summary" : isComparisonMode ? "Click to view CSV breakdown" : "Customer revenue"}
           >
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-gray-900 break-words">
@@ -177,7 +219,7 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
                   </div>
                   <div className="max-h-[70vh] overflow-auto">
                     {(() => {
-                      const pivot = getCustomerPivot(customer.fullCustomerName);
+                      const pivot = getCustomerPivot(customer.fullCustomerName, selectedMonth);
                       const monthsFiltered = pivot.columns.filter(m => !csvSearch || m.toLowerCase().includes(csvSearch.toLowerCase()));
                       const productsFiltered = pivot.products.filter(p => {
                         if (!csvSearch) return true;
@@ -188,7 +230,41 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
                         );
                       });
                       return (
-                        <table className="w-full text-xs">
+                        <>
+                          {/* Navigation controls for customer pivot */}
+                          {pivot.columns.length > CUSTOMER_PIVOT_WINDOW_SIZE && (
+                            <div className="flex items-center justify-end px-3 py-2 bg-gray-100 border-b">
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (navigateCustomerPivot) navigateCustomerPivot('left', pivot.columns.length);
+                                  }}
+                                  className="p-1 hover:bg-gray-200 rounded disabled:opacity-50"
+                                  disabled={!customerPivotRange || customerPivotRange.start === 0}
+                                >
+                                  <ChevronLeft className="w-4 h-4" />
+                                </button>
+                                <span className="text-xs text-gray-600 px-2">
+                                  {customerPivotRange ? 
+                                    `${pivot.columns[customerPivotRange.start]} - ${pivot.columns[customerPivotRange.end]}` :
+                                    `${pivot.columns.length} periods`
+                                  }
+                                </span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (navigateCustomerPivot) navigateCustomerPivot('right', pivot.columns.length);
+                                  }}
+                                  className="p-1 hover:bg-gray-200 rounded disabled:opacity-50"
+                                  disabled={!customerPivotRange || customerPivotRange.end === pivot.columns.length - 1}
+                                >
+                                  <ChevronRight className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                          <table className="w-full text-xs">
                           <thead className="bg-gray-50 sticky top-0">
                             <tr>
                               <th className="p-2 text-left">Product</th>
@@ -223,6 +299,7 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
                             })()}
                           </tbody>
                         </table>
+                        </>
                       );
                     })()}
                   </div>
@@ -249,10 +326,10 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
                 <div 
                   key={customer.id}
                   className={`relative flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors ${
-                    (isComparisonMode || isKeHeMode) ? 'cursor-pointer' : ''
+                    (isComparisonMode || isKeHeMode || isVistarMode) ? 'cursor-pointer' : ''
                   }`}
                   onClick={() => handleCustomerClick(customer.fullCustomerName)}
-                  title={isKeHeMode ? "Click to view customer summary" : isComparisonMode ? "Click to view CSV breakdown" : "Customer revenue"}
+                  title={isKeHeMode || isVistarMode ? "Click to view customer summary" : isComparisonMode ? "Click to view CSV breakdown" : "Customer revenue"}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-gray-900 break-words">
@@ -292,7 +369,7 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
                         </div>
                         <div className="max-h-[70vh] overflow-auto">
                           {(() => {
-                            const pivot = getCustomerPivot(customer.fullCustomerName);
+                            const pivot = getCustomerPivot(customer.fullCustomerName, selectedMonth);
                             const monthsFiltered = pivot.columns.filter((m: string) => !csvSearch || m.toLowerCase().includes(csvSearch.toLowerCase()));
                             const productsFiltered = pivot.products.filter(p => {
                               if (!csvSearch) return true;
@@ -468,6 +545,7 @@ const Dashboard: React.FC = () => {
   const [currentAlpineData, setCurrentAlpineData] = useState<AlpineSalesRecord[]>([]);
   const [currentPetesData, setCurrentPetesData] = useState<AlpineSalesRecord[]>([]);
   const [currentKeHeData, setCurrentKeHeData] = useState<AlpineSalesRecord[]>([]);
+  const [currentVistarData, setCurrentVistarData] = useState<AlpineSalesRecord[]>([]);
   const [currentCustomerProgressions, setCurrentCustomerProgressions] = useState<Map<string, any>>(new Map());
   const [currentPetesCustomerProgressions, setCurrentPetesCustomerProgressions] = useState<Map<string, any>>(new Map());
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -483,9 +561,15 @@ const Dashboard: React.FC = () => {
   const [showMonthlySummary, setShowMonthlySummary] = useState(false);
   const [openNewAccountsTooltipMonth, setOpenNewAccountsTooltipMonth] = useState<string | null>(null);
   const [openDeltaTooltipMonth, setOpenDeltaTooltipMonth] = useState<string | null>(null);
-  const [selectedDistributor, setSelectedDistributor] = useState<'ALPINE' | 'PETES' | 'KEHE' | 'ALL'>('ALPINE');
+  const [selectedDistributor, setSelectedDistributor] = useState<'ALPINE' | 'PETES' | 'KEHE' | 'VISTAR' | 'ALL'>('ALPINE');
   const [isDistributorDropdownOpen, setIsDistributorDropdownOpen] = useState(false);
   const [showCustomReport, setShowCustomReport] = useState(false);
+  
+  // Chart navigation state
+  const [chartVisibleRange, setChartVisibleRange] = useState<{start: number, end: number} | null>(null);
+  const [customerPivotRange, setCustomerPivotRange] = useState<{start: number, end: number} | null>(null);
+  const [monthlySummaryRange, setMonthlySummaryRange] = useState<{start: number, end: number} | null>(null);
+  
   const tooltipTimerRef = React.useRef<number | null>(null);
   const cancelTooltipClose = () => {
     if (tooltipTimerRef.current) {
@@ -506,9 +590,10 @@ const Dashboard: React.FC = () => {
     if (selectedDistributor === 'ALPINE') return currentAlpineData;
     if (selectedDistributor === 'PETES') return currentPetesData;
     if (selectedDistributor === 'KEHE') return currentKeHeData;
+    if (selectedDistributor === 'VISTAR') return currentVistarData;
     // For 'ALL': combine all data but exclude sub-distributors from totals
-    return [...currentAlpineData, ...currentPetesData, ...currentKeHeData];
-  }, [selectedDistributor, currentAlpineData, currentPetesData, currentKeHeData]);
+    return [...currentAlpineData, ...currentPetesData, ...currentKeHeData, ...currentVistarData];
+  }, [selectedDistributor, currentAlpineData, currentPetesData, currentKeHeData, currentVistarData]);
 
   // Data for calculations - excludes sub-distributors when viewing "All Businesses"
   const dataForTotals = useMemo(() => {
@@ -716,6 +801,32 @@ const Dashboard: React.FC = () => {
     setCurrentKeHeCustomerProgressions(new Map());
   };
 
+  const handleVistarDataParsed = (data: { records: AlpineSalesRecord[]; customerProgressions: Map<string, any> }) => {
+    const newPeriods = new Set(data.records.map(r => r.period));
+
+    const filteredExistingData = currentVistarData.filter(record => !newPeriods.has(record.period));
+    const mergedData = [...filteredExistingData, ...data.records];
+
+    setCurrentVistarData(mergedData);
+
+    const allCustomers = Array.from(new Set(mergedData.map(r => r.customerName)));
+    const updatedCustomerProgressions = new Map();
+    allCustomers.forEach(customer => {
+      const progress = analyzeCustomerProgress(mergedData, customer);
+      updatedCustomerProgressions.set(customer, progress);
+    });
+
+    const newestUploadedPeriod = Array.from(newPeriods).sort().slice(-1)[0];
+    if (newestUploadedPeriod) {
+      setSelectedMonth(newestUploadedPeriod);
+    }
+  };
+
+  const handleClearVistarData = () => {
+    console.log('Clearing Vistar data');
+    setCurrentVistarData([]);
+  };
+
   // Removed CSV invoice upload handlers
 
 
@@ -806,12 +917,90 @@ const Dashboard: React.FC = () => {
     }));
   }, [dataForTotals, availablePeriods]);
 
+  // Chart navigation logic
+  const CHART_WINDOW_SIZE = 8; // Show 8 periods at a time
+  const CUSTOMER_PIVOT_WINDOW_SIZE = 3; // Show 3 periods at a time
+  const MONTHLY_SUMMARY_WINDOW_SIZE = 6; // Show 6 months at a time
+  const visibleRevenueData = useMemo(() => {
+    if (!chartVisibleRange || revenueOverTime.length <= CHART_WINDOW_SIZE) {
+      return revenueOverTime;
+    }
+    return revenueOverTime.slice(chartVisibleRange.start, chartVisibleRange.end + 1);
+  }, [revenueOverTime, chartVisibleRange]);
+
   // Determine which period to highlight on the chart
   const highlightedPeriod = useMemo(() => {
     if (selectedMonth && selectedMonth !== 'all') return selectedMonth;
     // Default to most recent available period when "All Periods" is selected
     return availablePeriods.length ? availablePeriods[availablePeriods.length - 1] : '';
   }, [selectedMonth, availablePeriods]);
+
+  // Initialize chart range when data changes or selected month changes
+  React.useEffect(() => {
+    if (revenueOverTime.length > CHART_WINDOW_SIZE) {
+      const currentPeriodIndex = highlightedPeriod 
+        ? revenueOverTime.findIndex(item => item.period === highlightedPeriod)
+        : revenueOverTime.length - 1;
+      
+      if (currentPeriodIndex >= 0) {
+        const centerIndex = Math.max(0, Math.min(revenueOverTime.length - 1, currentPeriodIndex));
+        const start = Math.max(0, centerIndex - Math.floor(CHART_WINDOW_SIZE / 2));
+        const end = Math.min(revenueOverTime.length - 1, start + CHART_WINDOW_SIZE - 1);
+        
+        setChartVisibleRange({ start, end });
+      }
+    } else {
+      setChartVisibleRange(null);
+    }
+  }, [revenueOverTime, highlightedPeriod]);
+
+  // Reset customer pivot range when data changes
+  useEffect(() => {
+    setCustomerPivotRange(null);
+  }, [currentData]);
+
+
+  // Reset monthly summary range when modal closes
+  useEffect(() => {
+    if (!showMonthlySummary) {
+      setMonthlySummaryRange(null);
+    }
+  }, [showMonthlySummary]);
+
+  const navigateChart = (direction: 'left' | 'right') => {
+    if (!chartVisibleRange || revenueOverTime.length <= CHART_WINDOW_SIZE) return;
+    
+    const step = Math.floor(CHART_WINDOW_SIZE / 2); // Move by half the window size
+    let newStart, newEnd;
+    
+    if (direction === 'left') {
+      newStart = Math.max(0, chartVisibleRange.start - step);
+      newEnd = Math.min(revenueOverTime.length - 1, newStart + CHART_WINDOW_SIZE - 1);
+    } else {
+      newEnd = Math.min(revenueOverTime.length - 1, chartVisibleRange.end + step);
+      newStart = Math.max(0, newEnd - CHART_WINDOW_SIZE + 1);
+    }
+    
+    setChartVisibleRange({ start: newStart, end: newEnd });
+  };
+
+  const navigateCustomerPivot = (direction: 'left' | 'right', totalPeriods: number) => {
+    if (!customerPivotRange) return;
+    
+    let newStart, newEnd;
+    if (direction === 'left') {
+      // Move window left by 1 month
+      newStart = Math.max(0, customerPivotRange.start - 1);
+      newEnd = Math.min(totalPeriods - 1, newStart + CUSTOMER_PIVOT_WINDOW_SIZE - 1);
+    } else {
+      // Move window right by 1 month
+      newEnd = Math.min(totalPeriods - 1, customerPivotRange.end + 1);
+      newStart = Math.max(0, newEnd - CUSTOMER_PIVOT_WINDOW_SIZE + 1);
+    }
+    
+    setCustomerPivotRange({ start: newStart, end: newEnd });
+  };
+
 
   // Revenue by customer data
   const revenueByCustomer = useMemo(() => {
@@ -869,20 +1058,37 @@ const Dashboard: React.FC = () => {
     if (!currentComparisonPeriod || !previousComparisonPeriod) {
       return { newCustomers: [] as string[], lostCustomers: [] as string[] };
     }
+    
+    // Get all customers who appeared in current period
     const curSet = new Set(
       dataForTotals
         .filter(r => r.period === currentComparisonPeriod)
         .map(r => r.customerName)
     );
+    
+    // Get all customers who appeared in previous period
     const prevSet = new Set(
       dataForTotals
         .filter(r => r.period === previousComparisonPeriod)
         .map(r => r.customerName)
     );
-    const newList = Array.from(curSet).filter(c => !prevSet.has(c)).sort((a, b) => a.localeCompare(b));
+    
+    // Get all customers who appeared in any period before the current period
+    const allPreviousPeriods = availablePeriods.filter(p => p < currentComparisonPeriod);
+    const allPreviousCustomers = new Set(
+      dataForTotals
+        .filter(r => allPreviousPeriods.includes(r.period))
+        .map(r => r.customerName)
+    );
+    
+    // A customer is "new" only if they appear in current period but have NEVER appeared in any previous period
+    const newList = Array.from(curSet).filter(c => !allPreviousCustomers.has(c)).sort((a, b) => a.localeCompare(b));
+    
+    // A customer is "lost" if they appeared in previous period but not in current period
     const lostList = Array.from(prevSet).filter(c => !curSet.has(c)).sort((a, b) => a.localeCompare(b));
+    
     return { newCustomers: newList, lostCustomers: lostList };
-  }, [dataForTotals, currentComparisonPeriod, previousComparisonPeriod]);
+  }, [dataForTotals, currentComparisonPeriod, previousComparisonPeriod, availablePeriods]);
 
   // Previously displayed revenue summaries removed from UI; keep code lean
 
@@ -908,17 +1114,17 @@ const Dashboard: React.FC = () => {
   // Combined progressions for ALL view
   const combinedCustomerProgressions = useMemo(() => {
     // Exclude Pete's data to avoid double-counting (it's a sub-distributor)
-    const data = [...currentAlpineData, ...currentPetesData, ...currentKeHeData].filter(r => !r.excludeFromTotals);
+    const data = [...currentAlpineData, ...currentPetesData, ...currentKeHeData, ...currentVistarData].filter(r => !r.excludeFromTotals);
     const customers = Array.from(new Set(data.map(r => r.customerName)));
     const map = new Map<string, any>();
     customers.forEach(c => {
       map.set(c, analyzeCustomerProgress(data, c));
     });
     return map;
-  }, [currentAlpineData, currentPetesData, currentKeHeData]);
+  }, [currentAlpineData, currentPetesData, currentKeHeData, currentVistarData]);
 
-  const getDistributorLabel = (d: 'ALPINE' | 'PETES' | 'KEHE' | 'ALL' = selectedDistributor) => (
-    d === 'ALPINE' ? 'Alpine' : d === 'PETES' ? "Pete's Coffee" : d === 'KEHE' ? 'KeHe' : 'All Businesses'
+  const getDistributorLabel = (d: 'ALPINE' | 'PETES' | 'KEHE' | 'VISTAR' | 'ALL' = selectedDistributor) => (
+    d === 'ALPINE' ? 'Alpine' : d === 'PETES' ? "Pete's Coffee" : d === 'KEHE' ? 'KeHe' : d === 'VISTAR' ? 'Vistar' : 'All Businesses'
   );
 
   // Monthly accounts/cases summary pivot
@@ -995,6 +1201,52 @@ const Dashboard: React.FC = () => {
     };
   }, [dataForTotals]);
 
+  // Get visible months for monthly summary
+  const visibleMonthlySummaryMonths = useMemo(() => {
+    if (!monthlySummaryRange || monthlySummary.months.length <= MONTHLY_SUMMARY_WINDOW_SIZE) {
+      return monthlySummary.months;
+    }
+    return monthlySummary.months.slice(monthlySummaryRange.start, monthlySummaryRange.end + 1);
+  }, [monthlySummary.months, monthlySummaryRange]);
+
+  const navigateMonthlySummary = (direction: 'left' | 'right') => {
+    if (!monthlySummaryRange || monthlySummary.months.length <= MONTHLY_SUMMARY_WINDOW_SIZE) return;
+    
+    let newStart, newEnd;
+    if (direction === 'left') {
+      // Move window left by 1 month
+      newStart = Math.max(0, monthlySummaryRange.start - 1);
+      newEnd = Math.min(monthlySummary.months.length - 1, newStart + MONTHLY_SUMMARY_WINDOW_SIZE - 1);
+    } else {
+      // Move window right by 1 month
+      newEnd = Math.min(monthlySummary.months.length - 1, monthlySummaryRange.end + 1);
+      newStart = Math.max(0, newEnd - MONTHLY_SUMMARY_WINDOW_SIZE + 1);
+    }
+    
+    setMonthlySummaryRange({ start: newStart, end: newEnd });
+  };
+
+  // Initialize monthly summary range when modal opens or data changes
+  useEffect(() => {
+    if (showMonthlySummary && monthlySummary.months.length > MONTHLY_SUMMARY_WINDOW_SIZE && !monthlySummaryRange) {
+      // Find current month index
+      const currentMonth = selectedMonth && selectedMonth !== 'all' ? selectedMonth : monthlySummary.months[monthlySummary.months.length - 1];
+      const currentIndex = monthlySummary.months.findIndex(month => month === currentMonth);
+      
+      if (currentIndex >= 0) {
+        // Position current month on the right (last position in the 6-month window)
+        const end = currentIndex;
+        const start = Math.max(0, end - MONTHLY_SUMMARY_WINDOW_SIZE + 1);
+        setMonthlySummaryRange({ start, end });
+      } else {
+        // Fallback to showing the most recent months
+        const start = Math.max(0, monthlySummary.months.length - MONTHLY_SUMMARY_WINDOW_SIZE);
+        const end = monthlySummary.months.length - 1;
+        setMonthlySummaryRange({ start, end });
+      }
+    }
+  }, [showMonthlySummary, monthlySummary.months, selectedMonth, monthlySummaryRange]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto p-6">
@@ -1017,7 +1269,7 @@ const Dashboard: React.FC = () => {
                   {isDistributorDropdownOpen && (
                     <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
                       <div className="py-1">
-                        {(['ALPINE','PETES','KEHE','ALL'] as const).map((d) => (
+                        {(['ALPINE','PETES','KEHE','VISTAR','ALL'] as const).map((d) => (
                           <button
                             key={d}
                             onClick={(e) => {
@@ -1092,9 +1344,6 @@ const Dashboard: React.FC = () => {
                   )}
                 </div>
               </div>
-              <p className="text-sm text-gray-500 mt-1">
-                {filteredData.length} sales records{selectedMonth !== 'all' ? ` for ${selectedMonth === 'all' ? 'all periods' : getMonthName(selectedMonth)}` : ` from ${availablePeriods.join(', ')} periods`}
-              </p>
               {selectedDistributor === 'ALL' && currentPetesData.length > 0 && (
                 <div className="mt-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
                   <span className="font-semibold">Note:</span> Totals exclude Pete's Coffee data to prevent double-counting (sub-distributor)
@@ -1141,14 +1390,41 @@ const Dashboard: React.FC = () => {
           >
             <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50 rounded-t-lg">
               <div className="text-sm font-medium">Monthly Accounts & Cases Summary</div>
-              <Button variant="ghost" size="sm" onClick={() => setShowMonthlySummary(false)} className="h-7 px-2">✕</Button>
+              <div className="flex items-center gap-3">
+                {/* Navigation controls for monthly summary */}
+                {monthlySummary.months.length > MONTHLY_SUMMARY_WINDOW_SIZE && (
+                  <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-3 py-2">
+                    <button
+                      onClick={() => navigateMonthlySummary('left')}
+                      className="p-1 hover:bg-gray-200 rounded disabled:opacity-50"
+                      disabled={!monthlySummaryRange || monthlySummaryRange.start === 0}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <span className="text-sm text-gray-700 px-2 whitespace-nowrap">
+                      {monthlySummaryRange ? 
+                        `${getShortMonthLabel(monthlySummary.months[monthlySummaryRange.start])} - ${getShortMonthLabel(monthlySummary.months[monthlySummaryRange.end])}` :
+                        `${monthlySummary.months.length} months`
+                      }
+                    </span>
+                    <button
+                      onClick={() => navigateMonthlySummary('right')}
+                      className="p-1 hover:bg-gray-200 rounded disabled:opacity-50"
+                      disabled={!monthlySummaryRange || monthlySummaryRange.end === monthlySummary.months.length - 1}
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+                <Button variant="ghost" size="sm" onClick={() => setShowMonthlySummary(false)} className="h-7 px-2">✕</Button>
+              </div>
             </div>
             <div className="max-h-[70vh] overflow-auto">
               <table className="w-full text-xs">
                 <thead className="bg-gray-50 sticky top-0">
                   <tr>
                     <th className="p-2 text-left w-56">Metric</th>
-                    {monthlySummary.months.map((m) => (
+                    {visibleMonthlySummaryMonths.map((m) => (
                       <th key={m} className="p-2 text-right whitespace-nowrap">{getShortMonthLabel(m)}</th>
                     ))}
                   </tr>
@@ -1156,7 +1432,7 @@ const Dashboard: React.FC = () => {
                 <tbody>
                   <tr>
                     <td className="p-2 font-medium">New Accounts</td>
-                    {monthlySummary.months.map((m) => (
+                    {visibleMonthlySummaryMonths.map((m) => (
                       <td key={m} className="p-2 text-right">
                         <div 
                           className="relative inline-block group"
@@ -1192,13 +1468,13 @@ const Dashboard: React.FC = () => {
                   </tr>
                   <tr>
                     <td className="p-2 font-medium">Total Accounts Ordered</td>
-                    {monthlySummary.months.map((m) => (
+                    {visibleMonthlySummaryMonths.map((m) => (
                       <td key={m} className="p-2 text-right tabular-nums">{monthlySummary.accountsOrderedByMonth[m] || 0}</td>
                     ))}
                   </tr>
                   <tr>
                     <td className="p-2 font-medium">Δ</td>
-                    {monthlySummary.months.map((m, idx) => (
+                    {visibleMonthlySummaryMonths.map((m, idx) => (
                       <td key={m} className="p-2 text-right">
                         <div 
                           className="relative inline-block group"
@@ -1265,13 +1541,13 @@ const Dashboard: React.FC = () => {
                   </tr>
                   <tr>
                     <td className="p-2 font-medium">Total Cases Sold</td>
-                    {monthlySummary.months.map((m) => (
+                    {visibleMonthlySummaryMonths.map((m) => (
                       <td key={m} className="p-2 text-right tabular-nums">{monthlySummary.totalCasesByMonth[m] || 0}</td>
                     ))}
                   </tr>
                   <tr>
                     <td className="p-2 font-medium">Average Cases / Account</td>
-                    {monthlySummary.months.map((m) => (
+                    {visibleMonthlySummaryMonths.map((m) => (
                       <td key={m} className="p-2 text-right tabular-nums">{(monthlySummary.avgCasesPerAccountByMonth[m] || 0).toFixed(1)}</td>
                     ))}
                   </tr>
@@ -1314,6 +1590,12 @@ const Dashboard: React.FC = () => {
                 onClearData={handleClearKeHeData}
                 onProcessingComplete={() => setShowUploadSection(false)}
               />
+            ) : selectedDistributor === 'VISTAR' ? (
+              <VistarReportUpload
+                onDataParsed={handleVistarDataParsed}
+                onClearData={handleClearVistarData}
+                onProcessingComplete={() => setShowUploadSection(false)}
+              />
             ) : (
               <>
                 <AlpineReportUpload
@@ -1329,6 +1611,11 @@ const Dashboard: React.FC = () => {
                 <KeHeReportUpload
                   onDataParsed={handleKeHeDataParsed}
                   onClearData={handleClearKeHeData}
+                  onProcessingComplete={() => setShowUploadSection(false)}
+                />
+                <VistarReportUpload
+                  onDataParsed={handleVistarDataParsed}
+                  onClearData={handleClearVistarData}
                   onProcessingComplete={() => setShowUploadSection(false)}
                 />
               </>
@@ -1347,9 +1634,6 @@ const Dashboard: React.FC = () => {
                 ${kpis.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
-                <div className="text-gray-400">
-                  💰
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -1362,9 +1646,6 @@ const Dashboard: React.FC = () => {
                   <p className="text-2xl font-bold text-gray-900">
                     {kpis.totalCases.toFixed(0)}
                   </p>
-                </div>
-                <div className="text-gray-400">
-                  📦
                 </div>
               </div>
             </CardContent>
@@ -1379,9 +1660,6 @@ const Dashboard: React.FC = () => {
                 {kpis.topCustomer}
                   </p>
                 </div>
-                <div className="text-gray-400">
-                  🏆
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -1395,9 +1673,6 @@ const Dashboard: React.FC = () => {
                 {kpis.topProduct}
                   </p>
                 </div>
-                <div className="text-gray-400">
-                  🎯
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -1408,12 +1683,39 @@ const Dashboard: React.FC = () => {
           {/* Revenue Over Time */}
           <Card>
             <CardHeader>
-              <CardTitle>Revenue by Period</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Revenue by Period</CardTitle>
+                {revenueOverTime.length > CHART_WINDOW_SIZE && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigateChart('left')}
+                      disabled={!chartVisibleRange || chartVisibleRange.start === 0}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    <span className="text-sm text-gray-600 min-w-0">
+                      {chartVisibleRange ? `${chartVisibleRange.start + 1}-${chartVisibleRange.end + 1} of ${revenueOverTime.length}` : `${revenueOverTime.length} periods`}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigateChart('right')}
+                      disabled={!chartVisibleRange || chartVisibleRange.end === revenueOverTime.length - 1}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={revenueOverTime} margin={{ top: 5, right: 20, bottom: 20, left: 0 }}>
+                <LineChart data={visibleRevenueData} margin={{ top: 5, right: 20, bottom: 20, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis 
                       dataKey="period" 
@@ -1550,8 +1852,14 @@ const Dashboard: React.FC = () => {
                 revenueByCustomer={revenueByCustomer}
                 alpineData={currentData}
                 onCustomerClick={handleCustomerClick}
-                isComparisonMode={selectedDistributor !== 'KEHE'}
+                isComparisonMode={selectedDistributor !== 'KEHE' && selectedDistributor !== 'VISTAR'}
                 isKeHeMode={selectedDistributor === 'KEHE'}
+                isVistarMode={selectedDistributor === 'VISTAR'}
+                customerPivotRange={customerPivotRange}
+                setCustomerPivotRange={setCustomerPivotRange}
+                navigateCustomerPivot={navigateCustomerPivot}
+                CUSTOMER_PIVOT_WINDOW_SIZE={CUSTOMER_PIVOT_WINDOW_SIZE}
+                selectedMonth={selectedMonth}
               />
             </CardContent>
           </Card>
@@ -1670,11 +1978,23 @@ const Dashboard: React.FC = () => {
             keheData={currentKeHeData}
             isOpen={isCustomerModalOpen}
             onClose={handleCloseCustomerModal}
+            selectedMonth={selectedMonth}
+          />
+        )}
+
+        {/* Vistar Customer Detail Modal */}
+        {selectedCustomerForModal && selectedDistributor === 'VISTAR' && (
+          <VistarCustomerDetailModal
+            opcoName={selectedCustomerForModal}
+            vistarData={currentVistarData}
+            isOpen={isCustomerModalOpen}
+            onClose={handleCloseCustomerModal}
+            selectedMonth={selectedMonth}
           />
         )}
 
         {/* Customer Detail Modal for Alpine and Pete's */}
-        {selectedCustomerForModal && selectedDistributor !== 'KEHE' && (
+        {selectedCustomerForModal && selectedDistributor !== 'KEHE' && selectedDistributor !== 'VISTAR' && (
           <CustomerDetailModal
             customerName={selectedCustomerForModal}
             currentInvoices={[]}
