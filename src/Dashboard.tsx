@@ -7,9 +7,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
   ReferenceLine,
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card';
@@ -856,20 +853,57 @@ const Dashboard: React.FC = () => {
       }));
   }, [filteredData]);
 
-  // Product mix pie chart data
-  const productMix = useMemo(() => {
-    const total = filteredData.reduce((sum, record) => sum + record.revenue, 0);
+  // New vs Lost customers (current vs previous period)
+  const currentComparisonPeriod = useMemo(() => {
+    if (selectedMonth && selectedMonth !== 'all') return selectedMonth;
+    return availablePeriods.length ? availablePeriods[availablePeriods.length - 1] : '';
+  }, [selectedMonth, availablePeriods]);
 
-    return revenueByProduct
-      .slice(0, 8) // Top 8 products
-      .map((product) => ({
-        name: product.product.length > 12 ? product.product.substring(0, 12) + '...' : product.product,
-        fullName: toTitleCase(product.fullProduct),
-        value: Math.round((product.revenue / total) * 100 * 100) / 100,
-      }));
-  }, [revenueByProduct, filteredData]);
+  const previousComparisonPeriod = useMemo(() => {
+    if (!currentComparisonPeriod) return '';
+    const idx = availablePeriods.indexOf(currentComparisonPeriod);
+    return idx > 0 ? availablePeriods[idx - 1] : '';
+  }, [currentComparisonPeriod, availablePeriods]);
 
-  const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#F97316', '#06B6D4', '#84CC16'];
+  const { newCustomers, lostCustomers } = useMemo(() => {
+    if (!currentComparisonPeriod || !previousComparisonPeriod) {
+      return { newCustomers: [] as string[], lostCustomers: [] as string[] };
+    }
+    const curSet = new Set(
+      dataForTotals
+        .filter(r => r.period === currentComparisonPeriod)
+        .map(r => r.customerName)
+    );
+    const prevSet = new Set(
+      dataForTotals
+        .filter(r => r.period === previousComparisonPeriod)
+        .map(r => r.customerName)
+    );
+    const newList = Array.from(curSet).filter(c => !prevSet.has(c)).sort((a, b) => a.localeCompare(b));
+    const lostList = Array.from(prevSet).filter(c => !curSet.has(c)).sort((a, b) => a.localeCompare(b));
+    return { newCustomers: newList, lostCustomers: lostList };
+  }, [dataForTotals, currentComparisonPeriod, previousComparisonPeriod]);
+
+  // Previously displayed revenue summaries removed from UI; keep code lean
+
+  // Build detailed rows with revenue for sorting/display
+  const newCustomersDetailed = useMemo(() => {
+    const cur = dataForTotals.filter(r => r.period === currentComparisonPeriod);
+    const revenueByCustomer: Record<string, number> = {};
+    cur.forEach(r => { revenueByCustomer[r.customerName] = (revenueByCustomer[r.customerName] || 0) + (r.revenue || 0); });
+    return newCustomers.map(name => ({ name, revenue: revenueByCustomer[name] || 0 }));
+  }, [dataForTotals, currentComparisonPeriod, newCustomers]);
+
+  const lostCustomersDetailed = useMemo(() => {
+    const prev = dataForTotals.filter(r => r.period === previousComparisonPeriod);
+    const revenueByCustomer: Record<string, number> = {};
+    prev.forEach(r => { revenueByCustomer[r.customerName] = (revenueByCustomer[r.customerName] || 0) + (r.revenue || 0); });
+    return lostCustomers.map(name => ({ name, revenue: revenueByCustomer[name] || 0 }));
+  }, [dataForTotals, previousComparisonPeriod, lostCustomers]);
+
+  const [movementFilter, setMovementFilter] = useState('');
+
+  
 
   // Combined progressions for ALL view
   const combinedCustomerProgressions = useMemo(() => {
@@ -1011,7 +1045,7 @@ const Dashboard: React.FC = () => {
                     onClick={() => setIsMonthDropdownOpen(!isMonthDropdownOpen)}
                     className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
                   >
-                    {selectedMonth === 'all' ? 'All Periods' : selectedMonth ? getMonthName(selectedMonth) : 'Select Month'}
+                    {selectedMonth === 'all' ? 'All Periods' : selectedMonth ? getShortMonthLabel(selectedMonth) : 'Select Month'}
                     <ChevronDown className={`w-4 h-4 transition-transform ${isMonthDropdownOpen ? 'rotate-180' : ''}`} />
                   </Button>
                   
@@ -1036,7 +1070,7 @@ const Dashboard: React.FC = () => {
                                 selectedMonth === period ? 'text-blue-700 font-medium' : 'text-gray-700'
                               }`}
                             >
-                              {period === 'all' ? 'All Periods' : getMonthName(period)}
+                              {period === 'all' ? 'All Periods' : getShortMonthLabel(period)}
                             </button>
                             {period !== 'all' && selectedDistributor !== 'ALL' && (
                               <button
@@ -1045,7 +1079,7 @@ const Dashboard: React.FC = () => {
                                   e.stopPropagation();
                                   setPendingDeletePeriod(period);
                                 }}
-                                title={`Delete ${getMonthName(period)}`}
+                                title={`Delete ${getShortMonthLabel(period)}`}
                                 className="p-2 rounded text-red-600 hover:text-red-700 hover:bg-red-50"
                               >
                                 <Trash2 className="w-4 h-4" />
@@ -1424,43 +1458,82 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Product Mix */}
+          {/* New vs Lost Customers */}
           <Card>
             <CardHeader>
-              <CardTitle>Product Mix</CardTitle>
+              <CardTitle>Account Updates</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={productMix}
-                    cx="50%"
-                    cy="50%"
-                      outerRadius={80}
-                    dataKey="value"
-                      label={({ name, value }) => `${name}: ${value}%`}
-                  >
-                    {productMix.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                    ))}
-                  </Pie>
-                    <Tooltip 
-                      content={(props: any) => {
-                        const { active, payload } = props || {};
-                        if (!active || !payload || payload.length === 0) return null;
-                        const p = payload[0].payload;
-                        return (
-                          <div className="bg-white border border-gray-200 rounded-md shadow-md p-2 text-xs">
-                            <div className="font-medium text-gray-900 mb-1">{p.fullName}</div>
-                            <div className="text-gray-600">{p.value}% of total</div>
-                          </div>
-                        );
-                      }}
+              {(!currentComparisonPeriod || !previousComparisonPeriod) ? (
+                <div className="text-sm text-gray-600">Upload at least two periods to see new and lost customers.</div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="md:col-span-2 flex items-center gap-2 mb-2">
+                    <input
+                      type="text"
+                      value={movementFilter}
+                      onChange={(e) => setMovementFilter(e.target.value)}
+                      placeholder="Search customers"
+                      className="px-2 py-1 text-xs border rounded w-56"
                     />
-                </PieChart>
-              </ResponsiveContainer>
-              </div>
+                    <div className="ml-auto" />
+                  </div>
+                  <div>
+                    <div className="flex items-baseline justify-between mb-2">
+                      <h3 className="text-sm font-semibold text-gray-900">New Accounts</h3>
+                    </div>
+                    
+                    {newCustomers.length === 0 ? (
+                      <div className="text-sm text-gray-500">None</div>
+                    ) : (
+                      <ul className="space-y-1 text-sm max-h-72 overflow-auto">
+                        {[...newCustomersDetailed]
+                          .filter(r => !movementFilter || r.name.toLowerCase().includes(movementFilter.toLowerCase()))
+                          .sort((a, b) => (b.revenue - a.revenue))
+                          .map(({ name, revenue }) => (
+                          <li
+                            key={`new-${name}`}
+                            className="truncate cursor-pointer hover:text-blue-700 flex items-center gap-2"
+                            title={name}
+                            onClick={() => { setPivotCustomerName(name); setIsPivotOpen(true); }}
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span>
+                            <span className="flex-1 min-w-0 truncate">{name}</span>
+                            <span className="text-[11px] text-gray-500">${revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  <div>
+                    <div className="flex items-baseline justify-between mb-2">
+                      <h3 className="text-sm font-semibold text-gray-900">Lost Accounts</h3>
+                    </div>
+                    
+                    {lostCustomers.length === 0 ? (
+                      <div className="text-sm text-gray-500">None</div>
+                    ) : (
+                      <ul className="space-y-1 text-sm max-h-72 overflow-auto">
+                        {[...lostCustomersDetailed]
+                          .filter(r => !movementFilter || r.name.toLowerCase().includes(movementFilter.toLowerCase()))
+                          .sort((a, b) => (b.revenue - a.revenue))
+                          .map(({ name, revenue }) => (
+                          <li
+                            key={`lost-${name}`}
+                            className="truncate cursor-pointer hover:text-blue-700 flex items-center gap-2"
+                            title={name}
+                            onClick={() => { setPivotCustomerName(name); setIsPivotOpen(true); }}
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span>
+                            <span className="flex-1 min-w-0 truncate">{name}</span>
+                            <span className="text-[11px] text-gray-500">${revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
