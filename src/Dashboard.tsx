@@ -26,6 +26,8 @@ import PetesReportUpload from './components/PetesReportUpload';
 import KeHeReportUpload from './components/KeHeReportUpload';
 import VistarReportUpload from './components/VistarReportUpload';
 import VistarCustomerDetailModal from './components/VistarCustomerDetailModal';
+import TonysReportUpload from './components/TonysReportUpload';
+import TonysCustomerDetailModal from './components/TonysCustomerDetailModal';
 
 // Revenue by Customer Component
 interface RevenueByCustomerProps {
@@ -35,6 +37,7 @@ interface RevenueByCustomerProps {
   isComparisonMode?: boolean;
   isKeHeMode?: boolean;
   isVistarMode?: boolean;
+  isTonysMode?: boolean;
   customerPivotRange?: { start: number; end: number } | null;
   setCustomerPivotRange?: (range: { start: number; end: number } | null) => void;
   navigateCustomerPivot?: (direction: 'left' | 'right', totalPeriods: number) => void;
@@ -49,6 +52,7 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
   isComparisonMode = false,
   isKeHeMode = false,
   isVistarMode = false,
+  isTonysMode = false,
   customerPivotRange,
   setCustomerPivotRange,
   navigateCustomerPivot,
@@ -85,8 +89,8 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
       setCustomerPivotRange(null);
     }
     
-    // For KeHe or Vistar mode, always use the custom modal (bypass comparison mode)
-    if (isKeHeMode || isVistarMode) {
+    // For KeHe, Vistar, or Tony's mode, always use the custom modal (bypass comparison mode)
+    if (isKeHeMode || isVistarMode || isTonysMode) {
       if (onCustomerClick) onCustomerClick(fullCustomerName);
       return;
     }
@@ -546,10 +550,13 @@ const Dashboard: React.FC = () => {
   const [currentPetesData, setCurrentPetesData] = useState<AlpineSalesRecord[]>([]);
   const [currentKeHeData, setCurrentKeHeData] = useState<AlpineSalesRecord[]>([]);
   const [currentVistarData, setCurrentVistarData] = useState<AlpineSalesRecord[]>([]);
+  const [currentTonysData, setCurrentTonysData] = useState<AlpineSalesRecord[]>([]);
   const [currentCustomerProgressions, setCurrentCustomerProgressions] = useState<Map<string, any>>(new Map());
   const [currentPetesCustomerProgressions, setCurrentPetesCustomerProgressions] = useState<Map<string, any>>(new Map());
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [currentKeHeCustomerProgressions, setCurrentKeHeCustomerProgressions] = useState<Map<string, any>>(new Map());
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [currentTonysCustomerProgressions, setCurrentTonysCustomerProgressions] = useState<Map<string, any>>(new Map());
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
   // Removed CSV invoice upload; no longer tracking last uploaded invoice month
@@ -561,7 +568,7 @@ const Dashboard: React.FC = () => {
   const [showMonthlySummary, setShowMonthlySummary] = useState(false);
   const [openNewAccountsTooltipMonth, setOpenNewAccountsTooltipMonth] = useState<string | null>(null);
   const [openDeltaTooltipMonth, setOpenDeltaTooltipMonth] = useState<string | null>(null);
-  const [selectedDistributor, setSelectedDistributor] = useState<'ALPINE' | 'PETES' | 'KEHE' | 'VISTAR' | 'ALL'>('ALPINE');
+  const [selectedDistributor, setSelectedDistributor] = useState<'ALPINE' | 'PETES' | 'KEHE' | 'VISTAR' | 'TONYS' | 'ALL'>('ALPINE');
   const [isDistributorDropdownOpen, setIsDistributorDropdownOpen] = useState(false);
   const [showCustomReport, setShowCustomReport] = useState(false);
   
@@ -591,9 +598,10 @@ const Dashboard: React.FC = () => {
     if (selectedDistributor === 'PETES') return currentPetesData;
     if (selectedDistributor === 'KEHE') return currentKeHeData;
     if (selectedDistributor === 'VISTAR') return currentVistarData;
+    if (selectedDistributor === 'TONYS') return currentTonysData;
     // For 'ALL': combine all data but exclude sub-distributors from totals
-    return [...currentAlpineData, ...currentPetesData, ...currentKeHeData, ...currentVistarData];
-  }, [selectedDistributor, currentAlpineData, currentPetesData, currentKeHeData, currentVistarData]);
+    return [...currentAlpineData, ...currentPetesData, ...currentKeHeData, ...currentVistarData, ...currentTonysData];
+  }, [selectedDistributor, currentAlpineData, currentPetesData, currentKeHeData, currentVistarData, currentTonysData]);
 
   // Data for calculations - excludes sub-distributors when viewing "All Businesses"
   const dataForTotals = useMemo(() => {
@@ -827,6 +835,33 @@ const Dashboard: React.FC = () => {
     setCurrentVistarData([]);
   };
 
+  const handleTonysDataParsed = (data: { records: AlpineSalesRecord[]; customerProgressions: Map<string, any> }) => {
+    const newPeriods = new Set(data.records.map(r => r.period));
+
+    const filteredExistingData = currentTonysData.filter(record => !newPeriods.has(record.period));
+    const mergedData = [...filteredExistingData, ...data.records];
+
+    setCurrentTonysData(mergedData);
+
+    const allCustomers = Array.from(new Set(mergedData.map(r => r.customerName)));
+    const updatedCustomerProgressions = new Map();
+    allCustomers.forEach(customer => {
+      const progress = analyzeCustomerProgress(mergedData, customer);
+      updatedCustomerProgressions.set(customer, progress);
+    });
+
+    const newestUploadedPeriod = Array.from(newPeriods).sort().slice(-1)[0];
+    if (newestUploadedPeriod) {
+      setSelectedMonth(newestUploadedPeriod);
+    }
+  };
+
+  const handleClearTonysData = () => {
+    console.log("Clearing Tony's data");
+    setCurrentTonysData([]);
+    setCurrentTonysCustomerProgressions(new Map());
+  };
+
   // Removed CSV invoice upload handlers
 
 
@@ -864,6 +899,19 @@ const Dashboard: React.FC = () => {
         updatedCustomerProgressions.set(customer, progress);
       });
       setCurrentKeHeCustomerProgressions(updatedCustomerProgressions);
+    } else if (selectedDistributor === 'VISTAR') {
+      const updatedData = currentVistarData.filter(record => record.period !== periodToDelete);
+      setCurrentVistarData(updatedData);
+    } else if (selectedDistributor === 'TONYS') {
+      const updatedData = currentTonysData.filter(record => record.period !== periodToDelete);
+      setCurrentTonysData(updatedData);
+      const allCustomers = Array.from(new Set(updatedData.map(r => r.customerName)));
+      const updatedCustomerProgressions = new Map();
+      allCustomers.forEach(customer => {
+        const progress = analyzeCustomerProgress(updatedData, customer);
+        updatedCustomerProgressions.set(customer, progress);
+      });
+      setCurrentTonysCustomerProgressions(updatedCustomerProgressions);
     }
 
     if (selectedMonth === periodToDelete) {
@@ -1114,17 +1162,17 @@ const Dashboard: React.FC = () => {
   // Combined progressions for ALL view
   const combinedCustomerProgressions = useMemo(() => {
     // Exclude Pete's data to avoid double-counting (it's a sub-distributor)
-    const data = [...currentAlpineData, ...currentPetesData, ...currentKeHeData, ...currentVistarData].filter(r => !r.excludeFromTotals);
+    const data = [...currentAlpineData, ...currentPetesData, ...currentKeHeData, ...currentVistarData, ...currentTonysData].filter(r => !r.excludeFromTotals);
     const customers = Array.from(new Set(data.map(r => r.customerName)));
     const map = new Map<string, any>();
     customers.forEach(c => {
       map.set(c, analyzeCustomerProgress(data, c));
     });
     return map;
-  }, [currentAlpineData, currentPetesData, currentKeHeData, currentVistarData]);
+  }, [currentAlpineData, currentPetesData, currentKeHeData, currentVistarData, currentTonysData]);
 
-  const getDistributorLabel = (d: 'ALPINE' | 'PETES' | 'KEHE' | 'VISTAR' | 'ALL' = selectedDistributor) => (
-    d === 'ALPINE' ? 'Alpine' : d === 'PETES' ? "Pete's Coffee" : d === 'KEHE' ? 'KeHe' : d === 'VISTAR' ? 'Vistar' : 'All Businesses'
+  const getDistributorLabel = (d: 'ALPINE' | 'PETES' | 'KEHE' | 'VISTAR' | 'TONYS' | 'ALL' = selectedDistributor) => (
+    d === 'ALPINE' ? 'Alpine' : d === 'PETES' ? "Pete's Coffee" : d === 'KEHE' ? 'KeHe' : d === 'VISTAR' ? 'Vistar' : d === 'TONYS' ? "Tony's Fine Foods" : 'All Businesses'
   );
 
   // Monthly accounts/cases summary pivot
@@ -1255,7 +1303,7 @@ const Dashboard: React.FC = () => {
           <div className="flex justify-between items-start">
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-bold text-gray-900">{getDistributorLabel()} Sales Dashboard</h1>
+                <h1 className="text-3xl font-bold text-gray-900">{getDistributorLabel()} Sales Reports</h1>
                 <div className="relative distributor-dropdown">
                   <Button
                     variant="outline"
@@ -1269,7 +1317,7 @@ const Dashboard: React.FC = () => {
                   {isDistributorDropdownOpen && (
                     <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
                       <div className="py-1">
-                        {(['ALPINE','PETES','KEHE','VISTAR','ALL'] as const).map((d) => (
+                        {(['ALPINE','PETES','KEHE','VISTAR','TONYS','ALL'] as const).map((d) => (
                           <button
                             key={d}
                             onClick={(e) => {
@@ -1596,6 +1644,12 @@ const Dashboard: React.FC = () => {
                 onClearData={handleClearVistarData}
                 onProcessingComplete={() => setShowUploadSection(false)}
               />
+            ) : selectedDistributor === 'TONYS' ? (
+              <TonysReportUpload
+                onDataParsed={handleTonysDataParsed}
+                onClearData={handleClearTonysData}
+                onProcessingComplete={() => setShowUploadSection(false)}
+              />
             ) : (
               <>
                 <AlpineReportUpload
@@ -1616,6 +1670,11 @@ const Dashboard: React.FC = () => {
                 <VistarReportUpload
                   onDataParsed={handleVistarDataParsed}
                   onClearData={handleClearVistarData}
+                  onProcessingComplete={() => setShowUploadSection(false)}
+                />
+                <TonysReportUpload
+                  onDataParsed={handleTonysDataParsed}
+                  onClearData={handleClearTonysData}
                   onProcessingComplete={() => setShowUploadSection(false)}
                 />
               </>
@@ -1852,9 +1911,10 @@ const Dashboard: React.FC = () => {
                 revenueByCustomer={revenueByCustomer}
                 alpineData={currentData}
                 onCustomerClick={handleCustomerClick}
-                isComparisonMode={selectedDistributor !== 'KEHE' && selectedDistributor !== 'VISTAR'}
+                isComparisonMode={selectedDistributor !== 'KEHE' && selectedDistributor !== 'VISTAR' && selectedDistributor !== 'TONYS'}
                 isKeHeMode={selectedDistributor === 'KEHE'}
                 isVistarMode={selectedDistributor === 'VISTAR'}
+                isTonysMode={selectedDistributor === 'TONYS'}
                 customerPivotRange={customerPivotRange}
                 setCustomerPivotRange={setCustomerPivotRange}
                 navigateCustomerPivot={navigateCustomerPivot}
@@ -1993,8 +2053,18 @@ const Dashboard: React.FC = () => {
           />
         )}
 
+        {selectedCustomerForModal && selectedDistributor === 'TONYS' && (
+          <TonysCustomerDetailModal
+            warehouseName={selectedCustomerForModal}
+            tonysData={currentTonysData}
+            isOpen={isCustomerModalOpen}
+            onClose={handleCloseCustomerModal}
+            selectedMonth={selectedMonth}
+          />
+        )}
+
         {/* Customer Detail Modal for Alpine and Pete's */}
-        {selectedCustomerForModal && selectedDistributor !== 'KEHE' && selectedDistributor !== 'VISTAR' && (
+        {selectedCustomerForModal && selectedDistributor !== 'KEHE' && selectedDistributor !== 'VISTAR' && selectedDistributor !== 'TONYS' && (
           <CustomerDetailModal
             customerName={selectedCustomerForModal}
             currentInvoices={[]}
