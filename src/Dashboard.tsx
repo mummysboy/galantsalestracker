@@ -28,6 +28,8 @@ import VistarReportUpload from './components/VistarReportUpload';
 import VistarCustomerDetailModal from './components/VistarCustomerDetailModal';
 import TonysReportUpload from './components/TonysReportUpload';
 import TonysCustomerDetailModal from './components/TonysCustomerDetailModal';
+import MhdReportUpload from './components/MhdReportUpload';
+import MhdCustomerDetailModal from './components/MhdCustomerDetailModal';
 
 // Revenue by Customer Component
 interface RevenueByCustomerProps {
@@ -38,6 +40,7 @@ interface RevenueByCustomerProps {
   isKeHeMode?: boolean;
   isVistarMode?: boolean;
   isTonysMode?: boolean;
+  isMhdMode?: boolean;
   customerPivotRange?: { start: number; end: number } | null;
   setCustomerPivotRange?: (range: { start: number; end: number } | null) => void;
   navigateCustomerPivot?: (direction: 'left' | 'right', totalPeriods: number) => void;
@@ -53,6 +56,7 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
   isKeHeMode = false,
   isVistarMode = false,
   isTonysMode = false,
+  isMhdMode = false,
   customerPivotRange,
   setCustomerPivotRange,
   navigateCustomerPivot,
@@ -89,8 +93,8 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
       setCustomerPivotRange(null);
     }
     
-    // For KeHe, Vistar, or Tony's mode, always use the custom modal (bypass comparison mode)
-    if (isKeHeMode || isVistarMode || isTonysMode) {
+    // For KeHe, Vistar, Tony's, or MHD mode, always use the custom modal (bypass comparison mode)
+    if (isKeHeMode || isVistarMode || isTonysMode || isMhdMode) {
       if (onCustomerClick) onCustomerClick(fullCustomerName);
       return;
     }
@@ -180,10 +184,10 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
           <div 
             key={customer.id}
             className={`relative flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors ${
-              (isComparisonMode || isKeHeMode || isVistarMode) ? 'cursor-pointer' : ''
+              (isComparisonMode || isKeHeMode || isVistarMode || isTonysMode || isMhdMode) ? 'cursor-pointer' : ''
             }`}
             onClick={() => handleCustomerClick(customer.fullCustomerName)}
-            title={isKeHeMode || isVistarMode ? "Click to view customer summary" : isComparisonMode ? "Click to view CSV breakdown" : "Customer revenue"}
+            title={isKeHeMode || isVistarMode || isTonysMode || isMhdMode ? "Click to view customer summary" : isComparisonMode ? "Click to view CSV breakdown" : "Customer revenue"}
           >
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-gray-900 break-words">
@@ -551,6 +555,7 @@ const Dashboard: React.FC = () => {
   const [currentKeHeData, setCurrentKeHeData] = useState<AlpineSalesRecord[]>([]);
   const [currentVistarData, setCurrentVistarData] = useState<AlpineSalesRecord[]>([]);
   const [currentTonysData, setCurrentTonysData] = useState<AlpineSalesRecord[]>([]);
+  const [currentMhdData, setCurrentMhdData] = useState<AlpineSalesRecord[]>([]);
   const [currentCustomerProgressions, setCurrentCustomerProgressions] = useState<Map<string, any>>(new Map());
   const [currentPetesCustomerProgressions, setCurrentPetesCustomerProgressions] = useState<Map<string, any>>(new Map());
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -568,7 +573,7 @@ const Dashboard: React.FC = () => {
   const [showMonthlySummary, setShowMonthlySummary] = useState(false);
   const [openNewAccountsTooltipMonth, setOpenNewAccountsTooltipMonth] = useState<string | null>(null);
   const [openDeltaTooltipMonth, setOpenDeltaTooltipMonth] = useState<string | null>(null);
-  const [selectedDistributor, setSelectedDistributor] = useState<'ALPINE' | 'PETES' | 'KEHE' | 'VISTAR' | 'TONYS' | 'ALL'>('ALPINE');
+  const [selectedDistributor, setSelectedDistributor] = useState<'ALPINE' | 'PETES' | 'KEHE' | 'VISTAR' | 'TONYS' | 'MHD' | 'ALL'>('ALPINE');
   const [isDistributorDropdownOpen, setIsDistributorDropdownOpen] = useState(false);
   const [showCustomReport, setShowCustomReport] = useState(false);
   
@@ -599,9 +604,10 @@ const Dashboard: React.FC = () => {
     if (selectedDistributor === 'KEHE') return currentKeHeData;
     if (selectedDistributor === 'VISTAR') return currentVistarData;
     if (selectedDistributor === 'TONYS') return currentTonysData;
+    if (selectedDistributor === 'MHD') return currentMhdData;
     // For 'ALL': combine all data but exclude sub-distributors from totals
-    return [...currentAlpineData, ...currentPetesData, ...currentKeHeData, ...currentVistarData, ...currentTonysData];
-  }, [selectedDistributor, currentAlpineData, currentPetesData, currentKeHeData, currentVistarData, currentTonysData]);
+    return [...currentAlpineData, ...currentPetesData, ...currentKeHeData, ...currentVistarData, ...currentTonysData, ...currentMhdData];
+  }, [selectedDistributor, currentAlpineData, currentPetesData, currentKeHeData, currentVistarData, currentTonysData, currentMhdData]);
 
   // Data for calculations - excludes sub-distributors when viewing "All Businesses"
   const dataForTotals = useMemo(() => {
@@ -862,6 +868,25 @@ const Dashboard: React.FC = () => {
     setCurrentTonysCustomerProgressions(new Map());
   };
 
+  const handleMhdDataParsed = (data: { records: AlpineSalesRecord[]; customerProgressions: Map<string, any> }) => {
+    const newPeriods = new Set(data.records.map(r => r.period));
+
+    const filteredExistingData = currentMhdData.filter(record => !newPeriods.has(record.period));
+    const mergedData = [...filteredExistingData, ...data.records];
+
+    setCurrentMhdData(mergedData);
+
+    const newestUploadedPeriod = Array.from(newPeriods).sort().slice(-1)[0];
+    if (newestUploadedPeriod) {
+      setSelectedMonth(newestUploadedPeriod);
+    }
+  };
+
+  const handleClearMhdData = () => {
+    console.log('Clearing MHD data');
+    setCurrentMhdData([]);
+  };
+
   // Removed CSV invoice upload handlers
 
 
@@ -912,6 +937,9 @@ const Dashboard: React.FC = () => {
         updatedCustomerProgressions.set(customer, progress);
       });
       setCurrentTonysCustomerProgressions(updatedCustomerProgressions);
+    } else if (selectedDistributor === 'MHD') {
+      const updatedData = currentMhdData.filter(record => record.period !== periodToDelete);
+      setCurrentMhdData(updatedData);
     }
 
     if (selectedMonth === periodToDelete) {
@@ -1169,10 +1197,24 @@ const Dashboard: React.FC = () => {
       map.set(c, analyzeCustomerProgress(data, c));
     });
     return map;
-  }, [currentAlpineData, currentPetesData, currentKeHeData, currentVistarData, currentTonysData]);
+  }, [currentAlpineData, currentPetesData, currentKeHeData, currentVistarData, currentTonysData, currentMhdData]);
 
-  const getDistributorLabel = (d: 'ALPINE' | 'PETES' | 'KEHE' | 'VISTAR' | 'TONYS' | 'ALL' = selectedDistributor) => (
-    d === 'ALPINE' ? 'Alpine' : d === 'PETES' ? "Pete's Coffee" : d === 'KEHE' ? 'KeHe' : d === 'VISTAR' ? 'Vistar' : d === 'TONYS' ? "Tony's Fine Foods" : 'All Businesses'
+  const availableDistributorsByData = useMemo(() => {
+    const map = new Map<string, boolean>();
+    map.set('ALPINE', currentAlpineData.length > 0);
+    map.set('PETES', currentPetesData.length > 0);
+    map.set('KEHE', currentKeHeData.length > 0);
+    map.set('VISTAR', currentVistarData.length > 0);
+    map.set('TONYS', currentTonysData.length > 0);
+    map.set('MHD', currentMhdData.length > 0);
+    // ALL is always available if any data exists
+    const hasAnyData = currentAlpineData.length > 0 || currentPetesData.length > 0 || currentKeHeData.length > 0 || currentVistarData.length > 0 || currentTonysData.length > 0 || currentMhdData.length > 0;
+    map.set('ALL', hasAnyData);
+    return map;
+  }, [currentAlpineData, currentPetesData, currentKeHeData, currentVistarData, currentTonysData, currentMhdData]);
+
+  const getDistributorLabel = (d: 'ALPINE' | 'PETES' | 'KEHE' | 'VISTAR' | 'TONYS' | 'MHD' | 'ALL' = selectedDistributor) => (
+    d === 'ALPINE' ? 'Alpine' : d === 'PETES' ? "Pete's Coffee" : d === 'KEHE' ? 'KeHe' : d === 'VISTAR' ? 'Vistar' : d === 'TONYS' ? "Tony's Fine Foods" : d === 'MHD' ? 'Mike Hudson' : 'All Businesses'
   );
 
   // Monthly accounts/cases summary pivot
@@ -1303,6 +1345,7 @@ const Dashboard: React.FC = () => {
           <div className="flex justify-between items-start">
             <div>
               <div className="flex items-center gap-3">
+                <img src="/galantfoodco.avif" alt="Galant Food Co." className="h-24 w-auto" />
                 <h1 className="text-3xl font-bold text-gray-900">{getDistributorLabel()} Sales Reports</h1>
                 <div className="relative distributor-dropdown">
                   <Button
@@ -1317,7 +1360,7 @@ const Dashboard: React.FC = () => {
                   {isDistributorDropdownOpen && (
                     <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
                       <div className="py-1">
-                        {(['ALPINE','PETES','KEHE','VISTAR','TONYS','ALL'] as const).map((d) => (
+                        {(['ALPINE','PETES','KEHE','VISTAR','TONYS','MHD','ALL'] as const).map((d) => (
                           <button
                             key={d}
                             onClick={(e) => {
@@ -1650,6 +1693,12 @@ const Dashboard: React.FC = () => {
                 onClearData={handleClearTonysData}
                 onProcessingComplete={() => setShowUploadSection(false)}
               />
+            ) : selectedDistributor === 'MHD' ? (
+              <MhdReportUpload
+                onDataParsed={handleMhdDataParsed}
+                onClearData={handleClearMhdData}
+                onProcessingComplete={() => setShowUploadSection(false)}
+              />
             ) : (
               <>
                 <AlpineReportUpload
@@ -1675,6 +1724,11 @@ const Dashboard: React.FC = () => {
                 <TonysReportUpload
                   onDataParsed={handleTonysDataParsed}
                   onClearData={handleClearTonysData}
+                  onProcessingComplete={() => setShowUploadSection(false)}
+                />
+                <MhdReportUpload
+                  onDataParsed={handleMhdDataParsed}
+                  onClearData={handleClearMhdData}
                   onProcessingComplete={() => setShowUploadSection(false)}
                 />
               </>
@@ -1911,10 +1965,11 @@ const Dashboard: React.FC = () => {
                 revenueByCustomer={revenueByCustomer}
                 alpineData={currentData}
                 onCustomerClick={handleCustomerClick}
-                isComparisonMode={selectedDistributor !== 'KEHE' && selectedDistributor !== 'VISTAR' && selectedDistributor !== 'TONYS'}
+                isComparisonMode={selectedDistributor !== 'KEHE' && selectedDistributor !== 'VISTAR' && selectedDistributor !== 'TONYS' && selectedDistributor !== 'MHD'}
                 isKeHeMode={selectedDistributor === 'KEHE'}
                 isVistarMode={selectedDistributor === 'VISTAR'}
                 isTonysMode={selectedDistributor === 'TONYS'}
+                isMhdMode={selectedDistributor === 'MHD'}
                 customerPivotRange={customerPivotRange}
                 setCustomerPivotRange={setCustomerPivotRange}
                 navigateCustomerPivot={navigateCustomerPivot}
@@ -2063,8 +2118,19 @@ const Dashboard: React.FC = () => {
           />
         )}
 
+        {/* MHD Customer Detail Modal */}
+        {selectedCustomerForModal && selectedDistributor === 'MHD' && (
+          <MhdCustomerDetailModal
+            retailerName={selectedCustomerForModal}
+            mhdData={currentMhdData}
+            isOpen={isCustomerModalOpen}
+            onClose={handleCloseCustomerModal}
+            selectedMonth={selectedMonth}
+          />
+        )}
+
         {/* Customer Detail Modal for Alpine and Pete's */}
-        {selectedCustomerForModal && selectedDistributor !== 'KEHE' && selectedDistributor !== 'VISTAR' && selectedDistributor !== 'TONYS' && (
+        {selectedCustomerForModal && selectedDistributor !== 'KEHE' && selectedDistributor !== 'VISTAR' && selectedDistributor !== 'TONYS' && selectedDistributor !== 'MHD' && (
           <CustomerDetailModal
             customerName={selectedCustomerForModal}
             currentInvoices={[]}

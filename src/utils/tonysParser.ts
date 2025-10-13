@@ -92,31 +92,11 @@ export async function parseTonysXLSX(file: File): Promise<ParsedTonysData> {
   const itemPackIdx = 7; // Column H - Item Pack
   const itemSizeIdx = 8; // Column I - Item Size
   const vendorItemIdx = 9; // Column J - Vendor Item
+  const casesIdx = 10; // Column K - Cases (Quantity shipped)
 
-  // Find quantity columns (they contain "Quantity shipped")
-  const quantityColumns: Array<{ index: number; period: string }> = [];
-  headers.forEach((header, index) => {
-    if (header.toLowerCase().includes('quantity shipped')) {
-      const period = parsePeriodFromHeader(header);
-      quantityColumns.push({ index, period });
-    }
-  });
-
-  // If no quantity columns found, return empty
-  if (quantityColumns.length === 0) {
-    return {
-      records: [],
-      metadata: {
-        supplier: 'TONYS',
-        periods: [],
-        customers: [],
-        products: [],
-        totalRevenue: 0,
-        totalCases: 0,
-        periodRevenue: {}
-      }
-    };
-  }
+  // Parse period from column K header
+  const casesHeader = headers[casesIdx] || '';
+  const period = parsePeriodFromHeader(casesHeader);
 
   const records: AlpineSalesRecord[] = [];
 
@@ -159,30 +139,28 @@ export async function parseTonysXLSX(file: File): Promise<ParsedTonysData> {
     // Build size string
     const sizeStr = itemPack && itemSize ? `${itemPack}pk x ${itemSize}` : (itemPack || itemSize || '');
 
-    // Create a record for each quantity column (period)
-    for (const { index, period } of quantityColumns) {
-      const qty = toNumber(row[index]);
-      
-      // Skip if no quantity
-      if (qty === 0) {
-        continue;
-      }
-
-      const record: AlpineSalesRecord = {
-        customerName: warehouse, // Level 1: Warehouse
-        productName: productName, // Product: Brand + Description
-        size: sizeStr || undefined,
-        cases: Math.round(qty),
-        pieces: 0,
-        revenue: 0, // Tony's data doesn't include revenue, set to 0
-        period,
-        productCode: itemNumber || vendorItem || undefined,
-        customerId: shipToCustomer || undefined,
-        accountName: storeName, // Level 2/3: Store Name (we'll use this for drill-down)
-      };
-
-      records.push(record);
+    // Get cases from column K
+    const qty = toNumber(row[casesIdx]);
+    
+    // Skip if no quantity
+    if (qty === 0) {
+      continue;
     }
+
+    const record: AlpineSalesRecord = {
+      customerName: warehouse, // Level 1: Warehouse
+      productName: productName, // Product: Brand + Description
+      size: sizeStr || undefined,
+      cases: Math.round(qty),
+      pieces: 0,
+      revenue: 0, // Tony's data doesn't include revenue, set to 0
+      period,
+      productCode: itemNumber || vendorItem || undefined,
+      customerId: shipToCustomer || undefined,
+      accountName: storeName, // Level 2/3: Store Name (we'll use this for drill-down)
+    };
+
+    records.push(record);
   }
 
   // Calculate metadata
