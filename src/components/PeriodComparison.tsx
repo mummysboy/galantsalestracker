@@ -30,6 +30,7 @@ interface CustomerComparison {
 
 const PeriodComparison: React.FC<PeriodComparisonProps> = ({ alpineData, selectedMonth, onCustomerView }) => {
   const [sortBy, setSortBy] = useState<'revenue' | 'cases' | 'change'>('change');
+  const [showAllCustomers, setShowAllCustomers] = useState(false);
 
   const availablePeriods = useMemo(() => {
     return Array.from(new Set(alpineData.map(record => record.period))).sort();
@@ -496,7 +497,7 @@ const PeriodComparison: React.FC<PeriodComparisonProps> = ({ alpineData, selecte
 
       {/* Customer Comparisons */}
       <div className="space-y-4">
-        {comparisons.map((comparison) => {
+        {(showAllCustomers ? comparisons : comparisons.slice(0, 10)).map((comparison) => {
           const firstPeriod = comparison.periods[0];
           const secondPeriod = comparison.periods[1];
           
@@ -581,6 +582,18 @@ const PeriodComparison: React.FC<PeriodComparisonProps> = ({ alpineData, selecte
             </Card>
           );
         })}
+        
+        {/* Show More Button */}
+        {comparisons.length > 10 && (
+          <div className="flex justify-center pt-4">
+            <button
+              onClick={() => setShowAllCustomers(!showAllCustomers)}
+              className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors font-medium"
+            >
+              {showAllCustomers ? 'Show Less' : `Show ${comparisons.length - 10} More`}
+            </button>
+          </div>
+        )}
       </div>
 
       {comparisons.length === 0 && (

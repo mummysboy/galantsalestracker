@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { AlpineSalesRecord } from './alpineParser';
+import { mapToCanonicalProductName } from './productMapping';
 
 export interface ParsedKeHeData {
   records: AlpineSalesRecord[];
@@ -201,7 +202,7 @@ export async function parseKeHeXLSX(file: File): Promise<ParsedKeHeData> {
     
     const record: AlpineSalesRecord = {
       customerName: retailerName, // Level 1: Retailer Name (Column B)
-      productName: finalProductName, // Level 3: Product Data (Column N)
+      productName: mapToCanonicalProductName(finalProductName), // Level 3: Product Data (Column N) - normalized
       size: sizeStr || undefined,
       cases: Math.round(qty),
       pieces: 0,

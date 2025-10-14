@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { AlpineSalesRecord } from './alpineParser';
+import { mapToCanonicalProductName } from './productMapping';
 
 export interface ParsedPetesData {
   records: AlpineSalesRecord[];
@@ -318,7 +319,7 @@ export async function parsePetesXLSX(file: File): Promise<ParsedPetesData> {
 
     const rec: AlpineSalesRecord = {
       customerName,
-      productName,
+      productName: mapToCanonicalProductName(productName), // Normalize product name
       cases,
       pieces: 0,
       revenue,

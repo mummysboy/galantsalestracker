@@ -1,6 +1,25 @@
-# Getting Started with Create React App
+# Galant Foods Sales Tracker
+
+A comprehensive sales tracking dashboard with automatic product name normalization across multiple suppliers.
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+
+## 🎯 Key Features
+
+- **Multi-Supplier Support**: Alpine, KeHE, Pete's, Tony's, Vistar, and MHD
+- **Product Name Mapping**: Automatic standardization of product descriptions
+- **Period Comparison**: Track sales trends across months
+- **Customer Analysis**: Detailed customer-level reporting
+- **MHD Integration**: Full support for MHD quarterly reports
+
+## 📚 Documentation
+
+- **[Product Mapping Guide](PRODUCT_MAPPING_GUIDE.md)** - Comprehensive guide to the product mapping system
+- **[Product Mapping Quickstart](PRODUCT_MAPPING_QUICKSTART.md)** - Quick reference for common tasks
+- **[Product Mapping Examples](PRODUCT_MAPPING_EXAMPLE.md)** - Before/after examples
+- **[Implementation Summary](PRODUCT_MAPPING_IMPLEMENTATION_SUMMARY.md)** - Technical overview
+- **[Usage Guide](USAGE_GUIDE.md)** - Dashboard usage instructions
+- **[MHD Integration](MHD_INTEGRATION_SUMMARY.md)** - MHD-specific documentation
 
 ## Available Scripts
 
@@ -29,15 +48,65 @@ Your app is ready to be deployed!
 
 See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
 
+### `npm run analyze-products`
+
+Analyzes sales data to identify unmapped products and suggests mappings.
+
+Generates:
+- `product-mapping-analysis.json` - Complete analysis
+- `unmapped-products-code.txt` - Code templates for new mappings
+
+### `npm run extract-products`
+
+Extracts all unique product names from sales data files.
+
+Output: `product-names-extraction.json`
+
+### `npm run analyze-master-pricing`
+
+Examines the Master Pricing file structure to help with product mapping.
+
 ### `npm run eject`
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+**Note: this is a one-way operation. Once you `eject`, you can't go back!**
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+
+## 🔄 Product Name Mapping
+
+The Sales Tracker includes an automatic product name mapping system that standardizes product descriptions across all suppliers.
+
+### Why It Matters
+
+Different suppliers use different names for the same products:
+- Alpine: `GAL BURR BRKFST BACON`
+- MHD: `MH400002`
+- KeHE: `GLNT BACON BREAKF BURRITO`
+
+All automatically map to: **`Uncured Bacon Breakfast Burrito`** (from Master Pricing)
+
+### Quick Start
+
+1. **No setup required** - Product mapping works automatically!
+2. **Upload sales data** - Product names are standardized on import
+3. **View unified reports** - All dashboards show consistent names
+
+### Adding New Products
+
+```bash
+# 1. Identify unmapped products
+npm run analyze-products
+
+# 2. Edit src/utils/productMapping.ts to add mappings
+# 3. Restart dashboard
+npm start
+```
+
+See **[Product Mapping Quickstart](PRODUCT_MAPPING_QUICKSTART.md)** for details.
 
 ## Learn More
 

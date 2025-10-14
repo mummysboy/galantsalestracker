@@ -28,7 +28,10 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "analyze-products": "npx tsx src/utils/buildProductMappings.ts",
+    "extract-products": "npx tsx src/utils/extractProductNames.ts",
+    "analyze-master-pricing": "npx tsx src/utils/analyzeMasterPricing.ts"
   },
   "eslintConfig": {
     "extends": [

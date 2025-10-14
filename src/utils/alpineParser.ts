@@ -1,3 +1,5 @@
+import { mapToCanonicalProductName } from './productMapping';
+
 export interface AlpineSalesRecord {
   customerName: string;
   productName: string;
@@ -150,7 +152,7 @@ export function parseAlpineTXT(txtContent: string, reportDate: string): ParsedAl
         const record: AlpineSalesRecord = {
           period,
           customerName: currentCustomer,
-          productName: description,
+          productName: mapToCanonicalProductName(description), // Normalize product name
           size: size,
           customerId: currentCustomerId,
           productCode: itemNumber,

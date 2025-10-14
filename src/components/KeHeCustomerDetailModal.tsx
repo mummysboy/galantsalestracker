@@ -564,23 +564,23 @@ const KeHeCustomerDetailModal: React.FC<KeHeCustomerDetailModalProps> = ({
               <div className="text-sm text-gray-600">
                 Sum of Cases by Company • Click companies to view product breakdown
               </div>
-              <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => setViewMode('month')}
-                  className={`px-3 py-1 text-sm rounded transition-colors ${
+                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
                     viewMode === 'month' 
-                      ? 'bg-blue-600 text-white shadow-sm' 
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
                   Month
                 </button>
                 <button
                   onClick={() => setViewMode('quarter')}
-                  className={`px-3 py-1 text-sm rounded transition-colors ${
+                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
                     viewMode === 'quarter' 
-                      ? 'bg-blue-600 text-white shadow-sm' 
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
                   Quarter

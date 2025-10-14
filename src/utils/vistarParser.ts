@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { AlpineSalesRecord } from './alpineParser';
+import { mapToCanonicalProductName } from './productMapping';
 
 export interface ParsedVistarData {
   records: AlpineSalesRecord[];
@@ -124,7 +125,7 @@ export async function parseVistarXLSX(file: File): Promise<ParsedVistarData> {
 
       const record: AlpineSalesRecord = {
         customerName: opcoDesc, // Level 1: OPCO Desc (e.g., "Vistar Illinois")
-        productName: finalProductName, // Level 3: Item Description
+        productName: mapToCanonicalProductName(finalProductName), // Level 3: Item Description - normalized
         size: sizeStr || undefined,
         cases: Math.round(qty),
         pieces: 0,
