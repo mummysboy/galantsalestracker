@@ -33,7 +33,7 @@ import MhdCustomerDetailModal from './components/MhdCustomerDetailModal';
 
 // Revenue by Customer Component
 interface RevenueByCustomerProps {
-  revenueByCustomer: Array<{ id: string; customer: string; fullCustomerName: string; customerId: string; revenue: number }>;
+  revenueByCustomer: Array<{ id: string; customer: string; fullCustomerName: string; customerId: string; revenue: number; cases: number }>;
   alpineData: AlpineSalesRecord[];
   onCustomerClick?: (customerName: string) => void;
   isComparisonMode?: boolean;
@@ -46,6 +46,7 @@ interface RevenueByCustomerProps {
   navigateCustomerPivot?: (direction: 'left' | 'right', totalPeriods: number) => void;
   CUSTOMER_PIVOT_WINDOW_SIZE?: number;
   selectedMonth?: string;
+  displayMode?: 'revenue' | 'cases';
 }
 
 const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({ 
@@ -61,7 +62,8 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
   setCustomerPivotRange,
   navigateCustomerPivot,
   CUSTOMER_PIVOT_WINDOW_SIZE = 3,
-  selectedMonth
+  selectedMonth,
+  displayMode = 'revenue'
 }) => {
   const [showAll, setShowAll] = useState(false);
   const [openCsvForCustomer, setOpenCsvForCustomer] = useState<string | null>(null);
@@ -77,13 +79,19 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
   const topCustomers = revenueByCustomer.slice(0, 5);
   const remainingCustomers = revenueByCustomer.slice(5);
   const totalRevenue = revenueByCustomer.reduce((sum, customer) => sum + customer.revenue, 0);
+  const totalCases = revenueByCustomer.reduce((sum, customer) => sum + customer.cases, 0);
   
-  const formatRevenue = (revenue: number) => {
-    return `$${revenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatValue = (value: number) => {
+    if (displayMode === 'revenue') {
+      return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    } else {
+      return value.toLocaleString('en-US');
+    }
   };
 
-  const getPercentage = (revenue: number) => {
-    return ((revenue / totalRevenue) * 100).toFixed(1);
+  const getPercentage = (value: number) => {
+    const total = displayMode === 'revenue' ? totalRevenue : totalCases;
+    return ((value / total) * 100).toFixed(1);
   };
 
 
@@ -109,7 +117,7 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
   // Helpers to build month-by-month pivot by product for a customer
   const buildCustomerRows = (customerName: string) => {
     return alpineData
-      .filter(r => r.customerName === customerName)
+      .filter(r => r.customerName === customerName && !r.isAdjustment)
       .sort((a, b) => {
         if (a.period !== b.period) return a.period.localeCompare(b.period);
         if ((a.productName || '') !== (b.productName || '')) return (a.productName || '').localeCompare(b.productName || '');
@@ -196,10 +204,10 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
               {customer.customerId && (
                 <div className="text-xs text-blue-600 font-medium">ID: {customer.customerId}</div>
               )}
-              <div className="text-xs text-gray-500">{getPercentage(customer.revenue)}% of total</div>
+              <div className="text-xs text-gray-500">{getPercentage(displayMode === 'revenue' ? customer.revenue : customer.cases)}% of total</div>
               </div>
             <div className="text-sm font-semibold text-gray-900">
-              {formatRevenue(customer.revenue)}
+              {formatValue(displayMode === 'revenue' ? customer.revenue : customer.cases)}
             </div>
 
             {openCsvForCustomer === customer.fullCustomerName && (
@@ -346,10 +354,10 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
                   {customer.customerId && (
                     <div className="text-xs text-blue-600 font-medium">ID: {customer.customerId}</div>
                   )}
-                  <div className="text-xs text-gray-500">{getPercentage(customer.revenue)}% of total</div>
+                  <div className="text-xs text-gray-500">{getPercentage(displayMode === 'revenue' ? customer.revenue : customer.cases)}% of total</div>
                 </div>
                   <div className="text-sm font-semibold text-gray-900">
-                    {formatRevenue(customer.revenue)}
+                    {formatValue(displayMode === 'revenue' ? customer.revenue : customer.cases)}
               </div>
 
                   {openCsvForCustomer === customer.fullCustomerName && (
@@ -453,23 +461,30 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
 
 // Revenue by Product Component
 interface RevenueByProductProps {
-  revenueByProduct: Array<{ id: string; product: string; fullProduct: string; revenue: number }>;
+  revenueByProduct: Array<{ id: string; product: string; fullProduct: string; revenue: number; cases: number }>;
   alpineData: AlpineSalesRecord[];
+  displayMode?: 'revenue' | 'cases';
 }
 
-const RevenueByProductComponent: React.FC<RevenueByProductProps> = ({ revenueByProduct, alpineData }) => {
+const RevenueByProductComponent: React.FC<RevenueByProductProps> = ({ revenueByProduct, alpineData, displayMode = 'revenue' }) => {
   const [showAll, setShowAll] = useState(false);
   
   const topProducts = revenueByProduct.slice(0, 5);
   const remainingProducts = revenueByProduct.slice(5);
   const totalRevenue = revenueByProduct.reduce((sum, product) => sum + product.revenue, 0);
+  const totalCases = revenueByProduct.reduce((sum, product) => sum + product.cases, 0);
   
-  const formatRevenue = (revenue: number) => {
-    return `$${revenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatValue = (value: number) => {
+    if (displayMode === 'revenue') {
+      return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    } else {
+      return value.toLocaleString('en-US');
+    }
   };
 
-  const getPercentage = (revenue: number) => {
-    return ((revenue / totalRevenue) * 100).toFixed(1);
+  const getPercentage = (value: number) => {
+    const total = displayMode === 'revenue' ? totalRevenue : totalCases;
+    return ((value / total) * 100).toFixed(1);
   };
 
   return (
@@ -487,10 +502,10 @@ const RevenueByProductComponent: React.FC<RevenueByProductProps> = ({ revenueByP
               <div className="text-sm font-medium text-gray-900 break-words">
                   {toTitleCase(product.product)}
                 </div>
-              <div className="text-xs text-gray-500">{getPercentage(product.revenue)}% of total</div>
+              <div className="text-xs text-gray-500">{getPercentage(displayMode === 'revenue' ? product.revenue : product.cases)}% of total</div>
               </div>
             <div className="text-sm font-semibold text-gray-900">
-              {formatRevenue(product.revenue)}
+              {formatValue(displayMode === 'revenue' ? product.revenue : product.cases)}
             </div>
           </div>
         ))}
@@ -510,10 +525,10 @@ const RevenueByProductComponent: React.FC<RevenueByProductProps> = ({ revenueByP
                     <div className="text-sm font-medium text-gray-900 break-words">
                     {toTitleCase(product.product)}
                   </div>
-                  <div className="text-xs text-gray-500">{getPercentage(product.revenue)}% of total</div>
+                  <div className="text-xs text-gray-500">{getPercentage(displayMode === 'revenue' ? product.revenue : product.cases)}% of total</div>
                 </div>
                   <div className="text-sm font-semibold text-gray-900">
-                    {formatRevenue(product.revenue)}
+                    {formatValue(displayMode === 'revenue' ? product.revenue : product.cases)}
               </div>
             </div>
           ))}
@@ -576,6 +591,7 @@ const Dashboard: React.FC = () => {
   const [selectedDistributor, setSelectedDistributor] = useState<'ALPINE' | 'PETES' | 'KEHE' | 'VISTAR' | 'TONYS' | 'MHD' | 'ALL'>('ALPINE');
   const [isDistributorDropdownOpen, setIsDistributorDropdownOpen] = useState(false);
   const [showCustomReport, setShowCustomReport] = useState(false);
+  const [displayMode, setDisplayMode] = useState<'revenue' | 'cases'>('cases');
   
   // Chart navigation state
   const [chartVisibleRange, setChartVisibleRange] = useState<{start: number, end: number} | null>(null);
@@ -962,9 +978,11 @@ const Dashboard: React.FC = () => {
     }, {} as Record<string, number>);
     const topCustomer = Object.entries(customerRevenue).sort(([,a], [,b]) => b - a)[0];
 
-    // Top product by revenue
+    // Top product by revenue (exclude adjustment records)
     const productRevenue = filteredData.reduce((acc, record) => {
-      acc[record.productName] = (acc[record.productName] || 0) + record.revenue;
+      if (!record.isAdjustment) {
+        acc[record.productName] = (acc[record.productName] || 0) + record.revenue;
+      }
       return acc;
     }, {} as Record<string, number>);
     const topProduct = Object.entries(productRevenue).sort(([,a], [,b]) => b - a)[0];
@@ -985,11 +1003,18 @@ const Dashboard: React.FC = () => {
       return acc;
     }, {} as Record<string, number>);
 
+    const periodCases = dataForTotals.reduce((acc, record) => {
+      const period = record.period;
+      acc[period] = (acc[period] || 0) + record.cases;
+      return acc;
+    }, {} as Record<string, number>);
+
     // Ensure we return an entry for every available period in order
     const periods = [...availablePeriods];
     return periods.map((period) => ({
       period,
       revenue: Math.round((periodRevenue[period] || 0) * 100) / 100,
+      cases: periodCases[period] || 0,
     }));
   }, [dataForTotals, availablePeriods]);
 
@@ -1085,38 +1110,62 @@ const Dashboard: React.FC = () => {
       return acc;
     }, {} as Record<string, number>);
 
+    const customerCases = filteredData.reduce((acc, record) => {
+      acc[record.customerName] = (acc[record.customerName] || 0) + record.cases;
+      return acc;
+    }, {} as Record<string, number>);
+
     const customerIds = filteredData.reduce((acc, record) => {
       acc[record.customerName] = record.customerId || '';
       return acc;
     }, {} as Record<string, string>);
 
-    return Object.entries(customerRevenue)
-      .sort(([,a], [,b]) => b - a)
-      .map(([customer, revenue], index) => ({
-        id: `${customer}-${index}`,
-        customer: customer,
-        fullCustomerName: customer,
-        customerId: customerIds[customer] || '',
-        revenue: Math.round(revenue * 100) / 100,
-      }));
-  }, [filteredData]);
+    const entries = Object.entries(customerRevenue).map(([customer, revenue], index) => ({
+      id: `${customer}-${index}`,
+      customer: customer,
+      fullCustomerName: customer,
+      customerId: customerIds[customer] || '',
+      revenue: Math.round(revenue * 100) / 100,
+      cases: customerCases[customer] || 0,
+    }));
+
+    // Sort by the appropriate field based on display mode
+    return entries.sort((a, b) => {
+      const sortField = displayMode === 'revenue' ? 'revenue' : 'cases';
+      return b[sortField] - a[sortField];
+    });
+  }, [filteredData, displayMode]);
 
   // Revenue by product data
   const revenueByProduct = useMemo(() => {
     const productRevenue = filteredData.reduce((acc, record) => {
-      acc[record.productName] = (acc[record.productName] || 0) + record.revenue;
+      if (!record.isAdjustment) {
+        acc[record.productName] = (acc[record.productName] || 0) + record.revenue;
+      }
       return acc;
     }, {} as Record<string, number>);
 
-    return Object.entries(productRevenue)
-      .sort(([,a], [,b]) => b - a)
-      .map(([product, revenue], index) => ({
-        id: `${product}-${index}`,
-        product: product,
-        fullProduct: product,
-        revenue: Math.round(revenue * 100) / 100,
-      }));
-  }, [filteredData]);
+    const productCases = filteredData.reduce((acc, record) => {
+      if (!record.isAdjustment) {
+        acc[record.productName] = (acc[record.productName] || 0) + record.cases;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    const entries = Object.entries(productRevenue).map(([product, revenue], index) => ({
+      id: `${product}-${index}`,
+      product: product,
+      fullProduct: product,
+      revenue: Math.round(revenue * 100) / 100,
+      cases: productCases[product] || 0,
+    }));
+
+    // Sort by the appropriate field based on display mode
+    return entries.sort((a, b) => {
+      const sortField = displayMode === 'revenue' ? 'revenue' : 'cases';
+      return b[sortField] - a[sortField];
+    });
+  }, [filteredData, displayMode]);
 
   // New vs Lost customers (current vs previous period)
   const currentComparisonPeriod = useMemo(() => {
@@ -1168,19 +1217,35 @@ const Dashboard: React.FC = () => {
 
   // Previously displayed revenue summaries removed from UI; keep code lean
 
-  // Build detailed rows with revenue for sorting/display
+  // Build detailed rows with revenue and cases for sorting/display
   const newCustomersDetailed = useMemo(() => {
     const cur = dataForTotals.filter(r => r.period === currentComparisonPeriod);
     const revenueByCustomer: Record<string, number> = {};
-    cur.forEach(r => { revenueByCustomer[r.customerName] = (revenueByCustomer[r.customerName] || 0) + (r.revenue || 0); });
-    return newCustomers.map(name => ({ name, revenue: revenueByCustomer[name] || 0 }));
+    const casesByCustomer: Record<string, number> = {};
+    cur.forEach(r => { 
+      revenueByCustomer[r.customerName] = (revenueByCustomer[r.customerName] || 0) + (r.revenue || 0);
+      casesByCustomer[r.customerName] = (casesByCustomer[r.customerName] || 0) + (r.cases || 0);
+    });
+    return newCustomers.map(name => ({ 
+      name, 
+      revenue: revenueByCustomer[name] || 0,
+      cases: casesByCustomer[name] || 0
+    }));
   }, [dataForTotals, currentComparisonPeriod, newCustomers]);
 
   const lostCustomersDetailed = useMemo(() => {
     const prev = dataForTotals.filter(r => r.period === previousComparisonPeriod);
     const revenueByCustomer: Record<string, number> = {};
-    prev.forEach(r => { revenueByCustomer[r.customerName] = (revenueByCustomer[r.customerName] || 0) + (r.revenue || 0); });
-    return lostCustomers.map(name => ({ name, revenue: revenueByCustomer[name] || 0 }));
+    const casesByCustomer: Record<string, number> = {};
+    prev.forEach(r => { 
+      revenueByCustomer[r.customerName] = (revenueByCustomer[r.customerName] || 0) + (r.revenue || 0);
+      casesByCustomer[r.customerName] = (casesByCustomer[r.customerName] || 0) + (r.cases || 0);
+    });
+    return lostCustomers.map(name => ({ 
+      name, 
+      revenue: revenueByCustomer[name] || 0,
+      cases: casesByCustomer[name] || 0
+    }));
   }, [dataForTotals, previousComparisonPeriod, lostCustomers]);
 
   const [movementFilter, setMovementFilter] = useState('');
@@ -1420,6 +1485,30 @@ const Dashboard: React.FC = () => {
                     </div>
                   )}
                 </div>
+                
+                {/* Revenue/Cases Toggle */}
+                <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setDisplayMode('revenue')}
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                      displayMode === 'revenue' 
+                        ? 'bg-white text-blue-700 shadow-sm' 
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Revenue
+                  </button>
+                  <button
+                    onClick={() => setDisplayMode('cases')}
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                      displayMode === 'cases' 
+                        ? 'bg-white text-blue-700 shadow-sm' 
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Cases
+                  </button>
+                </div>
               </div>
               {selectedDistributor === 'ALL' && currentPetesData.length > 0 && (
                 <div className="mt-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
@@ -1643,6 +1732,12 @@ const Dashboard: React.FC = () => {
           onClose={() => setShowCustomReport(false)}
           data={currentData}
           availablePeriods={availablePeriods}
+          alpineData={currentAlpineData}
+          petesData={currentPetesData}
+          keheData={currentKeHeData}
+          vistarData={currentVistarData}
+          tonysData={currentTonysData}
+          mhdData={currentMhdData}
         />
       )}
 
@@ -1783,7 +1878,7 @@ const Dashboard: React.FC = () => {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>Revenue by Period</CardTitle>
+                <CardTitle>{displayMode === 'revenue' ? 'Revenue by Period' : 'Cases by Period'}</CardTitle>
                 {revenueOverTime.length > CHART_WINDOW_SIZE && (
                   <div className="flex items-center gap-2">
                     <Button
@@ -1833,12 +1928,17 @@ const Dashboard: React.FC = () => {
                     <YAxis />
                   <ReferenceLine x={highlightedPeriod} stroke="#93C5FD" strokeDasharray="4 4" />
                   <Tooltip 
-                      formatter={(value: number) => [`$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Revenue']}
+                      formatter={(value: number) => [
+                        displayMode === 'revenue' 
+                          ? `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          : value.toLocaleString('en-US'),
+                        displayMode === 'revenue' ? 'Revenue' : 'Cases'
+                      ]}
                       labelFormatter={(label) => `Period: ${label}`}
                   />
                   <Line 
                     type="monotone" 
-                    dataKey="revenue" 
+                    dataKey={displayMode === 'revenue' ? 'revenue' : 'cases'} 
                     stroke="#3B82F6" 
                     strokeWidth={2}
                       dot={(props: any) => {
@@ -1890,8 +1990,8 @@ const Dashboard: React.FC = () => {
                       <ul className="space-y-1 text-sm max-h-72 overflow-auto">
                         {[...newCustomersDetailed]
                           .filter(r => !movementFilter || r.name.toLowerCase().includes(movementFilter.toLowerCase()))
-                          .sort((a, b) => (b.revenue - a.revenue))
-                          .map(({ name, revenue }) => (
+                          .sort((a, b) => displayMode === 'revenue' ? (b.revenue - a.revenue) : (b.cases - a.cases))
+                          .map(({ name, revenue, cases }) => (
                           <li
                             key={`new-${name}`}
                             className="truncate cursor-pointer hover:text-blue-700 flex items-center gap-2"
@@ -1900,7 +2000,14 @@ const Dashboard: React.FC = () => {
                           >
                             <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span>
                             <span className="flex-1 min-w-0 truncate">{name}</span>
-                            <span className="text-[11px] text-gray-500">${revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <span className="text-[11px] text-gray-500">
+                              {(() => {
+                                console.log('DisplayMode in New Accounts:', displayMode, 'Revenue:', revenue, 'Cases:', cases);
+                                return displayMode === 'revenue' 
+                                  ? `$${revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                  : `${cases.toLocaleString()} case`;
+                              })()}
+                            </span>
                           </li>
                         ))}
                       </ul>
@@ -1917,8 +2024,8 @@ const Dashboard: React.FC = () => {
                       <ul className="space-y-1 text-sm max-h-72 overflow-auto">
                         {[...lostCustomersDetailed]
                           .filter(r => !movementFilter || r.name.toLowerCase().includes(movementFilter.toLowerCase()))
-                          .sort((a, b) => (b.revenue - a.revenue))
-                          .map(({ name, revenue }) => (
+                          .sort((a, b) => displayMode === 'revenue' ? (b.revenue - a.revenue) : (b.cases - a.cases))
+                          .map(({ name, revenue, cases }) => (
                           <li
                             key={`lost-${name}`}
                             className="truncate cursor-pointer hover:text-blue-700 flex items-center gap-2"
@@ -1927,7 +2034,14 @@ const Dashboard: React.FC = () => {
                           >
                             <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"></span>
                             <span className="flex-1 min-w-0 truncate">{name}</span>
-                            <span className="text-[11px] text-gray-500">${revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <span className="text-[11px] text-gray-500">
+                              {(() => {
+                                console.log('DisplayMode in Lost Accounts:', displayMode, 'Revenue:', revenue, 'Cases:', cases);
+                                return displayMode === 'revenue' 
+                                  ? `$${revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                  : `${cases.toLocaleString()} case`;
+                              })()}
+                            </span>
                           </li>
                         ))}
                       </ul>
@@ -1944,7 +2058,7 @@ const Dashboard: React.FC = () => {
           {/* Revenue by Customer */}
           <Card>
             <CardHeader>
-              <CardTitle>Revenue by Customer</CardTitle>
+              <CardTitle>{displayMode === 'revenue' ? 'Revenue by Customer' : 'Cases by Customer'}</CardTitle>
             </CardHeader>
             <CardContent>
               <RevenueByCustomerComponent
@@ -1961,6 +2075,7 @@ const Dashboard: React.FC = () => {
                 navigateCustomerPivot={navigateCustomerPivot}
                 CUSTOMER_PIVOT_WINDOW_SIZE={CUSTOMER_PIVOT_WINDOW_SIZE}
                 selectedMonth={selectedMonth}
+                displayMode={displayMode}
               />
             </CardContent>
           </Card>
@@ -1968,12 +2083,13 @@ const Dashboard: React.FC = () => {
           {/* Revenue by Product */}
           <Card>
             <CardHeader>
-              <CardTitle>Revenue by Product</CardTitle>
+              <CardTitle>{displayMode === 'revenue' ? 'Revenue by Product' : 'Cases by Product'}</CardTitle>
             </CardHeader>
             <CardContent>
               <RevenueByProductComponent
                 revenueByProduct={revenueByProduct}
                 alpineData={filteredData}
+                displayMode={displayMode}
               />
             </CardContent>
           </Card>
@@ -2016,7 +2132,7 @@ const Dashboard: React.FC = () => {
                     const totalRevenue = periodRecords.reduce((s, r) => s + r.revenue, 0);
                     const totalCases = periodRecords.reduce((s, r) => s + r.cases, 0);
                     const customers = new Set(periodRecords.map(r => r.customerName)).size;
-                    const products = new Set(periodRecords.map(r => r.productName)).size;
+                    const products = new Set(periodRecords.filter(r => !r.isAdjustment).map(r => r.productName)).size;
                     return (
                       <div className="text-xs text-gray-700 grid grid-cols-2 gap-2">
                         <div><span className="text-gray-500">Records:</span> {periodRecords.length}</div>

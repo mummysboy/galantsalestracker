@@ -204,7 +204,7 @@ export async function parseKeHeXLSX(file: File): Promise<ParsedKeHeData> {
       customerName: retailerName, // Level 1: Retailer Name (Column B)
       productName: mapToCanonicalProductName(finalProductName), // Level 3: Product Data (Column N) - normalized
       size: sizeStr || undefined,
-      cases: Math.round(qty),
+      cases: Math.round(qty / 12),
       pieces: 0,
       revenue: Math.round(cost * 100) / 100,
       period,

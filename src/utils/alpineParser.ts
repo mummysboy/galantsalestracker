@@ -14,6 +14,7 @@ export interface AlpineSalesRecord {
   productCode?: string;
   accountName?: string; // For KeHe: the customer name under a retailer
   excludeFromTotals?: boolean; // For sub-distributors like Pete's Coffee to avoid double-counting
+  isAdjustment?: boolean; // For synthetic adjustment records that shouldn't appear as products
 }
 
 export interface ParsedAlpineData {

@@ -268,7 +268,28 @@ export async function parsePetesXLSX(file: File): Promise<ParsedPetesData> {
     // Skip row if clearly empty
     if (row.every(cell => cell === null || cell === undefined || String(cell).trim() === '')) continue;
 
-    const customerName = String(customerIdx >= 0 ? (row[customerIdx] ?? '') : (sheetLevelCustomer ?? '')).trim();
+    let customerName = String(customerIdx >= 0 ? (row[customerIdx] ?? '') : (sheetLevelCustomer ?? '')).trim();
+    
+    // Clean up customer name - extract only the actual customer name if it contains concatenated data
+    if (customerName.includes(':')) {
+      // If customer name contains a colon, take the part after the colon (e.g., "Employee Purchases:jose Olea" -> "jose Olea")
+      const parts = customerName.split(':');
+      customerName = parts[parts.length - 1].trim();
+    }
+    
+    // Additional cleanup for common concatenation patterns
+    customerName = customerName.replace(/^(Employee Purchases|Staff|Internal|Admin)[:\s]*/i, '').trim();
+    
+    // Ensure we only use data from the designated customer column, not concatenated data
+    if (customerName && customerIdx >= 0) {
+      // Double-check that we're using the correct column value
+      const rawCustomerValue = String(row[customerIdx] ?? '').trim();
+      if (rawCustomerValue !== customerName && !customerName.includes(rawCustomerValue)) {
+        // If there's a mismatch, prefer the raw column value
+        customerName = rawCustomerValue;
+      }
+    }
+    
     const productName = String(productIdx >= 0 ? (row[productIdx] ?? '') : '').trim();
     // Detect totals even if product/customer columns are blank by scanning all cells for total-like labels
     const rowTextJoined = row.map(c => String(c ?? '').toLowerCase()).join(' ');
@@ -340,8 +361,10 @@ export async function parsePetesXLSX(file: File): Promise<ParsedPetesData> {
     const revDiff = Math.round((revTarget - computedRevenue) * 100) / 100;
     const casesDiff = Math.round(casesTarget - computedCases);
     if (Math.abs(revDiff) > 0.009 || casesDiff !== 0) {
+      // Add adjustment record with proper customer name from existing data
+      const existingCustomer = records.length > 0 ? records[0].customerName : 'Unknown Customer';
       records.push({
-        customerName: 'Adjustments',
+        customerName: existingCustomer,
         productName: 'Sheet Bottom-Line Adjustment',
         cases: casesDiff,
         pieces: 0,
@@ -349,6 +372,7 @@ export async function parsePetesXLSX(file: File): Promise<ParsedPetesData> {
         period,
         productCode: 'ADJ',
         excludeFromTotals: true, // Pete's is a sub-distributor; exclude to avoid double-counting
+        isAdjustment: true, // Mark as adjustment record so it doesn't appear as a product
       });
       // Update computed totals to match targets
       computedRevenue = revTarget;
