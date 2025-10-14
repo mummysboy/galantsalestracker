@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, TrendingUp, TrendingDown, Package, ChevronDown, ChevronRight, Calendar, Download, ChevronLeft } from 'lucide-react';
+import { X, TrendingUp, TrendingDown, Package, ChevronDown, ChevronRight, ChevronLeft } from 'lucide-react';
 import { Button } from './ui/button';
 import { AlpineSalesRecord } from '../utils/alpineParser';
 import { toTitleCase } from '../lib/utils';
@@ -16,9 +16,6 @@ function calculateRetailerCustomerDataAllPeriods(mhdData: AlpineSalesRecord[], r
   // Get all unique customers for this retailer
   const customersMap = new Map<string, Map<string, number>>();
 
-  // Determine periods
-  const allPeriods = Array.from(new Set(retailerRecords.map(r => r.period))).sort();
-  
   // Convert to quarter format if needed
   const periodToQuarter = (period: string) => {
     const [year, monthStr] = period.split('-');
@@ -77,9 +74,6 @@ function calculateCustomerProductDataAllPeriods(mhdData: AlpineSalesRecord[], re
   const productsMap = new Map<string, Map<string, number>>();
   const productMetadata = new Map<string, { size?: string; productCode?: string }>();
 
-  // Determine periods
-  const allPeriods = Array.from(new Set(customerRecords.map(r => r.period))).sort();
-  
   // Convert to quarter format if needed
   const periodToQuarter = (period: string) => {
     const [year, monthStr] = period.split('-');
@@ -156,20 +150,6 @@ const MhdCustomerDetailModal: React.FC<MhdCustomerDetailModalProps> = ({
   
   const PERIOD_WINDOW_SIZE = 3;
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2
-    }).format(amount);
-  };
-
-  const getTrendIcon = (change: number) => {
-    if (change > 0) return <TrendingUp className="w-4 h-4 text-green-600" />;
-    if (change < 0) return <TrendingDown className="w-4 h-4 text-red-600" />;
-    return null;
-  };
-
   const toggleCustomerExpansion = (customerName: string) => {
     setExpandedCustomers(prev => {
       const newSet = new Set(prev);
@@ -225,9 +205,6 @@ const MhdCustomerDetailModal: React.FC<MhdCustomerDetailModalProps> = ({
     }
   }, [availablePeriods, selectedPeriod, selectedMonth, periodRange]);
 
-  // Ensure we always have a selected period
-  const effectiveSelectedPeriod = selectedPeriod || (availablePeriods.length > 0 ? availablePeriods[availablePeriods.length - 1] : '');
-
   // Reset selected period when switching view modes
   React.useEffect(() => {
     if (availablePeriods.length > 0) {
@@ -235,7 +212,7 @@ const MhdCustomerDetailModal: React.FC<MhdCustomerDetailModalProps> = ({
     }
     // Reset period range when switching view modes
     setPeriodRange(null);
-  }, [viewMode]);
+  }, [viewMode, availablePeriods]);
 
   // Navigation functions for period range
   const navigatePeriodRange = (direction: 'left' | 'right') => {
@@ -284,7 +261,7 @@ const MhdCustomerDetailModal: React.FC<MhdCustomerDetailModalProps> = ({
   if (!isOpen) return null;
 
   // Show customers (Level 2) summary for retailer with visible periods only
-  const { customers, periods: allPeriods } = calculateRetailerCustomerDataAllPeriods(mhdData, retailerName, viewMode);
+  const { customers } = calculateRetailerCustomerDataAllPeriods(mhdData, retailerName, viewMode);
   
   // Filter periods to only show visible ones
   const periods = visiblePeriods;

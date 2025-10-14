@@ -1197,21 +1197,7 @@ const Dashboard: React.FC = () => {
       map.set(c, analyzeCustomerProgress(data, c));
     });
     return map;
-  }, [currentAlpineData, currentPetesData, currentKeHeData, currentVistarData, currentTonysData, currentMhdData]);
-
-  const availableDistributorsByData = useMemo(() => {
-    const map = new Map<string, boolean>();
-    map.set('ALPINE', currentAlpineData.length > 0);
-    map.set('PETES', currentPetesData.length > 0);
-    map.set('KEHE', currentKeHeData.length > 0);
-    map.set('VISTAR', currentVistarData.length > 0);
-    map.set('TONYS', currentTonysData.length > 0);
-    map.set('MHD', currentMhdData.length > 0);
-    // ALL is always available if any data exists
-    const hasAnyData = currentAlpineData.length > 0 || currentPetesData.length > 0 || currentKeHeData.length > 0 || currentVistarData.length > 0 || currentTonysData.length > 0 || currentMhdData.length > 0;
-    map.set('ALL', hasAnyData);
-    return map;
-  }, [currentAlpineData, currentPetesData, currentKeHeData, currentVistarData, currentTonysData, currentMhdData]);
+  }, [currentAlpineData, currentPetesData, currentKeHeData, currentVistarData, currentTonysData]);
 
   const getDistributorLabel = (d: 'ALPINE' | 'PETES' | 'KEHE' | 'VISTAR' | 'TONYS' | 'MHD' | 'ALL' = selectedDistributor) => (
     d === 'ALPINE' ? 'Alpine' : d === 'PETES' ? "Pete's Coffee" : d === 'KEHE' ? 'KeHe' : d === 'VISTAR' ? 'Vistar' : d === 'TONYS' ? "Tony's Fine Foods" : d === 'MHD' ? 'Mike Hudson' : 'All Businesses'

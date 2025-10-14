@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, TrendingUp, TrendingDown, Package, ChevronDown, ChevronRight, Calendar, Download, ChevronLeft } from 'lucide-react';
+import { X, TrendingUp, TrendingDown, Package, ChevronDown, ChevronRight, ChevronLeft } from 'lucide-react';
 import { Button } from './ui/button';
 import { AlpineSalesRecord } from '../utils/alpineParser';
 import { toTitleCase } from '../lib/utils';
@@ -17,9 +17,6 @@ function calculateOpcoCustomerDataAllPeriods(vistarData: AlpineSalesRecord[], op
   // Get all unique customers for this OPCO
   const customersMap = new Map<string, Map<string, number>>();
 
-  // Determine periods
-  const allPeriods = Array.from(new Set(opcoRecords.map(r => r.period))).sort();
-  
   // Convert to quarter format if needed
   const periodToQuarter = (period: string) => {
     const [year, monthStr] = period.split('-');
@@ -78,9 +75,6 @@ function calculateCustomerProductDataAllPeriods(vistarData: AlpineSalesRecord[],
   const productsMap = new Map<string, Map<string, number>>();
   const productMetadata = new Map<string, { size?: string; productCode?: string }>();
 
-  // Determine periods
-  const allPeriods = Array.from(new Set(customerRecords.map(r => r.period))).sort();
-  
   // Convert to quarter format if needed
   const periodToQuarter = (period: string) => {
     const [year, monthStr] = period.split('-');
@@ -157,20 +151,6 @@ const VistarCustomerDetailModal: React.FC<VistarCustomerDetailModalProps> = ({
   
   const PERIOD_WINDOW_SIZE = 3;
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2
-    }).format(amount);
-  };
-
-  const getTrendIcon = (change: number) => {
-    if (change > 0) return <TrendingUp className="w-4 h-4 text-green-600" />;
-    if (change < 0) return <TrendingDown className="w-4 h-4 text-red-600" />;
-    return null;
-  };
-
   const toggleCustomerExpansion = (customerName: string) => {
     setExpandedCustomers(prev => {
       const newSet = new Set(prev);
@@ -226,9 +206,6 @@ const VistarCustomerDetailModal: React.FC<VistarCustomerDetailModalProps> = ({
     }
   }, [availablePeriods, selectedPeriod, selectedMonth, periodRange]);
 
-  // Ensure we always have a selected period
-  const effectiveSelectedPeriod = selectedPeriod || (availablePeriods.length > 0 ? availablePeriods[availablePeriods.length - 1] : '');
-
   // Reset selected period when switching view modes
   React.useEffect(() => {
     if (availablePeriods.length > 0) {
@@ -236,7 +213,7 @@ const VistarCustomerDetailModal: React.FC<VistarCustomerDetailModalProps> = ({
     }
     // Reset period range when switching view modes
     setPeriodRange(null);
-  }, [viewMode]);
+  }, [viewMode, availablePeriods]);
 
   // Navigation functions for period range
   const navigatePeriodRange = (direction: 'left' | 'right') => {
@@ -282,58 +259,10 @@ const VistarCustomerDetailModal: React.FC<VistarCustomerDetailModalProps> = ({
     };
   }, [isPeriodDropdownOpen]);
 
-  // Function to export customer data as CSV
-  const exportToCSV = () => {
-    const { customers, periods } = calculateOpcoCustomerDataAllPeriods(vistarData, opcoName, viewMode);
-    
-    // CSV Headers
-    const headers = ['Customer', ...periods];
-    
-    // CSV Rows
-    const rows = customers.map(customer => [
-      customer.customerName,
-      ...periods.map(period => (customer.periodData.get(period) || 0).toString())
-    ]);
-    
-    // Add totals row
-    const totalsRow = ['Total', ...periods.map(period => {
-      const periodTotal = customers.reduce((sum, customer) => {
-        return sum + (customer.periodData.get(period) || 0);
-      }, 0);
-      return periodTotal.toString();
-    })];
-    
-    rows.push(totalsRow);
-    
-    // Convert to CSV format
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => {
-        // Escape cells containing commas, quotes, or newlines
-        const cellStr = String(cell);
-        if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
-          return `"${cellStr.replace(/"/g, '""')}"`;
-        }
-        return cellStr;
-      }).join(','))
-    ].join('\n');
-    
-    // Create download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${opcoName}_Cases_By_Customer_All_Periods.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   if (!isOpen) return null;
 
   // Show customers (Customer Desc) summary for OPCO with visible periods only
-  const { customers, periods: allPeriods } = calculateOpcoCustomerDataAllPeriods(vistarData, opcoName, viewMode);
+  const { customers } = calculateOpcoCustomerDataAllPeriods(vistarData, opcoName, viewMode);
   
   // Filter periods to only show visible ones
   const periods = visiblePeriods;

@@ -1,13 +1,8 @@
 import React, { useState, useMemo } from 'react';
-import { X, TrendingUp, TrendingDown, Package, ChevronDown, ChevronRight, Calendar, Download, ChevronLeft } from 'lucide-react';
+import { X, Package, ChevronRight, ChevronLeft } from 'lucide-react';
 import { Button } from './ui/button';
 import { AlpineSalesRecord } from '../utils/alpineParser';
 import { toTitleCase } from '../lib/utils';
-
-// Function to format company names for better readability
-const formatCompanyName = (companyName: string): string => {
-  return companyName;
-};
 
 // Calculate product data for a store (Level 3 -> Products) with all periods
 function calculateStoreProductDataAllPeriods(tonysData: AlpineSalesRecord[], storeName: string, viewMode: 'month' | 'quarter' = 'month') {
@@ -17,9 +12,6 @@ function calculateStoreProductDataAllPeriods(tonysData: AlpineSalesRecord[], sto
   const productsMap = new Map<string, Map<string, number>>();
   const productMetadata = new Map<string, { size?: string; productCode?: string }>();
 
-  // Determine periods
-  const allPeriods = Array.from(new Set(storeRecords.map(r => r.period))).sort();
-  
   // Convert to quarter format if needed
   const periodToQuarter = (period: string) => {
     const [year, monthStr] = period.split('-');
@@ -140,9 +132,6 @@ const TonysCustomerDetailModal: React.FC<TonysCustomerDetailModalProps> = ({
     }
   }, [availablePeriods, selectedPeriod, selectedMonth, periodRange]);
 
-  // Ensure we always have a selected period
-  const effectiveSelectedPeriod = selectedPeriod || (availablePeriods.length > 0 ? availablePeriods[availablePeriods.length - 1] : '');
-
   // Reset selected period when switching view modes
   React.useEffect(() => {
     if (availablePeriods.length > 0) {
@@ -150,7 +139,7 @@ const TonysCustomerDetailModal: React.FC<TonysCustomerDetailModalProps> = ({
     }
     // Reset period range when switching view modes
     setPeriodRange(null);
-  }, [viewMode]);
+  }, [viewMode, availablePeriods]);
 
   // Navigation functions for period range
   const navigatePeriodRange = (direction: 'left' | 'right') => {
@@ -196,60 +185,10 @@ const TonysCustomerDetailModal: React.FC<TonysCustomerDetailModalProps> = ({
     };
   }, [isPeriodDropdownOpen]);
 
-  // Function to export product data as CSV
-  const exportToCSV = () => {
-    const { products, periods } = calculateStoreProductDataAllPeriods(tonysData, customerName, viewMode);
-    
-    // CSV Headers
-    const headers = ['Product', 'Code', 'Size', ...periods];
-    
-    // CSV Rows
-    const rows = products.map(product => [
-      product.productName,
-      product.productCode || '',
-      product.size || '',
-      ...periods.map(period => (product.periodData.get(period) || 0).toString())
-    ]);
-    
-    // Add totals row
-    const totalsRow = ['Total', '', '', ...periods.map(period => {
-      const periodTotal = products.reduce((sum, product) => {
-        return sum + (product.periodData.get(period) || 0);
-      }, 0);
-      return periodTotal.toString();
-    })];
-    
-    rows.push(totalsRow);
-    
-    // Convert to CSV format
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => {
-        // Escape cells containing commas, quotes, or newlines
-        const cellStr = String(cell);
-        if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
-          return `"${cellStr.replace(/"/g, '""')}"`;
-        }
-        return cellStr;
-      }).join(','))
-    ].join('\n');
-    
-    // Create download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${customerName}_Cases_By_Product_All_Periods.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   if (!isOpen) return null;
 
   // Show products for this store with visible periods only
-  const { products, periods: allPeriods } = calculateStoreProductDataAllPeriods(tonysData, customerName, viewMode);
+  const { products } = calculateStoreProductDataAllPeriods(tonysData, customerName, viewMode);
   
   // Filter periods to only show visible ones
   const periods = visiblePeriods;

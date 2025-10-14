@@ -81,7 +81,6 @@ export async function parseTonysXLSX(file: File): Promise<ParsedTonysData> {
 
   // Header is in row 1 (index 0)
   const headers = (rows[0] || []).map(c => String(c || '').trim());
-  const headersLc = headers.map(h => h.toLowerCase());
 
   // Find column indices
   const warehouseIdx = 0; // Column A - Warehouse

@@ -489,7 +489,7 @@ export function addProductMapping(mapping: ProductMapping): void {
   lookup.set(mapping.itemNumber, mapping.canonicalName);
 }
 
-export default {
+const productMappingUtils = {
   mapToCanonicalProductName,
   getAllCanonicalProductNames,
   getProductByItemNumber,
@@ -500,3 +500,4 @@ export default {
   PRODUCT_MAPPINGS
 };
 
+export default productMappingUtils;
