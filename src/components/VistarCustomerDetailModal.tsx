@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, TrendingUp, TrendingDown, Package, ChevronDown, ChevronRight, ChevronLeft } from 'lucide-react';
+import { X, Package, ChevronDown, ChevronRight, ChevronLeft } from 'lucide-react';
 import { Button } from './ui/button';
 import { AlpineSalesRecord } from '../utils/alpineParser';
 import { toTitleCase } from '../lib/utils';
