@@ -1,0 +1,2594 @@
+// Additional product mappings - Add these to productMapping.ts
+
+  // TODO: Map "Chain Natural"
+  // Found in: KeHE Full POD Vendor (13).xlsx
+  // Frequency: 1323
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'Chain Natural',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "Independent West"
+  // Found in: KeHE Full POD Vendor (13).xlsx
+  // Frequency: 266
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'Independent West',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "Regional Accounts"
+  // Found in: KeHE Full POD Vendor (13).xlsx
+  // Frequency: 238
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'Regional Accounts',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "Independent East"
+  // Found in: KeHE Full POD Vendor (13).xlsx
+  // Frequency: 185
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'Independent East',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "Alternate Channel"
+  // Found in: KeHE Full POD Vendor (13).xlsx
+  // Frequency: 57
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'Alternate Channel',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "ROBERTS OF WOODSIDE"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 11
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'ROBERTS OF WOODSIDE',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "CLARKS NUTRITION &"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 11
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'CLARKS NUTRITION &',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "ECHO CHALET INC"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 10
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'ECHO CHALET INC',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "SHOPPERS CORNER, INC"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 10
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'SHOPPERS CORNER, INC',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "NEW LEAF - SAN JOSE EVG"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 9
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'NEW LEAF - SAN JOSE EVG',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "NEW LEAF COMM MKT-HMB"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 9
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'NEW LEAF COMM MKT-HMB',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "NEW LEAF - WEST SIDE"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 9
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'NEW LEAF - WEST SIDE',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "NEW LEAF COMM MKT-APTOS"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 9
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'NEW LEAF COMM MKT-APTOS',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "1109804"
+  // Found in: 4 - Galant Sales  Usage Q4 2024 - MHD (1).xlsx
+  // Frequency: 8
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      '1109804',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "GERRARDS"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 8
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'GERRARDS',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "1111017"
+  // Found in: 4 - Galant Sales  Usage Q4 2024 - MHD (1).xlsx
+  // Frequency: 7
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      '1111017',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "DE DIVINE INC"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 7
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'DE DIVINE INC',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "NEW LEAF NEW CAPITOLA"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 7
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'NEW LEAF NEW CAPITOLA',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "LUNARDI'S #5"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 7
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'LUNARDI'S #5',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "THE GOOD LIFE GROCERY"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 7
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'THE GOOD LIFE GROCERY',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "YOSEMITE VIEW LDG SPE LLC"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 7
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'YOSEMITE VIEW LDG SPE LLC',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "BF/LAZY ACRES #06"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 7
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'BF/LAZY ACRES #06',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "BF/LAZY ACRES #23"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 7
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'BF/LAZY ACRES #23',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "BF/LAZY ACRES #25"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 7
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'BF/LAZY ACRES #25',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "LAZY ACRES STORE #27"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 7
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'LAZY ACRES STORE #27',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "LAZY ACRES STORE #28"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 7
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'LAZY ACRES STORE #28',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "GENE'S FINE FOODS-PLSNTN"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 6
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'GENE'S FINE FOODS-PLSNTN',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "GRASSROOTS NATURAL FOODS"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 6
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'GRASSROOTS NATURAL FOODS',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "THE MILKMAN"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 6
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'THE MILKMAN',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "SCOTTY'S MARKET"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 6
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'SCOTTY'S MARKET',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "Digital Commerce"
+  // Found in: KeHE Full POD Vendor (13).xlsx
+  // Frequency: 5
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'Digital Commerce',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "ATKINSON'S MARKET - KETCH"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 5
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'ATKINSON'S MARKET - KETCH',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "LUNARDI'S #2"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 5
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'LUNARDI'S #2',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "ROXIE MARKET & DELI"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 5
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'ROXIE MARKET & DELI',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "SAVECO #13"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 5
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'SAVECO #13',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "WILDBERRIES MARKETPLACE"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 5
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'WILDBERRIES MARKETPLACE',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "#4 ROTH'S FRESH MARKETS"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 5
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      '#4 ROTH'S FRESH MARKETS',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "LAZY ACRES STORE #26"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 5
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'LAZY ACRES STORE #26',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #108"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 4
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #108',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #222"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 4
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #222',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "HOLIDAY MARKET #65"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 4
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'HOLIDAY MARKET #65',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "BERKELEY BOWL WEST"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 4
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'BERKELEY BOWL WEST',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "CASTRO VALLEY NATURAL GRO"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 4
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'CASTRO VALLEY NATURAL GRO',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "DAVIS FOOD CO-OP"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 4
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'DAVIS FOOD CO-OP',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "LUNARDI'S #8"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 4
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'LUNARDI'S #8',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "NEW MOON NATURAL FOODS-TC"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 4
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'NEW MOON NATURAL FOODS-TC',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "COMMUNITY MARKET"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 4
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'COMMUNITY MARKET',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "SUNSHINE HEALTH FOODS"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 4
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'SUNSHINE HEALTH FOODS',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "ROTH'S FRESH MARKETS #1"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 4
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'ROTH'S FRESH MARKETS #1',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S ONE#125"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S ONE#125',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #424"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #424',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "HOLIDAY MARKET #41"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'HOLIDAY MARKET #41',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "HOLIDAY MARKET #59"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'HOLIDAY MARKET #59',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "BEN LOMOND"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'BEN LOMOND',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "BIANCHINI'S MARKET- SC"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'BIANCHINI'S MARKET- SC',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "BIG JOHN'S MARKET /HLDSBG"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'BIG JOHN'S MARKET /HLDSBG',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "CANYON MARKET"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'CANYON MARKET',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "FARM FRESH TO YOU - W SAC"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'FARM FRESH TO YOU - W SAC',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "DELUXE FOODS OF APTOS"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'DELUXE FOODS OF APTOS',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "E G AYERS DISTRIBUTING"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'E G AYERS DISTRIBUTING',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "GROVE MARKET"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'GROVE MARKET',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "GUS'S COMM MKT HARRISON"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'GUS'S COMM MKT HARRISON',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "GUS'S COMM MKT CHANNEL"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'GUS'S COMM MKT CHANNEL',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "HAIGHT STREET MARKET"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'HAIGHT STREET MARKET',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "NEW LEAF - CAPITOLA"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'NEW LEAF - CAPITOLA',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "NEW LEAF-DOWNTOWN"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'NEW LEAF-DOWNTOWN',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "LUNARDI'S #3"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'LUNARDI'S #3',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "LUNARDI'S #4"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'LUNARDI'S #4',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "NEW MOON NATURAL FOODS"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'NEW MOON NATURAL FOODS',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "OLIVER'S MARKET #1"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'OLIVER'S MARKET #1',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "OLIVER'S MARKET #2"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'OLIVER'S MARKET #2',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "THE GOOD LIFE GROC- 20TH"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'THE GOOD LIFE GROC- 20TH',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "PINECREST LAKE RESORT"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'PINECREST LAKE RESORT',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "PIONEER MARKET MARIPOSA"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'PIONEER MARKET MARIPOSA',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RED HAWK CASINO"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RED HAWK CASINO',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "S & B MARKET, INC"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'S & B MARKET, INC',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "SIERRA HILLS MARKET"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'SIERRA HILLS MARKET',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "STAFF OF LIFE"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'STAFF OF LIFE',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "STAFF OF LIFE WATSONVILLE"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'STAFF OF LIFE WATSONVILLE',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "STEVE-O'S MEATS"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'STEVE-O'S MEATS',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "CORNUCOPIA NATURAL FOODS"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'CORNUCOPIA NATURAL FOODS',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "SURF SUPERMARKET INC."
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'SURF SUPERMARKET INC.',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "WILD RIVERS MARKET"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'WILD RIVERS MARKET',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "FULL CIRCLE - SEATTLE"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'FULL CIRCLE - SEATTLE',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "CHUCKS PRODUCE MILL PLAIN"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'CHUCKS PRODUCE MILL PLAIN',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "MY FRESH BASKET LLC"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'MY FRESH BASKET LLC',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "ROTH'S FRESH MARKETS#8"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'ROTH'S FRESH MARKETS#8',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "ROTH'S FRESH MARKETS#11"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'ROTH'S FRESH MARKETS#11',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "ROTH'S FRESH MARKETS#12"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'ROTH'S FRESH MARKETS#12',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "MANOLO #3"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 3
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'MANOLO #3',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #233"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #233',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #239"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #239',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #248"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #248',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #302"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #302',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #306"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #306',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #310"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #310',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #339"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #339',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #447"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #447',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #448"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #448',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "BEL AIR MARKET #519"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'BEL AIR MARKET #519',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "BEL AIR MARKET #526"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'BEL AIR MARKET #526',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "HOLIDAY MARKET #37"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'HOLIDAY MARKET #37',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "HOLIDAY MARKET #57"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'HOLIDAY MARKET #57',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "SCOLARI'S MARKET # 1"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'SCOLARI'S MARKET # 1',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "BRAITOS RIVERA FOODS"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'BRAITOS RIVERA FOODS',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "BROWN'S VALLEY MARKET INC"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'BROWN'S VALLEY MARKET INC',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "CAL MART SUPER"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'CAL MART SUPER',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "DE MARTINI ORCHARD /KOZY"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'DE MARTINI ORCHARD /KOZY',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "ENCINAL MARKET"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'ENCINAL MARKET',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "GLENSHIRE GENERAL STORE"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'GLENSHIRE GENERAL STORE',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "HARDESTER'S MARKETS & HAR"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'HARDESTER'S MARKETS & HAR',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "IONE PLAZA MARKET"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'IONE PLAZA MARKET',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "NATURAL SELECTION"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'NATURAL SELECTION',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "MOTHER TRUCKERS"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'MOTHER TRUCKERS',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "NORIEGA MARKET"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'NORIEGA MARKET',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "OLIVER'S MARKET #3"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'OLIVER'S MARKET #3',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "OLIVER'S MARKET #4"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'OLIVER'S MARKET #4',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "SHERM'S #1 THUNDERBIRD"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'SHERM'S #1 THUNDERBIRD',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "S.P.D. MARKET/NEVADA CITY"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'S.P.D. MARKET/NEVADA CITY',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "S.P.D. MARKET/GRASS VALLE"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'S.P.D. MARKET/GRASS VALLE',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "SPEER'S MARKET"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'SPEER'S MARKET',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "SPITERIS DELI & CATERING"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'SPITERIS DELI & CATERING',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "TWAIN HARTE MARKET"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'TWAIN HARTE MARKET',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "WILD OAK C/O RANCH MARKET"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'WILD OAK C/O RANCH MARKET',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "WORTON'S MARKET"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'WORTON'S MARKET',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "FARM FRESH TO YOU -VERNON"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'FARM FRESH TO YOU -VERNON',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "GENERAL STORE"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'GENERAL STORE',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "MOTHERS MKT & KITCHEN-CM"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'MOTHERS MKT & KITCHEN-CM',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "MOTHERS MKT & KITCHEN-LW"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'MOTHERS MKT & KITCHEN-LW',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "MOTHERS MARKETS - LB"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'MOTHERS MARKETS - LB',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "WHOLE FOODS MKT - KCM"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'WHOLE FOODS MKT - KCM',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "WHOLE FOODS MKT - FCO"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'WHOLE FOODS MKT - FCO',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "WHOLE FOODS MKT - BLT"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'WHOLE FOODS MKT - BLT',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "WHOLE FOODS MKT - BOZ RM"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'WHOLE FOODS MKT - BOZ RM',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "WHOLE FOODS MKT - OVP"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 2
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'WHOLE FOODS MKT - OVP',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "Version"
+  // Found in: KeHE Full POD Vendor (13).xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'Version',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "Vendor"
+  // Found in: KeHE Full POD Vendor (13).xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'Vendor',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "Format"
+  // Found in: KeHE Full POD Vendor (13).xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'Format',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "Items"
+  // Found in: KeHE Full POD Vendor (13).xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'Items',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "Distribution Center"
+  // Found in: KeHE Full POD Vendor (13).xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'Distribution Center',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "Stores"
+  // Found in: KeHE Full POD Vendor (13).xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'Stores',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "Date Range"
+  // Found in: KeHE Full POD Vendor (13).xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'Date Range',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "Channel"
+  // Found in: KeHE Full POD Vendor (13).xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'Channel',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "SALES BASIS - SORTED BY CUSTOMER NAME - SORTED BY CUSTOMER NAME"
+  // Found in: Troia- July 25 Sales.xls
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'SALES BASIS - SORTED BY CUSTOMER NAME - SORTED BY CUSTOMER NAME',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "CUST #"
+  // Found in: Troia- July 25 Sales.xls
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'CUST #',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "105087"
+  // Found in: Troia- July 25 Sales.xls
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      '105087',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "1052222"
+  // Found in: Troia- July 25 Sales.xls
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      '1052222',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "105681"
+  // Found in: Troia- July 25 Sales.xls
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      '105681',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "10784"
+  // Found in: Troia- July 25 Sales.xls
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      '10784',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "30007"
+  // Found in: Troia- July 25 Sales.xls
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      '30007',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #114"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #114',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #117"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #117',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #122"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #122',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #206"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #206',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #230"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #230',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #231"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #231',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #236"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #236',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #249"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #249',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #309"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #309',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #319"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #319',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #330"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #330',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #337"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #337',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #338"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #338',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #412"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #412',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #415"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #415',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #417"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #417',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "RALEY'S #420"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'RALEY'S #420',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "BEL AIR MARKET #502"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'BEL AIR MARKET #502',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "BEL AIR MARKET #506"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'BEL AIR MARKET #506',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "BEL AIR MARKET #510"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'BEL AIR MARKET #510',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "BEL AIR MARKET #524"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'BEL AIR MARKET #524',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "BEL AIR MARKET #525"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'BEL AIR MARKET #525',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "BEL AIR MARKET #530"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'BEL AIR MARKET #530',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "NOB HILL MARKET #602"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'NOB HILL MARKET #602',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "NOB HILL MARKET #628"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'NOB HILL MARKET #628',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "NOB HILL MARKET #632"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'NOB HILL MARKET #632',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "NOB HILL MARKET #634"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'NOB HILL MARKET #634',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "FOOD 4 LESS #30- WOODLAND"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'FOOD 4 LESS #30- WOODLAND',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "NUGGET MARKET #1"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'NUGGET MARKET #1',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "NUGGET MARKET #6"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'NUGGET MARKET #6',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "NUGGET MARKET #7"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'NUGGET MARKET #7',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "NUGGET MARKET #8"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'NUGGET MARKET #8',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "NUGGET MARKET #9"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'NUGGET MARKET #9',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "NUGGET MARKET #10"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'NUGGET MARKET #10',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "NUGGET MARKET #11"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'NUGGET MARKET #11',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "NUGGET MARKET #12"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'NUGGET MARKET #12',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "AJ'S MKT & NATURAL FOODS"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'AJ'S MKT & NATURAL FOODS',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "ANCHOR BAY STORE"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'ANCHOR BAY STORE',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "BERKELEY BOWL MARKETPLACE"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'BERKELEY BOWL MARKETPLACE',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "CHICO LOCKER & SAUSAGE CO"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'CHICO LOCKER & SAUSAGE CO',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "COLONIAL ENERGY 40136"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'COLONIAL ENERGY 40136',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "FALLETTI FOODS"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'FALLETTI FOODS',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "FARMER'S MARKET PLACE"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'FARMER'S MARKET PLACE',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "EL RANCHO MKT  SOLVANG"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'EL RANCHO MKT  SOLVANG',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "LUNARDI'S #9"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'LUNARDI'S #9',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "MOLLIE STONES #1 - SAUSAL"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'MOLLIE STONES #1 - SAUSAL',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "MOLLIE STONES #3 - PALO A"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'MOLLIE STONES #3 - PALO A',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "MOLLIE STONES #6 - BURLIN"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'MOLLIE STONES #6 - BURLIN',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "MOLLIE STONES #5 - SAN BR"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'MOLLIE STONES #5 - SAN BR',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "MOLLIE STONES #7 - SAN MA"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'MOLLIE STONES #7 - SAN MA',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "MOKE HILL MARKET"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'MOKE HILL MARKET',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "MOLLIE STONES #4 - GREENB"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'MOLLIE STONES #4 - GREENB',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "PURITY MARKET"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'PURITY MARKET',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "ROUNDMAN'S SMOKE HOUSE"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'ROUNDMAN'S SMOKE HOUSE',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "ROXIE FOOD CTR-SACTO"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'ROXIE FOOD CTR-SACTO',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "SAVE MORE MEATS"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'SAVE MORE MEATS',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "THE MARKET ON MARKET"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'THE MARKET ON MARKET',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "MOLLIE STONES #8"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'MOLLIE STONES #8',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "WILD OAK C/O DILLON BCH"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'WILD OAK C/O DILLON BCH',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "WILD OAK C/O PELICAN PZA"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'WILD OAK C/O PELICAN PZA',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "WILD OAK C/O FORT ROSS"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'WILD OAK C/O FORT ROSS',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "BOB'S MARKET"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'BOB'S MARKET',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "MOTHERS MKT&KITCHEN BREA"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'MOTHERS MKT&KITCHEN BREA',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "WINDMILL FARMS"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'WINDMILL FARMS',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "WHOLE FOODS MKT - LIN"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'WHOLE FOODS MKT - LIN',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+
+  // TODO: Map "WHOLE FOODS MKT - ELP"
+  // Found in: _M Galant Foods 3-S -Comp C_W, Y to Y 2025-08-21.xlsx
+  // Frequency: 1
+  {
+    itemNumber: 'XXX', // TODO: Fill in item number
+    canonicalName: 'TODO', // TODO: Fill in canonical name
+    alternateNames: [
+      'WHOLE FOODS MKT - ELP',
+    ],
+    category: 'TODO' // TODO: Fill in category
+  },
+

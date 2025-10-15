@@ -114,9 +114,9 @@ You can learn more in the [Create React App documentation](https://facebook.gith
 
 To learn React, check out the [React documentation](https://reactjs.org/).
 
-## Google Sheets integration (append on upload + quarterly CSV view)
+## Google Sheets integration (append on upload + monthly CSV view)
 
-You can push every upload into a Google Sheet and automatically maintain a quarterly CSV-style tab that mirrors your quarterly file. The app already sends rows when you upload (both CSV and Alpine TXT) if you set two environment variables:
+You can push every upload into a Google Sheet and automatically maintain a monthly CSV-style tab that mirrors your monthly data. The app already sends rows when you upload (both CSV and Alpine TXT) if you set two environment variables:
 
 - `REACT_APP_GS_WEBAPP_URL`
 - `REACT_APP_GS_TOKEN`
@@ -125,7 +125,7 @@ Follow these steps to set up the Google Apps Script receiver and the two tabs:
 
 1) Create a Google Sheet
 - Create a new spreadsheet (e.g., "SalesTracker Data").
-- Leave tabs empty; the script will create/update `AllData` and `Quarterly_CSV_View`.
+- Leave tabs empty; the script will create/update `AllData` and `Monthly_CSV_View`.
 
 2) Add the Apps Script
 - In the Sheet, go to Extensions → Apps Script.
@@ -133,11 +133,11 @@ Follow these steps to set up the Google Apps Script receiver and the two tabs:
 - Replace `TOKEN_VALUE` with a long random string. Keep it secret.
 
 ```javascript
-// Apps Script for receiving upload rows and building a quarterly CSV-like view
+// Apps Script for receiving upload rows and building a monthly CSV-like view
 
 const TOKEN = 'TOKEN_VALUE'; // set this to the same value as REACT_APP_GS_TOKEN
 const RAW_SHEET_NAME = 'AllData';
-const QUARTER_VIEW_SHEET_NAME = 'Quarterly_CSV_View';
+const MONTHLY_VIEW_SHEET_NAME = 'Monthly_CSV_View';
 
 function doPost(e) {
   try {
@@ -169,8 +169,8 @@ function doPost(e) {
       raw.getRange(startRow, 1, normalized.length, 8).setValues(normalized);
     }
 
-    // Rebuild quarterly view for the latest year present in the data
-    rebuildQuarterlyView(ss);
+    // Rebuild monthly view for the latest year present in the data
+    rebuildMonthlyView(ss);
     return ContentService.createTextOutput('OK');
   } catch (err) {
     return ContentService.createTextOutput('Error: ' + err);
@@ -223,43 +223,144 @@ function toNumber(v) {
   return isNaN(n) ? 0 : n;
 }
 
-function rebuildQuarterlyView(ss) {
+function rebuildMonthlyView(ss) {
   const raw = getOrCreateSheet(ss, RAW_SHEET_NAME);
   const lastRow = raw.getLastRow();
   if (lastRow < 2) {
     // No data
-    const view = getOrCreateSheet(ss, QUARTER_VIEW_SHEET_NAME);
+    const view = getOrCreateSheet(ss, MONTHLY_VIEW_SHEET_NAME);
     view.clear();
-    view.getRange(1, 1, 1, 6).setValues([[
-      'Customer', 'Product', 'Q1', 'Q2', 'Q3', 'Q4'
+    view.getRange(1, 1, 1, 14).setValues([[
+      'Customer', 'Product', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ]]);
     view.setFrozenRows(1);
     return;
   }
 
   const values = raw.getRange(2, 1, lastRow - 1, 8).getValues();
-  // Build map: key = year|customer|product, vals = q1..q4 quantities
-  const totalsByKey = {};
+  
+  // Build monthly summary data (for top section)
+  const monthlyTotals = {}; // key = YYYY-MM, value = {quantity, revenue, customers, products}
   const years = new Set();
-
+  
+  // Build map: key = year|customer|product, vals = 12 months quantities and revenues
+  const totalsByKey = {};
+  
   for (let i = 0; i < values.length; i++) {
-    const [dateStr, customer, product, quantity] = [values[i][0], values[i][1], values[i][2], values[i][3]];
+    const [dateStr, customer, product, quantity, revenue] = [values[i][0], values[i][1], values[i][2], values[i][3], values[i][4]];
     if (!dateStr || !customer || !product) continue;
     const d = new Date(dateStr);
     if (isNaN(d)) continue;
     const year = d.getFullYear();
-    years.add(year);
     const month = d.getMonth() + 1; // 1..12
-    const q = Math.ceil(month / 3); // 1..4
+    years.add(year);
+    
+    // Track monthly summary
+    const monthKey = year + '-' + ('0' + month).slice(-2);
+    if (!monthlyTotals[monthKey]) {
+      monthlyTotals[monthKey] = {
+        quantity: 0,
+        revenue: 0,
+        customers: new Set(),
+        products: new Set()
+      };
+    }
+    monthlyTotals[monthKey].quantity += toNumber(quantity);
+    monthlyTotals[monthKey].revenue += toNumber(revenue);
+    monthlyTotals[monthKey].customers.add(customer);
+    monthlyTotals[monthKey].products.add(product);
+    
+    // Track product-level data
     const key = year + '|' + customer + '|' + product;
-    if (!totalsByKey[key]) totalsByKey[key] = [0, 0, 0, 0];
-    totalsByKey[key][q - 1] += toNumber(quantity);
+    if (!totalsByKey[key]) {
+      totalsByKey[key] = {
+        quantities: Array(12).fill(0),
+        revenues: Array(12).fill(0)
+      };
+    }
+    totalsByKey[key].quantities[month - 1] += toNumber(quantity);
+    totalsByKey[key].revenues[month - 1] += toNumber(revenue);
   }
 
   // Choose the latest year present in the data for the CSV-like view
   const latestYear = Array.from(years).sort().pop();
-
-  const rows = [['Customer', 'Product', 'Q1', 'Q2', 'Q3', 'Q4']];
+  
+  const view = getOrCreateSheet(ss, MONTHLY_VIEW_SHEET_NAME);
+  view.clear();
+  
+  // BUILD TOP SECTION: MONTHLY REPORT SUMMARY
+  let currentRow = 1;
+  
+  // Title row
+  view.getRange(currentRow, 1).setValue('MONTHLY REPORT SUMMARY - ' + latestYear);
+  view.getRange(currentRow, 1, 1, 14).mergeAcross();
+  view.getRange(currentRow, 1).setFontWeight('bold').setFontSize(14).setBackground('#4285f4').setFontColor('#ffffff');
+  currentRow++;
+  
+  // Empty row for spacing
+  currentRow++;
+  
+  // Monthly summary headers
+  const summaryHeaders = ['Month', 'Total Quantity', 'Total Revenue', 'Unique Customers', 'Unique Products'];
+  view.getRange(currentRow, 1, 1, summaryHeaders.length).setValues([summaryHeaders]);
+  view.getRange(currentRow, 1, 1, summaryHeaders.length).setFontWeight('bold').setBackground('#e8f0fe');
+  currentRow++;
+  
+  // Monthly summary data rows
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  for (let m = 1; m <= 12; m++) {
+    const monthKey = latestYear + '-' + ('0' + m).slice(-2);
+    const data = monthlyTotals[monthKey] || { quantity: 0, revenue: 0, customers: new Set(), products: new Set() };
+    view.getRange(currentRow, 1, 1, 5).setValues([[
+      monthNames[m - 1] + ' ' + latestYear,
+      data.quantity,
+      data.revenue,
+      data.customers.size,
+      data.products.size
+    ]]);
+    // Format revenue as currency
+    view.getRange(currentRow, 3).setNumberFormat('$#,##0.00');
+    currentRow++;
+  }
+  
+  // Add total row
+  let totalQty = 0, totalRev = 0;
+  const allCustomers = new Set(), allProducts = new Set();
+  Object.keys(monthlyTotals).forEach(mk => {
+    if (mk.startsWith(String(latestYear))) {
+      const data = monthlyTotals[mk];
+      totalQty += data.quantity;
+      totalRev += data.revenue;
+      data.customers.forEach(c => allCustomers.add(c));
+      data.products.forEach(p => allProducts.add(p));
+    }
+  });
+  view.getRange(currentRow, 1, 1, 5).setValues([['TOTAL', totalQty, totalRev, allCustomers.size, allProducts.size]]);
+  view.getRange(currentRow, 1, 1, 5).setFontWeight('bold').setBackground('#fce8b2');
+  view.getRange(currentRow, 3).setNumberFormat('$#,##0.00');
+  currentRow++;
+  
+  // Empty rows for spacing
+  currentRow += 2;
+  
+  // BUILD BOTTOM SECTION: DETAILED PRODUCT DATA
+  view.getRange(currentRow, 1).setValue('DETAILED PRODUCT DATA BY MONTH - ' + latestYear);
+  view.getRange(currentRow, 1, 1, 14).mergeAcross();
+  view.getRange(currentRow, 1).setFontWeight('bold').setFontSize(12).setBackground('#34a853').setFontColor('#ffffff');
+  currentRow++;
+  
+  // Empty row
+  currentRow++;
+  
+  // Product data headers
+  const dataHeaderRow = ['Customer', 'Product', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  view.getRange(currentRow, 1, 1, dataHeaderRow.length).setValues([dataHeaderRow]);
+  view.getRange(currentRow, 1, 1, dataHeaderRow.length).setFontWeight('bold').setBackground('#e8f0fe');
+  view.setFrozenRows(currentRow); // Freeze up to and including the data header row
+  currentRow++;
+  
+  // Product data rows
+  const productRows = [];
   Object.keys(totalsByKey)
     .filter(k => String(k).startsWith(String(latestYear) + '|'))
     .sort()
@@ -267,15 +368,18 @@ function rebuildQuarterlyView(ss) {
       const parts = k.split('|');
       const customer = parts[1];
       const product = parts[2];
-      const qs = totalsByKey[k];
-      rows.push([customer, product, qs[0], qs[1], qs[2], qs[3]]);
+      const monthlyQtys = totalsByKey[k].quantities;
+      productRows.push([customer, product, ...monthlyQtys]);
     });
-
-  const view = getOrCreateSheet(ss, QUARTER_VIEW_SHEET_NAME);
-  view.clear();
-  view.getRange(1, 1, rows.length, rows[0].length).setValues(rows);
-  view.setFrozenRows(1);
-  view.getRange(1, 7).setValue('Year: ' + latestYear); // Optional note
+  
+  if (productRows.length > 0) {
+    view.getRange(currentRow, 1, productRows.length, 14).setValues(productRows);
+  }
+  
+  // Auto-resize columns for better readability
+  for (let col = 1; col <= 14; col++) {
+    view.autoResizeColumn(col);
+  }
 }
 ```
 
@@ -297,17 +401,32 @@ function rebuildQuarterlyView(ss) {
 5) How it works
 - When you upload a CSV in the app (or process Alpine TXT), the app sends rows shaped like:
   - `[Date, Customer, Product, Quantity, Revenue, InvoiceId, Source, UploadedAt]`
-- The script appends them to `AllData` and then rebuilds `Quarterly_CSV_View` to match the quarterly CSV format:
-  - Columns: `Customer, Product, Q1, Q2, Q3, Q4`
-  - Values: summed Quantity per quarter for the latest year present in the data.
-- Every new upload appends and updates the quarterly view automatically.
+- The script appends them to `AllData` and then rebuilds `Monthly_CSV_View` with two sections:
+  
+  **Top Section - Monthly Report Summary:**
+  - A summary table showing for each month:
+    - Total Quantity
+    - Total Revenue (formatted as currency)
+    - Number of Unique Customers
+    - Number of Unique Products
+  - Includes a TOTAL row at the bottom
+  - Color-coded with professional formatting
+  
+  **Bottom Section - Detailed Product Data:**
+  - Columns: `Customer, Product, Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec`
+  - Values: summed Quantity per month for the latest year present in the data
+  - Each customer/product combination gets its own row
+  
+- Every new upload appends to `AllData` and updates the monthly view automatically.
 
 6) Customization (optional)
-- To build by a specific year instead of the latest: change how `latestYear` is computed.
-- To include revenue columns, adapt `rebuildQuarterlyView` to accumulate revenue separately and add columns.
-- If you want multiple views (e.g., per year), create additional tabs like `Quarterly_2024`, `Quarterly_2025` inside `rebuildQuarterlyView`.
+- To build by a specific year instead of the latest: change how `latestYear` is computed in `rebuildMonthlyView`.
+- To show revenue instead of quantity in the product data section: change `monthlyQtys` to use `totalsByKey[k].revenues`.
+- If you want multiple views (e.g., per year), create additional tabs like `Monthly_2024`, `Monthly_2025` inside `rebuildMonthlyView`.
+- To adjust colors/formatting: modify the `setBackground()` and `setFontColor()` calls.
 
 Troubleshooting
 - If nothing appears: confirm the token matches, the deployment is a Web app, and the URL is correct.
 - If uploads are blocked by CORS: the app uses a simple `no-cors` POST, which the script accepts; no extra headers are required.
 - If numbers look wrong: ensure Quantity and Revenue columns in `AllData` are numeric; the script coerces them where possible.
+- If the monthly summary looks incomplete: ensure your data has proper dates in YYYY-MM-DD format.

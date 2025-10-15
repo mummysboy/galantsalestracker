@@ -1,0 +1,140 @@
+
+
+
+
+IT415V                       SALES RECAP - CUSTOMER/ITEM                     PAGE :        1
+                      FROM :  6/01/25 THRU  6/30/25                      RUN DATE :  7/06/25
+GALANT GALANT SALES REPORT OR/WA                                             TIME :  5:01:42
+       ALPINE
+
+                                                                                                                   SALES
+     #             DESCRIPTION            SIZE    CASES    PIECES    NET LBS        SALES                         MFG ITEM #
+----------  ------------------------- ---------- -------- -------- ------------ -------------                     ----------
+  3965-001  COOKS COMPANY PRODUCE INC
+    184016  GAL SAMPLE KIT            12 CT            1                  3.00           .01                      GAL SAMPLE
+                              CUSTOMER TOTAL :         1                  3.00           .01
+ 60127-001  BIRITE FOODSERVICE DISTRIBUTOR
+    999982  GAL SAND BRKFST BACON     12/4 OZ         10                 30.00        270.00                      811
+                              CUSTOMER TOTAL :        10                 30.00        270.00
+ 60421-001  BUCHANAN FOOD SERVICE
+    184016  GAL SAMPLE KIT            12 CT            1                  3.00           .01                      GAL SAMPLE
+    999986  GAL SAND SSG TURKEY       12/5 OZ          1                  3.75           .00                      20001
+                              CUSTOMER TOTAL :         2                  6.75           .01
+ 90110-001  CAPITOL DISTRIBUTING, INC
+    183922  GAL BAGEL DOG BEEF FRANK  12/5 OZ         10                 37.50        171.00                      12001
+    183924  GAL BAGEL DOG JALA CHS    12/5 OZ         13                 48.75        222.30                      12022
+                              CUSTOMER TOTAL :        23                 86.25        393.30
+ 90537-001  COFFEE WAREHOUSE INC., THE
+    999979  GAL BAGEL DOG POLISH      12/8 OZ         17                102.00        467.16                      100122
+    999983  GAL BURR BRKFST BACON     12/8 OZ         52                312.00       1591.20                      321
+    999989  GAL BURR BRKFST SAUSAGE   12/8 OZ         42                252.00       1285.20                      331
+                              CUSTOMER TOTAL :       111                666.00       3343.56
+ 90757-001  CORE-MARK, INTERN'L CLACKAMAS
+    999978  GAL BAGEL DOG BEEF        12/8 OZ         64                384.00        540.55-                     100121
+    999979  GAL BAGEL DOG POLISH      12/8 OZ         80                480.00        128.15                      100122
+                              CUSTOMER TOTAL :       144                864.00        412.40-
+ 90757-002  CORE-MARK INTERN'L SPOKANE
+    183922  GAL BAGEL DOG BEEF FRANK  12/5 OZ          5                 18.75         85.50                      12001
+    183923  GAL BAGEL DOG POLISH SSG  12/5 OZ          5                 18.75         85.50                      12021
+                              CUSTOMER TOTAL :        10                 37.50        171.00
+ 90757-005  CORE-MARK, INTERN'L HAYWARD
+    183924  GAL BAGEL DOG JALA CHS    12/5 OZ                                            .00                      12022
+                              CUSTOMER TOTAL :                                           .00
+ 90768-001  COTATI BRAND EGGS,INC-COTATI
+    183979  GAL PIROSHKI BEEF CHS N/S 12/6 OZ         11                 49.50        261.36                      211
+    184028  GAL PIROSHKI BF MUSH  N/S 12/6 OZ          4                 18.00         95.04                      231
+    999978  GAL BAGEL DOG BEEF        12/8 OZ          6                 36.00        164.88                      100121
+    999979  GAL BAGEL DOG POLISH      12/8 OZ          8                 48.00        219.84                      100122
+                              CUSTOMER TOTAL :        29                151.50        741.12
+120075-001  DAIRY FRESH FARMS-PORT ANGELES
+    999979  GAL BAGEL DOG POLISH      12/8 OZ          4                 24.00        109.92                      100122
+    999982  GAL SAND BRKFST BACON     12/4 OZ          8                 24.00        216.00                      811
+    999983  GAL BURR BRKFST BACON     12/8 OZ          4                 24.00        122.40                      321
+    999984  GAL SAND BRKFST CHORIZO   12/5 OZ          7                 26.25        191.10                      821
+    999985  GAL SAND PROV PESTO       12/4 OZ          4                 12.00        108.00                      831
+    999989  GAL BURR BRKFST SAUSAGE   12/8 OZ          8                 48.00        244.80                      331
+                              CUSTOMER TOTAL :        35                158.25        992.22
+120085-001  DAIRY VALLEY DISTRIBUTORS
+    999983  GAL BURR BRKFST BACON     12/8 OZ          5                 30.00        153.00                      321
+    999987  GAL BURR BFST CHORIZO     12/8 OZ         87                522.00       2662.20                      311
+    999988  GAL BURR BRKFST VERDE     12/8 OZ         20                120.00        612.00                      341
+                              CUSTOMER TOTAL :       112                672.00       3427.20
+230986-001  HARBOR WHOLESALE GROCERY LACEY
+
+
+
+
+
+IT415V                       SALES RECAP - CUSTOMER/ITEM                     PAGE :        2
+                      FROM :  6/01/25 THRU  6/30/25                      RUN DATE :  7/06/25
+GALANT GALANT SALES REPORT OR/WA                                             TIME :  5:01:42
+       ALPINE
+
+                                                                                                                   SALES
+     #             DESCRIPTION            SIZE    CASES    PIECES    NET LBS        SALES                         MFG ITEM #
+----------  ------------------------- ---------- -------- -------- ------------ -------------                     ----------
+    183922  GAL BAGEL DOG BEEF FRANK  12/5 OZ         23                 86.25        393.30                      12001
+    183923  GAL BAGEL DOG POLISH SSG  12/5 OZ         56                210.00        957.60                      12021
+    183924  GAL BAGEL DOG JALA CHS    12/5 OZ         22                 82.50        376.20                      12022
+                              CUSTOMER TOTAL :       101                378.75       1727.10
+410322-001  GLACIER WHOLESALERS, INC MT
+    999978  GAL BAGEL DOG BEEF        12/8 OZ          3                 18.00         82.44                      100121
+    999979  GAL BAGEL DOG POLISH      12/8 OZ          2                 12.00         54.96                      100122
+                              CUSTOMER TOTAL :         5                 30.00        137.40
+410435-001  HARBOR WHOLESALE - MDC MODESTO
+    183922  GAL BAGEL DOG BEEF FRANK  12/5 OZ         50                187.50        855.00                      12001
+    183923  GAL BAGEL DOG POLISH SSG  12/5 OZ         31                116.25        530.10                      12021
+    183924  GAL BAGEL DOG JALA CHS    12/5 OZ         11                 41.25        188.10                      12022
+                              CUSTOMER TOTAL :        92                345.00       1573.20
+500304-001  HARBOR WHOLESALE GROCERY ROSEB
+    183922  GAL BAGEL DOG BEEF FRANK  12/5 OZ          9                 33.75        153.90                      12001
+    183923  GAL BAGEL DOG POLISH SSG  12/5 OZ         12                 45.00        205.20                      12021
+    183924  GAL BAGEL DOG JALA CHS    12/5 OZ         11                 41.25        188.10                      12022
+                              CUSTOMER TOTAL :        32                120.00        547.20
+500342-001  PETE'S MILK DELIVERY
+    999983  GAL BURR BRKFST BACON     12/8 OZ         25                150.00        765.00                      321
+    999984  GAL SAND BRKFST CHORIZO   12/5 OZ          6                 22.50        163.80                      821
+    999985  GAL SAND PROV PESTO       12/4 OZ          5                 15.00        135.00                      831
+    999986  GAL SAND SSG TURKEY       12/5 OZ         11                 41.25        300.30                      20001
+    999988  GAL BURR BRKFST VERDE     12/8 OZ         35                210.00       1071.00                      341
+    999989  GAL BURR BRKFST SAUSAGE   12/8 OZ         17                102.00        520.20                      331
+                              CUSTOMER TOTAL :        99                540.75       2955.30
+530042-001  ROGGE PRODUCE
+    999978  GAL BAGEL DOG BEEF        12/8 OZ          3                 18.00         82.44                      100121
+    999983  GAL BURR BRKFST BACON     12/8 OZ          2                 12.00         61.20                      321
+    999989  GAL BURR BRKFST SAUSAGE   12/8 OZ          1                  6.00         30.60                      331
+                              CUSTOMER TOTAL :         6                 36.00        174.24
+590511-002  STEBO'S FOODSERVICE- LONGVIEW
+    999983  GAL BURR BRKFST BACON     12/8 OZ          3                 18.00         91.80                      321
+                              CUSTOMER TOTAL :         3                 18.00         91.80
+650065-002  UNFI Centralia Div-Frozen
+    183922  GAL BAGEL DOG BEEF FRANK  12/5 OZ        100                375.00       1710.00                      12001
+                              CUSTOMER TOTAL :       100                375.00       1710.00
+650075-002  UNFI Stockton Frozen
+    183922  GAL BAGEL DOG BEEF FRANK  12/5 OZ         50                187.50        855.00                      12001
+                              CUSTOMER TOTAL :        50                187.50        855.00
+650325-333  U.R.M. FOOD SERVICE-Frozen
+    183923  GAL BAGEL DOG POLISH SSG  12/5 OZ         12                 45.00        205.20                      12021
+    183924  GAL BAGEL DOG JALA CHS    12/5 OZ         12                 45.00        205.20                      12022
+    183984  GALANT MISC               1                                              1750.00-
+    999984  GAL SAND BRKFST CHORIZO   12/5 OZ          3                 11.25         81.90                      821
+    999986  GAL SAND SSG TURKEY       12/5 OZ          1                  3.75         27.30                      20001
+                              CUSTOMER TOTAL :        28                105.00       1230.40-
+680102-000  VERN'S DIST HERMISTON
+    183922  GAL BAGEL DOG BEEF FRANK  12/5 OZ          1                  3.75         17.10                      12001
+                              CUSTOMER TOTAL :         1                  3.75         17.10
+
+
+
+
+
+IT415V                       SALES RECAP - CUSTOMER/ITEM                     PAGE :        3
+                      FROM :  6/01/25 THRU  6/30/25                      RUN DATE :  7/06/25
+GALANT GALANT SALES REPORT OR/WA                                             TIME :  5:01:42
+       ALPINE
+
+                                                                                                                   SALES
+     #             DESCRIPTION            SIZE    CASES    PIECES    NET LBS        SALES                         MFG ITEM #
+----------  ------------------------- ---------- -------- -------- ------------ -------------                     ----------
+                             RUN TOTALS      :       994               4815.00      17483.96
+

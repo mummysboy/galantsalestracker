@@ -13,6 +13,7 @@ interface CustomReportModalProps {
   keheData?: AlpineSalesRecord[];
   vistarData?: AlpineSalesRecord[];
   tonysData?: AlpineSalesRecord[];
+  troiaData?: AlpineSalesRecord[];
   mhdData?: AlpineSalesRecord[];
 }
 
@@ -56,6 +57,7 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
   keheData = [],
   vistarData = [],
   tonysData = [],
+  troiaData = [],
   mhdData = []
 }) => {
   const [reportMode, setReportMode] = React.useState<ReportMode>('comparison');
@@ -73,13 +75,19 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
   // Broker report specific states
   const [selectedPeriods, setSelectedPeriods] = React.useState<string[]>([]);
   const [selectedCustomers, setSelectedCustomers] = React.useState<string[]>([]);
-  const [selectedSubDistributors, setSelectedSubDistributors] = React.useState<string[]>([]);
   const [selectedSubCustomers, setSelectedSubCustomers] = React.useState<string[]>([]);
   const [brokerResults, setBrokerResults] = React.useState<BrokerReportRow[]>([]);
 
-  // Initialize sensible defaults when opened
+  // Initialize sensible defaults when opened, clear state when closed
   React.useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      // Clear all state when modal closes to prevent cached data from showing
+      setResults([]);
+      setBrokerResults([]);
+      setError('');
+      return;
+    }
+    
     if (availablePeriods.length === 0) return;
 
     // Defaults: A = last 2 periods; B = prior 2 periods (or repeat last if not enough)
@@ -102,17 +110,14 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
       setSelectedPeriods([last]);
     }
     
-    // Initialize with all available customers
+    // Initialize with customers from current dashboard data only
     const allCustomers = new Set<string>();
-    [alpineData, petesData, keheData, vistarData, tonysData, mhdData].forEach(data => {
-      data.forEach(record => allCustomers.add(record.customerName));
-    });
+    data.forEach(record => allCustomers.add(record.customerName));
     setSelectedCustomers(Array.from(allCustomers).sort());
     
-    // Initialize sub-distributors (Pete's Coffee is the main sub-distributor)
-    setSelectedSubDistributors(['Pete\'s Coffee']);
+    // Initialize sub-customers
     setSelectedSubCustomers([]);
-  }, [isOpen, availablePeriods, alpineData, petesData, keheData, vistarData, tonysData, mhdData]);
+  }, [isOpen, availablePeriods, data, alpineData, petesData, keheData, vistarData, tonysData, troiaData, mhdData]);
 
   const isPeriodInRange = (p: string, start: string, end: string) => {
     const a = start <= end ? start : end;
@@ -195,6 +200,7 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
       { name: 'KeHe', data: keheData, isSubDistributor: false },
       { name: 'Vistar', data: vistarData, isSubDistributor: false },
       { name: "Tony's", data: tonysData, isSubDistributor: false },
+      { name: 'Troia Foods', data: troiaData, isSubDistributor: false },
       { name: 'Mike Hudson', data: mhdData, isSubDistributor: false },
     ];
 
@@ -308,15 +314,6 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
     });
   };
 
-  const toggleSubDistributorSelection = (subDistributor: string) => {
-    setSelectedSubDistributors(prev => {
-      if (prev.includes(subDistributor)) {
-        return prev.filter(s => s !== subDistributor);
-      } else {
-        return [...prev, subDistributor].sort();
-      }
-    });
-  };
 
   const toggleSubCustomerSelection = (subCustomer: string) => {
     setSelectedSubCustomers(prev => {
@@ -376,10 +373,9 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
   };
 
   const toggleAllCustomers = () => {
+    // Use only customers from current dashboard data
     const allCustomers = new Set<string>();
-    [alpineData, petesData, keheData, vistarData, tonysData, mhdData].forEach(data => {
-      data.forEach(record => allCustomers.add(record.customerName));
-    });
+    data.forEach(record => allCustomers.add(record.customerName));
     const allCustomersArray = Array.from(allCustomers).sort();
     
     if (selectedCustomers.length === allCustomersArray.length) {
@@ -581,10 +577,9 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
                     <div className="max-h-48 overflow-y-auto border rounded p-2 bg-gray-50">
                       <div className="grid grid-cols-1 gap-1">
                         {(() => {
+                          // Use only customers from current dashboard data
                           const allCustomers = new Set<string>();
-                          [alpineData, petesData, keheData, vistarData, tonysData, mhdData].forEach(data => {
-                            data.forEach(record => allCustomers.add(record.customerName));
-                          });
+                          data.forEach(record => allCustomers.add(record.customerName));
                           return Array.from(allCustomers).sort().map(customer => (
                             <label key={customer} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
                               <input
@@ -646,8 +641,8 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
                   </Card>
                 )}
 
-                {/* Sub-Distributor Selection */}
-                <Card>
+                {/* Sub-Distributor Selection - Disabled for now as sub-distributors are already marked in data */}
+                {/* <Card>
                   <CardHeader>
                     <CardTitle className="text-base">Select Sub-Distributors</CardTitle>
                   </CardHeader>
@@ -667,7 +662,7 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
                       </div>
                     </div>
                   </CardContent>
-                </Card>
+                </Card> */}
 
                 <div className="flex gap-2">
                   <Button onClick={handleGenerateBrokerReport}>Generate Broker Report</Button>
