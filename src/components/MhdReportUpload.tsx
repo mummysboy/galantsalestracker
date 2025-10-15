@@ -67,12 +67,20 @@ const MhdReportUpload: React.FC<MhdReportUploadProps> = ({ onDataParsed, onClear
               let hash = 5381; for (let i = 0; i < dateStr.length; i++) { hash = ((hash << 5) + hash) + dateStr.charCodeAt(i); hash = hash >>> 0; }
               return `SYN-${r.period.replace(/-/g,'')}-${hash.toString(36).toUpperCase()}`;
             })(),
-            "MHD XLSX",
+            "Mike Hudson",
             new Date().toISOString()
           ]);
+          console.log('MHD Upload - Sending to Google Sheets:', {
+            url: webAppUrl,
+            recordCount: rows.length,
+            sampleRows: rows.slice(0, 2)
+          });
           await fetch(webAppUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ token, rows }) });
+          console.log('MHD Upload - Data sent successfully');
         }
-      } catch (_e) {}
+      } catch (_e) {
+        console.error('MHD Upload - Error sending to Google Sheets:', _e);
+      }
 
       setIsProcessingComplete(true);
       setShowSuccessMessage(true);

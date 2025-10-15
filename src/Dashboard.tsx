@@ -569,6 +569,7 @@ const Dashboard: React.FC = () => {
   const [selectedCustomerForModal, setSelectedCustomerForModal] = useState<string | null>(null);
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [showUploadSection, setShowUploadSection] = useState(false);
+  const [uploadSectionKey, setUploadSectionKey] = useState(0);
   const [currentAlpineData, setCurrentAlpineData] = useState<AlpineSalesRecord[]>([]);
   const [currentPetesData, setCurrentPetesData] = useState<AlpineSalesRecord[]>([]);
   const [currentKeHeData, setCurrentKeHeData] = useState<AlpineSalesRecord[]>([]);
@@ -1570,7 +1571,13 @@ const Dashboard: React.FC = () => {
                 Custom Report
               </Button>
               <Button
-                onClick={() => setShowUploadSection(!showUploadSection)}
+                onClick={() => {
+                  if (!showUploadSection) {
+                    // Increment key to force fresh component mount when opening
+                    setUploadSectionKey(prev => prev + 1);
+                  }
+                  setShowUploadSection(!showUploadSection);
+                }}
                 className="flex items-center gap-2"
                 variant={showUploadSection ? "default" : "outline"}
               >
@@ -1782,42 +1789,49 @@ const Dashboard: React.FC = () => {
           <div className="mb-8 space-y-6">
             {selectedDistributor === 'ALPINE' ? (
               <AlpineReportUpload
+                key={`alpine-${uploadSectionKey}`}
                 onDataParsed={handleAlpineDataParsed}
                 onClearData={handleClearAlpineData}
                 onProcessingComplete={() => setShowUploadSection(false)}
               />
             ) : selectedDistributor === 'PETES' ? (
               <PetesReportUpload
+                key={`petes-${uploadSectionKey}`}
                 onDataParsed={handlePetesDataParsed}
                 onClearData={handleClearPetesData}
                 onProcessingComplete={() => setShowUploadSection(false)}
               />
             ) : selectedDistributor === 'KEHE' ? (
               <KeHeReportUpload
+                key={`kehe-${uploadSectionKey}`}
                 onDataParsed={handleKeHeDataParsed}
                 onClearData={handleClearKeHeData}
                 onProcessingComplete={() => setShowUploadSection(false)}
               />
             ) : selectedDistributor === 'VISTAR' ? (
               <VistarReportUpload
+                key={`vistar-${uploadSectionKey}`}
                 onDataParsed={handleVistarDataParsed}
                 onClearData={handleClearVistarData}
                 onProcessingComplete={() => setShowUploadSection(false)}
               />
             ) : selectedDistributor === 'TONYS' ? (
               <TonysReportUpload
+                key={`tonys-${uploadSectionKey}`}
                 onDataParsed={handleTonysDataParsed}
                 onClearData={handleClearTonysData}
                 onProcessingComplete={() => setShowUploadSection(false)}
               />
             ) : selectedDistributor === 'TROIA' ? (
               <TroiaReportUpload
+                key={`troia-${uploadSectionKey}`}
                 onDataParsed={handleTroiaDataParsed}
                 onClearData={handleClearTroiaData}
                 onProcessingComplete={() => setShowUploadSection(false)}
               />
             ) : selectedDistributor === 'MHD' ? (
               <MhdReportUpload
+                key={`mhd-${uploadSectionKey}`}
                 onDataParsed={handleMhdDataParsed}
                 onClearData={handleClearMhdData}
                 onProcessingComplete={() => setShowUploadSection(false)}
@@ -1825,36 +1839,43 @@ const Dashboard: React.FC = () => {
             ) : (
               <>
                 <AlpineReportUpload
+                  key={`alpine-${uploadSectionKey}`}
                   onDataParsed={handleAlpineDataParsed}
                   onClearData={handleClearAlpineData}
                   onProcessingComplete={() => setShowUploadSection(false)}
                 />
                 <PetesReportUpload
+                  key={`petes-${uploadSectionKey}`}
                   onDataParsed={handlePetesDataParsed}
                   onClearData={handleClearPetesData}
                   onProcessingComplete={() => setShowUploadSection(false)}
                 />
                 <KeHeReportUpload
+                  key={`kehe-${uploadSectionKey}`}
                   onDataParsed={handleKeHeDataParsed}
                   onClearData={handleClearKeHeData}
                   onProcessingComplete={() => setShowUploadSection(false)}
                 />
                 <VistarReportUpload
+                  key={`vistar-${uploadSectionKey}`}
                   onDataParsed={handleVistarDataParsed}
                   onClearData={handleClearVistarData}
                   onProcessingComplete={() => setShowUploadSection(false)}
                 />
                 <TonysReportUpload
+                  key={`tonys-${uploadSectionKey}`}
                   onDataParsed={handleTonysDataParsed}
                   onClearData={handleClearTonysData}
                   onProcessingComplete={() => setShowUploadSection(false)}
                 />
                 <TroiaReportUpload
+                  key={`troia-${uploadSectionKey}`}
                   onDataParsed={handleTroiaDataParsed}
                   onClearData={handleClearTroiaData}
                   onProcessingComplete={() => setShowUploadSection(false)}
                 />
                 <MhdReportUpload
+                  key={`mhd-${uploadSectionKey}`}
                   onDataParsed={handleMhdDataParsed}
                   onClearData={handleClearMhdData}
                   onProcessingComplete={() => setShowUploadSection(false)}
