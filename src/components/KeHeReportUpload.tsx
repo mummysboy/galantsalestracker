@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Upload, FileText, AlertCircle, CheckCircle, X } from 'lucide-react';
-import { parseKeHeXLSX } from '../utils/keheParser';
+import { parseKeHeCSV } from '../utils/keheParser';
 import { AlpineSalesRecord, analyzeCustomerProgress } from '../utils/alpineParser';
 
 interface KeHeReportUploadProps {
@@ -41,7 +41,7 @@ const KeHeReportUpload: React.FC<KeHeReportUploadProps> = ({ onDataParsed, onCle
     try {
       const allRecords: AlpineSalesRecord[] = [];
       for (const f of files) {
-        const parsed = await parseKeHeXLSX(f);
+        const parsed = await parseKeHeCSV(f);
         allRecords.push(...parsed.records);
       }
 
@@ -66,6 +66,7 @@ const KeHeReportUpload: React.FC<KeHeReportUploadProps> = ({ onDataParsed, onCle
               `${r.period}-15`,
               hierarchicalCustomer,
               r.productName,
+              r.productCode || '',  // Add product code
               r.cases,
               Math.round(r.revenue * 100) / 100,
               // Synthetic invoice key
@@ -74,7 +75,7 @@ const KeHeReportUpload: React.FC<KeHeReportUploadProps> = ({ onDataParsed, onCle
                 let hash = 5381; for (let i = 0; i < dateStr.length; i++) { hash = ((hash << 5) + hash) + dateStr.charCodeAt(i); hash = hash >>> 0; }
                 return `SYN-${r.period.replace(/-/g,'')}-${hash.toString(36).toUpperCase()}`;
               })(),
-              "KeHe XLSX",
+              "KeHe CSV",
               new Date().toISOString()
             ];
           });
@@ -102,7 +103,7 @@ const KeHeReportUpload: React.FC<KeHeReportUploadProps> = ({ onDataParsed, onCle
           KeHe Distributor Reports
         </CardTitle>
         <div className="mt-2 text-sm text-gray-600">
-          Upload KeHe Full POD Excel reports to analyze sales data
+          Upload KeHe Full POD CSV reports to analyze sales data
         </div>
       </CardHeader>
       <CardContent className="p-4 sm:p-6 pt-0">
@@ -112,7 +113,7 @@ const KeHeReportUpload: React.FC<KeHeReportUploadProps> = ({ onDataParsed, onCle
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
               <input
                 type="file"
-                accept=".xlsx,.xls"
+                accept=".csv"
                 onChange={(e) => {
                   const fs = Array.from(e.target.files || []);
                   if (fs.length > 0) {
@@ -126,7 +127,7 @@ const KeHeReportUpload: React.FC<KeHeReportUploadProps> = ({ onDataParsed, onCle
               />
               <label htmlFor="kehe-file-upload" className="cursor-pointer">
                 <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                <p className="text-sm text-gray-600 mb-2">Click to upload KeHe Excel reports</p>
+                <p className="text-sm text-gray-600 mb-2">Click to upload KeHe CSV reports</p>
                 <p className="text-xs text-gray-500">Supports multiple files • Auto-detects periods</p>
               </label>
             </div>

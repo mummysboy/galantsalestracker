@@ -59,6 +59,7 @@ const PetesReportUpload: React.FC<PetesReportUploadProps> = ({ onDataParsed, onC
             `${r.period}-15`,
             r.customerName,
             r.productName,
+            r.productCode || '',  // Add product code
             r.cases,
             Math.round(r.revenue * 100) / 100,
             // Synthetic invoice key

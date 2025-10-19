@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
 import { AlpineSalesRecord } from './alpineParser';
-import { mapToCanonicalProductName } from './productMapping';
+import { mapToCanonicalProductName, getItemNumberFromPetesCode } from './productMapping';
 
 export interface ParsedPetesData {
   records: AlpineSalesRecord[];
@@ -263,8 +263,27 @@ export async function parsePetesXLSX(file: File): Promise<ParsedPetesData> {
   const records: AlpineSalesRecord[] = [];
   let reportedTotalCases: number | null = null;
   let reportedTotalRevenue: number | null = null;
+  let currentProductCode: string | null = null; // Track Pete's product code from grouped headers
+  
   for (let r = headerRowIdx + 1; r < rows.length; r++) {
     const row = rows[r] || [];
+    
+    // Check if this row is a product code header: "59975 (CLARA'S Uncured Bacon Breakfast Burrito 12/8oz)"
+    // These headers appear in any column and signal the start of a new product section
+    let isProductCodeHeader = false;
+    for (let col = 0; col < row.length; col++) {
+      const cellValue = String(row[col] ?? '').trim();
+      const codeMatch = cellValue.match(/^(\d{5,6})\s*\((.+?)\)$/);
+      if (codeMatch) {
+        currentProductCode = codeMatch[1]; // Extract Pete's product code
+        isProductCodeHeader = true;
+        break; // Found the product code, no need to check other columns
+      }
+    }
+    
+    // Skip to next row if this is a product code header - it's not a data row
+    if (isProductCodeHeader) continue;
+    
     // Skip row if clearly empty
     if (row.every(cell => cell === null || cell === undefined || String(cell).trim() === '')) continue;
 
@@ -338,14 +357,36 @@ export async function parsePetesXLSX(file: File): Promise<ParsedPetesData> {
       }
     }
 
+    // Try to map by Pete's product code first, then fall back to description
+    let mappedProductName = productName;
+    let ourItemNumber: string | undefined = undefined;
+    
+    if (currentProductCode) {
+      // Try mapping by Pete's code
+      const codeMapping = mapToCanonicalProductName(currentProductCode);
+      if (codeMapping !== currentProductCode) {
+        // Code was successfully mapped
+        mappedProductName = codeMapping;
+        // Get our internal item number from Pete's code
+        ourItemNumber = getItemNumberFromPetesCode(currentProductCode);
+      } else {
+        // Code didn't map, try description
+        mappedProductName = mapToCanonicalProductName(productName);
+      }
+    } else {
+      // No Pete's code available, map by description
+      mappedProductName = mapToCanonicalProductName(productName);
+    }
+    
     const rec: AlpineSalesRecord = {
       customerName,
-      productName: mapToCanonicalProductName(productName), // Normalize product name
+      productName: mappedProductName, // Use mapped canonical name
       cases,
       pieces: 0,
       revenue,
       period,
-      productCode: codeVal ? String(codeVal) : undefined,
+      productCode: currentProductCode || (codeVal ? String(codeVal) : undefined), // Use Pete's code if available
+      itemNumber: ourItemNumber, // Our internal item number (321, 331, etc.)
       excludeFromTotals: true, // Pete's is a sub-distributor; exclude to avoid double-counting
     };
     records.push(rec);

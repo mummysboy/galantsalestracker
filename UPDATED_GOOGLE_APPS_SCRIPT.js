@@ -198,14 +198,14 @@ function mergeAndRebuild(sheet, newRows) {
   
   // Add existing data to map
   existingData.forEach(row => {
-    const key = row[0] + '|' + row[1] + '|' + row[2]; // date|customer|product
+    const key = row[0] + '|' + row[1] + '|' + row[2] + '|' + row[3]; // date|customer|product|productCode
     dataMap.set(key, row);
   });
   
   // Add/replace with new data
   let addedCount = 0;
   newRows.forEach(row => {
-    const key = row[0] + '|' + row[1] + '|' + row[2];
+    const key = row[0] + '|' + row[1] + '|' + row[2] + '|' + row[3];
     if (!dataMap.has(key)) {
       addedCount++;
     }
@@ -319,7 +319,7 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
   const customerData = {}; // key = year|customer
 
   for (let i = 0; i < values.length; i++) {
-    const [dateStr, customer, product, quantity, revenue] = values[i];
+    const [dateStr, customer, product, productCode, quantity, revenue] = values[i];
     if (!dateStr || !customer || !product) continue;
     const d = new Date(dateStr);
     if (isNaN(d)) continue;
@@ -342,12 +342,13 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
     }
     customersByMonth[monthKey].add(customer);
 
-    // Track product-level data by customer
-    const key = year + "|" + customer + "|" + product;
+    // Track product-level data by customer (include product code)
+    const key = year + "|" + customer + "|" + product + "|" + productCode;
     if (!totalsByKey[key]) {
       totalsByKey[key] = {
         quantities: Array(12).fill(0),
         revenues: Array(12).fill(0),
+        productCode: productCode || '',
       };
     }
     totalsByKey[key].quantities[month - 1] += toNumber(quantity);
@@ -695,9 +696,10 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
   currentRow++;
   currentRow++; // spacing
 
-  // Column headers
+  // Column headers (add Code column)
   const pivotHeaders = [
     "Customer / Product",
+    "Code",
     "Jan",
     "Feb",
     "Mar",
@@ -732,6 +734,7 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
       const parts = k.split("|");
       const fullCustomerName = parts[1];
       const product = parts[2];
+      const productCode = parts[3] || '';  // Extract product code
 
       // Detect if this is a sub-vendor (contains " - " or ": ")
       let mainCustomer = fullCustomerName;
@@ -765,6 +768,7 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
         customerHierarchy[mainCustomer].subVendors[subVendor].push({
           fullName: fullCustomerName,
           product: product,
+          productCode: productCode,  // Include product code
           quantities: totalsByKey[k].quantities,
           revenues: totalsByKey[k].revenues,
         });
@@ -773,6 +777,7 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
         customerHierarchy[mainCustomer].directProducts.push({
           fullName: fullCustomerName,
           product: product,
+          productCode: productCode,  // Include product code
           quantities: totalsByKey[k].quantities,
           revenues: totalsByKey[k].revenues,
         });
@@ -1036,15 +1041,17 @@ function normalizeRow(r) {
   const date = toYmd(r[0]);
   const customer = String(r[1] || "").trim();
   const product = String(r[2] || "").trim();
-  const quantity = toNumber(r[3]);
-  const revenue = toNumber(r[4]);
-  const invoiceId = String(r[5] || "").trim();
-  const source = String(r[6] || "").trim();
-  const uploadedAt = String(r[7] || new Date().toISOString());
+  const productCode = String(r[3] || "").trim();  // Add product code
+  const quantity = toNumber(r[4]);
+  const revenue = toNumber(r[5]);
+  const invoiceId = String(r[6] || "").trim();
+  const source = String(r[7] || "").trim();
+  const uploadedAt = String(r[8] || new Date().toISOString());
   return [
     date,
     customer,
     product,
+    productCode,
     quantity,
     revenue,
     invoiceId,

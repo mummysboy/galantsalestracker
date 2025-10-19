@@ -40,14 +40,29 @@ function detectPeriodFromDateRange(dateRangeStr: string): string {
   return `${yyyy}-${mm}`;
 }
 
-export async function parseKeHeXLSX(file: File): Promise<ParsedKeHeData> {
-  const arrayBuffer = await file.arrayBuffer();
-  const wb = XLSX.read(arrayBuffer, { type: 'array' });
-  const sheetName = wb.SheetNames[0];
-  const ws = wb.Sheets[sheetName];
-
-  // Parse all rows
-  const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true }) as any[][];
+export async function parseKeHeCSV(file: File): Promise<ParsedKeHeData> {
+  const text = await file.text();
+  const lines = text.split('\n');
+  const rows: string[][] = lines.map(line => {
+    // Simple CSV parsing - split by comma but handle quoted fields
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    result.push(current.trim());
+    return result;
+  });
   if (!rows || rows.length === 0) {
     return {
       records: [],
@@ -63,14 +78,19 @@ export async function parseKeHeXLSX(file: File): Promise<ParsedKeHeData> {
     };
   }
 
-  // Detect period from Date Range row (row 9 in the example: "1/1/2025 to 1/31/2025")
+  // Detect period from Date Range - in CSV format, look in the first data row
   let period = '';
-  for (let i = 0; i < Math.min(rows.length, 15); i++) {
-    const row = rows[i] || [];
-    const firstCell = String(row[0] || '').trim();
-    if (firstCell === 'Date Range' && row[1]) {
-      period = detectPeriodFromDateRange(String(row[1]));
-      break;
+  if (rows.length > 1) {
+    const firstDataRow = rows[1]; // First row after header
+    const dateRangeIdx = firstDataRow.findIndex(cell => 
+      String(cell).includes('1/1/2025 to 1/31/2025') || 
+      String(cell).includes('Date Range')
+    );
+    if (dateRangeIdx >= 0) {
+      const dateRangeCell = String(firstDataRow[dateRangeIdx]);
+      if (dateRangeCell.includes('1/1/2025 to 1/31/2025')) {
+        period = detectPeriodFromDateRange(dateRangeCell);
+      }
     }
   }
 
@@ -88,62 +108,47 @@ export async function parseKeHeXLSX(file: File): Promise<ParsedKeHeData> {
     }
   }
 
-  // Find header row (should contain "Customer Name" or "Retailer Name", and "Product Description", etc.)
-  let headerRowIdx = -1;
-  for (let i = 0; i < Math.min(rows.length, 20); i++) {
-    const row = rows[i] || [];
-    const joined = row.map(c => String(c || '').toLowerCase()).join(' ');
-    if ((joined.includes('customer name') || joined.includes('retailer name')) && joined.includes('product description')) {
-      headerRowIdx = i;
-      break;
-    }
-  }
-
-  if (headerRowIdx === -1) {
-    // No header found, return empty
-    return {
-      records: [],
-      metadata: {
-        supplier: 'KEHE',
-        periods: [period],
-        customers: [],
-        products: [],
-        totalRevenue: 0,
-        totalCases: 0,
-        periodRevenue: {}
-      }
-    };
-  }
+  // Find header row - in CSV format, it's the first row
+  let headerRowIdx = 0; // CSV header is always the first row
 
   const headers = (rows[headerRowIdx] || []).map(c => String(c || '').trim());
   const headersLc = headers.map(h => h.toLowerCase());
 
   // Find column indices - try by name first, then fall back to fixed positions
-  // Level 1: Column B (index 1) - Retailer Name
-  // Level 2: Column C (index 2) - Customer Name  
-  // Level 3: Column N (index 13) - Individual Product Data
-  let retailerNameIdx = headersLc.findIndex(h => h.includes('retailer name'));
-  let customerNameIdx = headersLc.findIndex(h => h.includes('customer name'));
+  // Column 19: RetailerName
+  // Column 20: CustomerName  
+  // Column 30: ProductDescription
+  let retailerNameIdx = headersLc.findIndex(h => h.includes('retailername'));
+  let customerNameIdx = headersLc.findIndex(h => h.includes('customername'));
   
   // Fall back to fixed positions if not found by name
-  if (retailerNameIdx === -1) retailerNameIdx = 1; // Column B
-  if (customerNameIdx === -1) customerNameIdx = 2; // Column C
+  if (retailerNameIdx === -1) retailerNameIdx = 18; // Column 19 (0-indexed)
+  if (customerNameIdx === -1) customerNameIdx = 19; // Column 20 (0-indexed)
   
   
   // Also find other useful columns
-  const productDescIdx = headersLc.findIndex(h => h.includes('product description'));
-  const brandNameIdx = headersLc.findIndex(h => h.includes('brand name'));
-  const productSizeIdx = headersLc.findIndex(h => h.includes('product size'));
-  const uomIdx = headersLc.findIndex(h => h === 'uom');
-  const currentYearQtyIdx = headersLc.findIndex(h => h.includes('current') && h.includes('year') && h.includes('qty'));
-  const currentYearCostIdx = headersLc.findIndex(h => h.includes('current') && h.includes('year') && h.includes('cost'));
-  const upcIdx = headersLc.findIndex(h => h === 'upc');
-  const addressBookNumberIdx = headersLc.findIndex(h => h.includes('address') && h.includes('book') && h.includes('number'));
+  let productDescIdx = headersLc.findIndex(h => h.includes('productdescription'));
+  let brandNameIdx = headersLc.findIndex(h => h.includes('brandname'));
+  let productSizeIdx = headersLc.findIndex(h => h.includes('productsize'));
+  let uomIdx = headersLc.findIndex(h => h === 'uom');
+  let currentYearQtyIdx = headersLc.findIndex(h => h.includes('currentyearqty'));
+  let currentYearCostIdx = headersLc.findIndex(h => h.includes('currentyearcost'));
+  let upcIdx = headersLc.findIndex(h => h === 'upc');
+  let addressBookNumberIdx = headersLc.findIndex(h => h.includes('addressbooknumber'));
   
   // Look for additional company name columns
   const companyNameIdx = headersLc.findIndex(h => h.includes('company') && h.includes('name'));
   const storeNameIdx = headersLc.findIndex(h => h.includes('store') && h.includes('name'));
   const locationNameIdx = headersLc.findIndex(h => h.includes('location') && h.includes('name'));
+
+  // Fall back to fixed positions if not found by name
+  if (productDescIdx === -1) productDescIdx = 29; // Column 30 (0-indexed)
+  if (brandNameIdx === -1) brandNameIdx = 28; // Column 29 (0-indexed)  
+  if (upcIdx === -1) upcIdx = 27; // Column 28 (0-indexed)
+  if (currentYearQtyIdx === -1) currentYearQtyIdx = 37; // Column 38 (0-indexed) - CurrentYearQTY
+  if (currentYearCostIdx === -1) currentYearCostIdx = 39; // Column 40 (0-indexed) - CurrentYearCost
+  if (productSizeIdx === -1) productSizeIdx = 30; // Column 31 (0-indexed) - ProductSize
+  if (addressBookNumberIdx === -1) addressBookNumberIdx = 20; // Column 21 (0-indexed)
   
   // Find Column N - try by position 13 (N is 14th column, index 13)
   // Look for product-related data in column N
@@ -160,16 +165,16 @@ export async function parseKeHeXLSX(file: File): Promise<ParsedKeHeData> {
       continue;
     }
 
-    // Extract data using the 3-level hierarchy (as displayed to user):
-    // Level 1: Column B (index 1) - Retailer Name
-    // Level 2: Column C (index 2) - Customer Name  
-    // Level 3: Column N (index 13) - Individual Product Data
+    // Extract data using the correct CSV column structure:
+    // Column 19: RetailerName
+    // Column 20: CustomerName  
+    // Column 30: ProductDescription
     
-    const retailerName = String(row[retailerNameIdx] || '').trim(); // Column B
-    const customerName = String(row[customerNameIdx] || '').trim(); // Column C
+    const retailerName = String(row[retailerNameIdx] || '').trim(); // Column 19
+    const customerName = String(row[customerNameIdx] || '').trim(); // Column 20
     
-    // Try to get product data from Column N (index 13)
-    const productDataFromN = productDataColIdx < row.length ? String(row[productDataColIdx] || '').trim() : '';
+    // Get product data from ProductDescription column
+    const productDataFromN = productDescIdx < row.length ? String(row[productDescIdx] || '').trim() : '';
     
     // Also extract other useful data
     const productDesc = productDescIdx >= 0 ? String(row[productDescIdx] || '').trim() : '';
@@ -194,21 +199,41 @@ export async function parseKeHeXLSX(file: File): Promise<ParsedKeHeData> {
     // Determine the best company name to display (Level 2: Customer Name from Column C or derived)
     const fullCompanyName = companyName || storeName || locationName || customerName || 'Unknown Customer';
     
-    // For Level 3, use Column N data, fallback to product description
-    const finalProductName = productDataFromN || productDesc || brandName || 'Unknown Product';
+    // Extract KeHE UPC code from ProductDescription column
+    // KeHE reports use UPC codes in the ProductDescription field (e.g., "611665888010")
+    let keheUPC = '';
+    let finalProductName = productDataFromN || productDesc || brandName || 'Unknown Product';
+    
+    // Check if the ProductDescription contains a KeHE UPC code (12-digit number starting with 611665)
+    const upcMatch = finalProductName.match(/^611665\d{6}$/);
+    if (upcMatch) {
+      keheUPC = upcMatch[0];
+      // If we found a UPC, try to map it to canonical name first
+      const mappedFromUPC = mapToCanonicalProductName(keheUPC);
+      if (mappedFromUPC !== keheUPC) {
+        // UPC was successfully mapped to canonical name
+        finalProductName = mappedFromUPC;
+      } else {
+        // UPC didn't map, keep original product name and try mapping by description
+        finalProductName = mapToCanonicalProductName(finalProductName);
+      }
+    } else {
+      // No UPC found, map by description
+      finalProductName = mapToCanonicalProductName(finalProductName);
+    }
 
     // Build size string
     const sizeStr = productSize && uom ? `${productSize} ${uom}` : (productSize || uom || '');
     
     const record: AlpineSalesRecord = {
       customerName: retailerName, // Level 1: Retailer Name (Column B)
-      productName: mapToCanonicalProductName(finalProductName), // Level 3: Product Data (Column N) - normalized
+      productName: finalProductName, // Level 3: Product Data (Column N) - normalized
       size: sizeStr || undefined,
       cases: Math.round(qty / 12),
       pieces: 0,
       revenue: Math.round(cost * 100) / 100,
       period,
-      productCode: upc || undefined,
+      productCode: keheUPC || upc || undefined, // Use KeHE UPC if available, fallback to original UPC
       customerId: addressBookNumber || undefined,
       accountName: fullCompanyName, // Level 2: Customer Name (Column C or derived)
     };

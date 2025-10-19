@@ -129,6 +129,7 @@ const AlpineReportUpload: React.FC<AlpineReportUploadProps> = ({
               dateStr,
               r.customerName,
               r.productName,
+              r.productCode || '',  // Add product code
               r.cases,
               Math.round(r.revenue * 100) / 100,
               syntheticKey,

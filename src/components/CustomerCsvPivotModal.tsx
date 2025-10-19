@@ -101,13 +101,13 @@ const CustomerCsvPivotModal: React.FC<CustomerCsvPivotModalProps> = ({ customerN
     const labels = Array.from(new Set(rows.map(r => pivotMode === 'month' ? r.period : periodToQuarter(r.period))));
     labels.sort(pivotMode === 'month' ? undefined : compareQuarter);
 
-    const byProduct = new Map<string, { productName: string; productCode: string; values: Record<string, number> }>();
+    const byProduct = new Map<string, { productName: string; productCode: string; itemNumber: string; values: Record<string, number> }>();
     rows.forEach(r => {
-      const key = `${r.productCode || ''}|${r.productName}`;
+      const key = `${r.itemNumber || ''}|${r.productCode || ''}|${r.productName}`;
       if (!byProduct.has(key)) {
         const init: Record<string, number> = {};
         labels.forEach(l => { init[l] = 0; });
-        byProduct.set(key, { productName: r.productName, productCode: r.productCode || '', values: init });
+        byProduct.set(key, { productName: r.productName, productCode: r.productCode || '', itemNumber: r.itemNumber || '', values: init });
       }
       const obj = byProduct.get(key)!;
       const label = pivotMode === 'month' ? r.period : periodToQuarter(r.period);
@@ -125,7 +125,8 @@ const CustomerCsvPivotModal: React.FC<CustomerCsvPivotModalProps> = ({ customerN
     const q = csvSearch.toLowerCase();
     return (
       (p.productName || '').toLowerCase().includes(q) ||
-      (p.productCode || '').toLowerCase().includes(q)
+      (p.productCode || '').toLowerCase().includes(q) ||
+      (p.itemNumber || '').toLowerCase().includes(q)
     );
   });
 
@@ -148,7 +149,7 @@ const CustomerCsvPivotModal: React.FC<CustomerCsvPivotModalProps> = ({ customerN
               type="text"
               value={csvSearch}
               onChange={(e) => setCsvSearch(e.target.value)}
-              placeholder="Filter by product, code or period"
+              placeholder="Filter by product, item #, vendor code, or period"
               className="px-2 py-1 text-xs border rounded"
             />
             <button className="h-7 px-2" onClick={(e) => { e.stopPropagation(); onClose(); }}>
@@ -161,7 +162,8 @@ const CustomerCsvPivotModal: React.FC<CustomerCsvPivotModalProps> = ({ customerN
             <thead className="bg-gray-50 sticky top-0">
               <tr>
                 <th className="p-2 text-left">Product</th>
-                <th className="p-2 text-left">Code</th>
+                <th className="p-2 text-left">Item #</th>
+                <th className="p-2 text-left">Vendor Code</th>
                 {monthsFiltered.map(m => (
                   <th key={m} className="p-2 text-right whitespace-nowrap">{m}</th>
                 ))}
@@ -169,9 +171,10 @@ const CustomerCsvPivotModal: React.FC<CustomerCsvPivotModalProps> = ({ customerN
             </thead>
             <tbody>
               {productsFiltered.map((p, idx) => (
-                <tr key={`${p.productCode}-${idx}`} className="border-t">
+                <tr key={`${p.itemNumber}-${p.productCode}-${idx}`} className="border-t">
                   <td className="p-2">{toTitleCase(p.productName)}</td>
-                  <td className="p-2 whitespace-nowrap">{p.productCode}</td>
+                  <td className="p-2 whitespace-nowrap">{p.itemNumber || '-'}</td>
+                  <td className="p-2 whitespace-nowrap">{p.productCode || '-'}</td>
                   {monthsFiltered.map(m => (
                     <td key={m} className="p-2 text-right tabular-nums">{(p as any).values[m] || 0}</td>
                   ))}
@@ -183,7 +186,7 @@ const CustomerCsvPivotModal: React.FC<CustomerCsvPivotModalProps> = ({ customerN
                 );
                 return (
                   <tr className="border-t bg-gray-50 font-semibold">
-                    <td className="p-2" colSpan={2}>Total</td>
+                    <td className="p-2" colSpan={3}>Total</td>
                     {monthTotals.map((t, i) => (
                       <td key={i} className="p-2 text-right tabular-nums">{t}</td>
                     ))}

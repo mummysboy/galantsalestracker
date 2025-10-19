@@ -350,7 +350,7 @@ export async function parseMhdXLSX(file: File): Promise<ParsedMhdData> {
 
   // Additional columns
   const productCodeIdx = headersLc.findIndex(h => 
-    h.includes('code') || h.includes('sku') || h.includes('upc') || h.includes('item #')
+    h.includes('code') || h.includes('sku') || h.includes('upc') || h.includes('item #') || h.includes('item id')
   );
   const customerIdIdx = headersLc.findIndex(h => 
     h.includes('id') || h.includes('number') || h.includes('account #')

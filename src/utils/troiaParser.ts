@@ -108,21 +108,19 @@ export async function parseTroiaXLSX(file: File): Promise<ParsedTroiaData> {
   // Extract period from report or filename
   const period = extractPeriodFromReport(rows) || detectPeriodFromFileName(file.name || '');
 
-  // Find header rows - look for "CUST #" or "DESCRIPTION" as indicators
-  let headerRow1Idx = -1;
-  let headerRow2Idx = -1;
+  // Find header row - look for "CUST #" and "DESCRIPTION" as indicators
+  let headerRowIdx = -1;
   
   for (let i = 0; i < Math.min(rows.length, 15); i++) {
     const row = rows[i] || [];
     const rowStr = row.map(c => String(c || '').trim().toUpperCase()).join('|');
-    if (rowStr.includes('CUST #') || rowStr.includes('DESCRIPTION')) {
-      headerRow1Idx = i;
-      headerRow2Idx = i + 1; // Product names continue on next row
+    if (rowStr.includes('CUST #') && rowStr.includes('DESCRIPTION')) {
+      headerRowIdx = i;
       break;
     }
   }
 
-  if (headerRow1Idx === -1) {
+  if (headerRowIdx === -1) {
     // Can't find headers, return empty
     return {
       records: [],
@@ -139,31 +137,67 @@ export async function parseTroiaXLSX(file: File): Promise<ParsedTroiaData> {
   }
 
   // Parse product column headers
-  const headerRow1 = rows[headerRow1Idx] || [];
-  const headerRow2 = rows[headerRow2Idx] || [];
+  const headerRow = rows[headerRowIdx] || [];
   
-  // Build product names by combining row 1 and row 2
-  const productColumns: { index: number; name: string }[] = [];
-  for (let colIdx = 3; colIdx < headerRow1.length; colIdx++) {
-    const part1 = String(headerRow1[colIdx] || '').trim();
-    const part2 = String(headerRow2[colIdx] || '').trim();
+  // Extract product codes and descriptions from the product list rows (4-7)
+  const productListRows = rows.slice(4, 8); // Rows 4, 5, 6, 7 contain product list
+  const productInfo: { code: string; name: string }[] = [];
+  
+  productListRows.forEach(row => {
+    const cell = String(row[0] || '').trim();
+    if (cell) {
+      // Handle both "PRODUCT LIST:" row and continuation rows
+      let productList = cell;
+      if (cell.includes('PRODUCT LIST:')) {
+        productList = cell.replace('PRODUCT LIST:', '').trim();
+      }
+      
+      if (productList) {
+        const products = productList.split(';');
+        
+        products.forEach(product => {
+          const trimmed = product.trim();
+          if (trimmed) {
+            // Extract code and name from format "29992-GLNT BACON BREAKF BURRITO 12CT"
+            const match = trimmed.match(/^(\d+)-(.+)$/);
+            if (match) {
+              const [, code, name] = match;
+              productInfo.push({ code: code.trim(), name: name.trim() });
+            }
+          }
+        });
+      }
+    }
+  });
+
+  // Build product columns by matching header columns with product info
+  const productColumns: { index: number; name: string; code: string }[] = [];
+  for (let colIdx = 3; colIdx < headerRow.length; colIdx++) {
+    const headerCell = String(headerRow[colIdx] || '').trim();
     
-    // Skip if both parts are empty or if it's "TOTAL" or "CUST COUNT"
-    if ((!part1 && !part2) || part1 === 'TOTAL' || part2 === 'COUNT') {
+    // Skip if empty or if it's "TOTAL" or "CUST COUNT"
+    if (!headerCell || headerCell === 'TOTAL' || headerCell === 'COUNT') {
       break; // Stop when we hit the total column
     }
     
-    // Combine parts to build full product name
-    const productName = [part1, part2].filter(Boolean).join(' ');
-    if (productName) {
-      productColumns.push({ index: colIdx, name: productName });
+    // Find matching product info for this column
+    // The columns correspond to the products in the same order as listed in product list
+    const productIndex = colIdx - 3; // First product column is index 3, so subtract 3
+    const product = productInfo[productIndex];
+    
+    if (product) {
+      productColumns.push({ 
+        index: colIdx, 
+        name: product.name,
+        code: product.code
+      });
     }
   }
 
   const records: AlpineSalesRecord[] = [];
   
-  // Find data rows - start after header row 2, skip Grand Total row
-  const dataStartIdx = headerRow2Idx + 1;
+  // Find data rows - start after header row, skip Grand Total row
+  const dataStartIdx = headerRowIdx + 1;
   
   for (let r = dataStartIdx; r < rows.length; r++) {
     const row = rows[r] || [];
@@ -200,6 +234,7 @@ export async function parseTroiaXLSX(file: File): Promise<ParsedTroiaData> {
         pieces: 0,
         revenue: 0, // Troia data doesn't include revenue
         period,
+        productCode: productCol.code, // Troia's product code/number from row 1
         customerId: customerNum || undefined,
         excludeFromTotals: false, // Troia is a direct distributor, include in totals
       };

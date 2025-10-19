@@ -3,6 +3,7 @@ import { X, Package, ChevronDown, ChevronRight, ChevronLeft } from 'lucide-react
 import { Button } from './ui/button';
 import { AlpineSalesRecord } from '../utils/alpineParser';
 import { toTitleCase } from '../lib/utils';
+import { getItemNumberForProduct } from '../utils/productMapping';
 
 // Function to format company names for better readability
 const formatCompanyName = (companyName: string): string => {
@@ -412,6 +413,7 @@ const KeHeCustomerDetailModal: React.FC<KeHeCustomerDetailModalProps> = ({
                                       <thead>
                                         <tr className="border-b border-gray-200">
                                           <th className="text-left px-4 py-3 text-sm font-bold text-gray-900 bg-gray-50">Product</th>
+                                          <th className="text-center px-4 py-3 text-sm font-bold text-gray-900 bg-gray-50">Item#</th>
                                           <th className="text-center px-4 py-3 text-sm font-bold text-gray-900 bg-gray-50">Code</th>
                                           {periods.map((period) => (
                                             <th key={period} className="text-center px-4 py-3 text-sm font-bold text-gray-900 bg-gray-50">
@@ -427,6 +429,9 @@ const KeHeCustomerDetailModal: React.FC<KeHeCustomerDetailModalProps> = ({
                                               {toTitleCase(product.productName)}
                                             </td>
                                             <td className="px-4 py-3 text-sm text-center text-gray-900">
+                                              {getItemNumberForProduct(product.productName) || ''}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-center text-gray-900">
                                               {product.productCode || ''}
                                             </td>
                                             {periods.map((period) => (
@@ -439,6 +444,7 @@ const KeHeCustomerDetailModal: React.FC<KeHeCustomerDetailModalProps> = ({
                                         {/* Product Totals Row */}
                                         <tr className="border-t border-gray-300">
                                           <td className="px-4 py-3 text-sm font-bold text-gray-900">Total</td>
+                                          <td className="px-4 py-3 text-sm font-bold text-center text-gray-900"></td>
                                           <td className="px-4 py-3 text-sm font-bold text-center text-gray-900"></td>
                                           {periods.map((period) => {
                                             const periodTotal = products.reduce((sum, product) => {

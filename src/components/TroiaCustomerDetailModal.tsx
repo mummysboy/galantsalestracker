@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { X, Package, ChevronRight, ChevronLeft } from 'lucide-react';
 import { Button } from './ui/button';
+import { getItemNumberForProduct } from '../utils/productMapping';
 import { AlpineSalesRecord } from '../utils/alpineParser';
 import { toTitleCase } from '../lib/utils';
 
@@ -248,6 +249,7 @@ const TroiaCustomerDetailModal: React.FC<TroiaCustomerDetailModalProps> = ({
                   <thead>
                     <tr className="border-b border-gray-200">
                       <th className="text-left px-4 py-3 text-sm font-bold text-gray-900">Product</th>
+                      <th className="text-center px-4 py-3 text-sm font-bold text-gray-900">Item#</th>
                       <th className="text-center px-4 py-3 text-sm font-bold text-gray-900">Code</th>
                       {periods.map((period) => (
                         <th key={period} className="text-right px-4 py-3 text-sm font-bold text-gray-900">
@@ -263,6 +265,9 @@ const TroiaCustomerDetailModal: React.FC<TroiaCustomerDetailModalProps> = ({
                           <span className="font-medium">{toTitleCase(product.productName)}</span>
                         </td>
                         <td className="px-4 py-3 text-sm text-center text-gray-900">
+                          {getItemNumberForProduct(product.productName) || ''}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-center text-gray-900">
                           {product.productCode || ''}
                         </td>
                         {periods.map((period) => (
@@ -275,6 +280,7 @@ const TroiaCustomerDetailModal: React.FC<TroiaCustomerDetailModalProps> = ({
                     {/* Total Row */}
                     <tr className="border-t border-gray-200">
                       <td className="px-4 py-3 text-sm font-bold text-gray-900">Total</td>
+                      <td className="px-4 py-3 text-sm font-bold text-center text-gray-900"></td>
                       <td className="px-4 py-3 text-sm font-bold text-center text-gray-900"></td>
                       {periods.map((period) => {
                         const periodTotal = products.reduce((sum, product) => {

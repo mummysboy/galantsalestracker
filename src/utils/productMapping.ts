@@ -8,6 +8,9 @@ export interface ProductMapping {
   canonicalName: string;
   alternateNames: string[];
   category?: string;
+  alpineProductCodes?: string[]; // Alpine-specific product codes
+  petesProductCodes?: string[]; // Pete's Coffee product codes (CLARA'S brand)
+  keheProductCodes?: string[]; // KeHE UPC codes (CLARA'S KITCHEN & BENNY'S brands)
 }
 
 /**
@@ -15,6 +18,19 @@ export interface ProductMapping {
  * This maps all product variations to their canonical names from the Master 2025 Pricing file
  */
 export const PRODUCT_MAPPINGS: ProductMapping[] = [
+  // Breakfast Folds
+  {
+    itemNumber: '371',
+    canonicalName: 'Whole Wheat Spinach Feta Breakfast Fold',
+    alternateNames: [
+      'SPINACH FETA BREAKFAST FOLD',
+      'WW SPINACH FETA FOLD',
+      'WHOLE WHEAT SPINACH FETA FOLD',
+      'MH400012',
+    ],
+    category: 'Breakfast Fold'
+  },
+  
   // Breakfast Burritos
   {
     itemNumber: '321',
@@ -24,9 +40,15 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'GLNT BACON BREAKF BURRITO',
       'BACON BREAKFAST BURRITO',
       'BACON BRKFST BURRITO',
-      'MH400002', // MHD code
+      "CLARA'S Uncured Bacon Breakfast Burrito",
+      'BURRITO BRKFST BCN EGG CHS',
+      'BurritoUncured Bacon Breakfast',
+      'MH400002',
     ],
-    category: 'Breakfast Burrito'
+    category: 'Breakfast Burrito',
+    alpineProductCodes: ['999983'],
+    petesProductCodes: ['59975'],
+    keheProductCodes: ['611665888003']
   },
   {
     itemNumber: '341',
@@ -35,10 +57,18 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'GAL BURR BRKFST VERDE',
       'GLNT CHILI VERDE BFA BRTO',
       'CHILI VERDE BREAKFAST BURRITO',
+      'CHILLE VERDE BREAKFAST BURRITO',
       'VERDE BREAKFAST BURRITO',
+      "CLARA'S Chille Verde Breakfast Burrito",
+      'WRAP BRKFST CHILE EGG CHS',
+      'BURRITO CHILE VERDE BRKFT',
+      'Burrito Chile Verde Breakfast',
       'MH400003',
     ],
-    category: 'Breakfast Burrito'
+    category: 'Breakfast Burrito',
+    alpineProductCodes: ['999988'],
+    petesProductCodes: ['59977'],
+    keheProductCodes: ['611665888010', '611665901023']
   },
   {
     itemNumber: '331',
@@ -48,21 +78,14 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'GLNT SAUSAGE BRKFST BRRTO',
       'SAUSAGE BRKFST BURRITO',
       'SAUSAGE BURRITO',
+      "CLARA'S Sausage Breakfast Burrito",
+      'WRAP BRKFST SAUSGE EGG CH',
       'MH400001',
     ],
-    category: 'Breakfast Burrito'
-  },
-  {
-    itemNumber: '311',
-    canonicalName: 'Chorizo Breakfast Burrito',
-    alternateNames: [
-      'GAL BURR BFST CHORIZO',
-      'GLNT CHORIZO BRKFST BRRTO',
-      'CHORIZO BREAKFAST BURRITO',
-      'CHORIZO BRKFST BURRITO',
-      'MH400006',
-    ],
-    category: 'Breakfast Burrito'
+    category: 'Breakfast Burrito',
+    alpineProductCodes: ['999989'],
+    petesProductCodes: ['59976'],
+    keheProductCodes: ['611665888027']
   },
   {
     itemNumber: '361',
@@ -72,38 +95,59 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'BEAN AND CHEESE BURRITO',
       'BLACK BEAN BREAKFAST BURRITO',
       'BLACK BEAN BURRITO',
+      'BLK BEAN BREAKFAST BURRITO', // MHD name
+      'BURRITO BREAKFAST',
+      'BURRITO BEAN CHEESE',
       'MH400011',
+    ],
+    category: 'Breakfast Burrito',
+    keheProductCodes: ['611665888126', '611665901047']
+  },
+  {
+    itemNumber: '311',
+    canonicalName: 'Chorizo Breakfast Burrito',
+    alternateNames: [
+      'GAL BURR BFST CHORIZO',
+      'GLNT CHORIZO BRKFST BRRTO',
+      'GLNT CHORIZO BRKFST', // Troia truncated name
+      'CHORIZO BREAKFAST BURRITO',
+      'CHORIZO BRKFST BURRITO',
+      'BURRITO BRKFST CHORIZO',
+      'Burrito Chorizo Breakfast',
+      'MH400006',
+    ],
+    category: 'Breakfast Burrito',
+    alpineProductCodes: ['999987'],
+    keheProductCodes: ['611665888119']
+  },
+  {
+    itemNumber: '901',
+    canonicalName: 'Plant Based Breakfast Burrito',
+    alternateNames: [
+      'PLANT BASED BREAKFAST BURRITO',
+      'PLANT BASED BURRITO',
+      'VEGAN BREAKFAST BURRITO',
+      'BURRITO BEAN CHSE PLNTBSD',
+      'MH400008',
+    ],
+    category: 'Breakfast Burrito',
+    keheProductCodes: ['611665888140']
+  },
+  {
+    itemNumber: '902',
+    canonicalName: 'Plant Based Sausage Breakfast Burrito',
+    alternateNames: [
+      'GLNT VEGN SSGE BRKFST BRT',
+      'VEGAN SAUSAGE BREAKFAST BURRITO',
+      'PLANT BASED SAUSAGE BREAKFAST BURRITO',
+      'VEGAN SSAGE BURRITO',
+      'BFAST BURRITO VEGAN SAUSAGE', // MHD name
+      'MH400123',
     ],
     category: 'Breakfast Burrito'
   },
   
-  // Breakfast Sandwiches
-  {
-    itemNumber: '211',
-    canonicalName: 'Bacon Breakfast Sandwich',
-    alternateNames: [
-      'GAL SAND BRKFST BACON',
-      'GLNT BACON BREAKF SANDWCH',
-      'BACON BREAKFAST SANDWICH',
-      'BACON BRKFST SANDWICH',
-      'MH400102',
-    ],
-    category: 'Breakfast Sandwich'
-  },
-  {
-    itemNumber: '213',
-    canonicalName: 'Chorizo Breakfast Sandwich',
-    alternateNames: [
-      'GAL SAND BRKFST CHORIZO',
-      'GLNT CHORIZO BFAST SNDWCH',
-      'CHORIZO BREAKFAST SANDWICH',
-      'CHORIZO BRKFST SANDWICH',
-      'MH400105',
-    ],
-    category: 'Breakfast Sandwich'
-  },
-  
-  // Lunch Wraps
+  // Wraps
   {
     itemNumber: '411',
     canonicalName: 'Chicken Florentine Wrap',
@@ -126,79 +170,690 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     category: 'Wrap'
   },
   {
-    itemNumber: '431',
-    canonicalName: 'BBQ Pulled Pork Wrap',
+    itemNumber: '811',
+    canonicalName: 'Chicken Bacon Ranch Wrap',
     alternateNames: [
-      'BBQ PULLED PORK WRAP',
-      'PULLED PORK WRAP',
-      'BBQ PORK WRAP',
-      'MH402005',
+      'GAL WRAP CHIC BAC RAN',
+      'Wrap Chicken Bacon Ranch',
+      'GLNT CHICKEN BACON RANCH',
+      'CHICKEN BACON RANCH BURRITO',
+      'CHICKEN BACON RANCH WRAP',
+      'CHKN BACON RANCH WRAP',
+      'WRAP CHICKEN BACON RANCH',
+      'MH400014',
+    ],
+    category: 'Wrap',
+    alpineProductCodes: ['183981'],
+    keheProductCodes: ['611665888089']
+  },
+  {
+    itemNumber: '451',
+    canonicalName: 'Chicken Curry Wrap',
+    alternateNames: [
+      'GLNT CHICKEN CURRY BURRTO',
+      'CHICKEN CURRY BURRITO',
+      'CHICKEN CURRY WRAP',
+      'CHKN CURRY WRAP',
+      'WRAP CHICKEN CURRY',
+      'BURRITO CHICKEN COCONUT CURRY', // MHD name
+      'MH400121',
+    ],
+    category: 'Wrap',
+    keheProductCodes: ['611665901009']
+  },
+  {
+    itemNumber: '461',
+    canonicalName: 'Spicy Thai Style Chicken Wrap',
+    alternateNames: [
+      'Wrap Spicy Thai Chicken',
+      'SPICY THAI CHICKEN WRAP',
+      'THAI STYLE CHICKEN WRAP',
+      'SPICY THAI WRAP',
+      'MH402007',
+    ],
+    category: 'Wrap'
+  },
+  
+  // Burritos (Non-Breakfast)
+  {
+    itemNumber: '392',
+    canonicalName: 'Plant Based Bean Burrito',
+    alternateNames: [
+      'PLANT BASED BEAN BURRITO',
+      'VEGAN BEAN BURRITO',
+      'MH400009',
+    ],
+    category: 'Burrito'
+  },
+  {
+    itemNumber: '511',
+    canonicalName: 'Bean & Cheese Burrito',
+    alternateNames: [
+      'GLNT BEAN & CHEESE BURRTO',
+      'BEAN AND CHEESE BURRITO',
+      'BEAN & CHEESE BURRITO',
+      'BURRITO CHICKN CHEES BEAN',
+      'MH400171',
+    ],
+    category: 'Burrito',
+    keheProductCodes: ['611665901054']
+  },
+  {
+    itemNumber: '471',
+    canonicalName: 'Chicken Chile Burrito',
+    alternateNames: [
+      'CHICKEN CHILE BURRITO',
+      'CHKN CHILE BURRITO',
+      'MH400015',
+    ],
+    category: 'Burrito'
+  },
+  {
+    itemNumber: '531',
+    canonicalName: 'Steak & Cheese Burrito',
+    alternateNames: [
+      'GLNT STEAK AND CHESE BRTO',
+      'STEAK AND CHEESE BURRITO',
+      'STEAK & CHEESE BURRITO',
+      'MH400122',
+    ],
+    category: 'Burrito'
+  },
+
+  // Missing Wraps from Master List
+  {
+    itemNumber: '411',
+    canonicalName: 'Chicken Florentine Wrap',
+    alternateNames: [
+      'CHICKEN FLORENTINE WRAP',
+      'CHICKEN FLORENTINE BURRITO',
+      'CHKN FLORENTINE WRAP',
+      'MH400013',
+    ],
+    category: 'Wrap'
+  },
+  {
+    itemNumber: '421',
+    canonicalName: 'Chicken Parmesan Wrap',
+    alternateNames: [
+      'CHICKEN PARMESAN WRAP',
+      'CHICKEN PARM WRAP',
+      'CHKN PARM WRAP',
+      'CHICKEN WRAP PARMESAN', // MHD name
+      'MH400014',
+    ],
+    category: 'Wrap'
+  },
+  {
+    itemNumber: '431',
+    canonicalName: 'Chicken Bacon Ranch Wrap',
+    alternateNames: [
+      'CHICKEN BACON RANCH WRAP',
+      'CHICKEN BACON RANCH BURRITO',
+      'CHKN BACON RANCH WRAP',
+      'MH400015',
     ],
     category: 'Wrap'
   },
   {
     itemNumber: '441',
+    canonicalName: 'Spicy Thai Style Chicken Wrap',
+    alternateNames: [
+      'SPICY THAI STYLE CHICKEN WRAP',
+      'THAI CHICKEN WRAP',
+      'SPICY THAI WRAP',
+      'CHICKEN WRAP SPICY THAI', // MHD name
+      'MH400016',
+    ],
+    category: 'Wrap'
+  },
+  {
+    itemNumber: '521',
+    canonicalName: 'Chicken Chile Burrito',
+    alternateNames: [
+      'CHICKEN CHILE BURRITO',
+      'CHICKEN CHILI BURRITO',
+      'CHKN CHILE BURRITO',
+      'MH400017',
+    ],
+    category: 'Burrito'
+  },
+  
+  // Paramount Piroshki
+  {
+    itemNumber: '211',
+    canonicalName: 'Beef & Cheese Piroshki',
+    alternateNames: [
+      'BEEF & CHEESE PIROSHKI',
+      'BEEF CHEESE PIROSHKI',
+      'PIROSHKI BEEF CHEESE',
+      'PIROSHKI BEEF & CHEESE WRAPPED', // MHD name
+      'PIROSHKI BEEF WRAPPED', // MHD name
+      'Beef & Cheese Piroshki',
+    ],
+    category: 'Piroshki'
+  },
+  {
+    itemNumber: '213',
+    canonicalName: 'Beef & Cheese Piroshki (retail pack)',
+    alternateNames: [
+      'BEEF & CHEESE PIROSHKI (RETAIL PACK)',
+      'BEEF CHEESE PIROSHKI RETAIL',
+      'PIROSHKI BEEF CHEESE RETAIL',
+      'Beef & Cheese Piroshki (retail pack)',
+    ],
+    category: 'Piroshki'
+  },
+
+  // Missing Products from Master List
+  {
+    itemNumber: '903',
+    canonicalName: 'Plant Based Bean Burrito',
+    alternateNames: [
+      'PLANT BASED BEAN BURRITO',
+      'VEGAN BEAN BURRITO',
+      'PLANT BEAN BURRITO',
+      'VEGAN BEAN & CHEESE BURRITO', // MHD name
+      'MH400018',
+    ],
+    category: 'Burrito'
+  },
+  {
+    itemNumber: '910',
+    canonicalName: 'Chimichuri Beef Empanada',
+    alternateNames: [
+      'CHIMICHURI BEEF EMPANADA',
+      'BEEF EMPANADA',
+      'CHIMICHURI EMPANADA',
+      'MH400019',
+    ],
+    category: 'Empanada'
+  },
+  {
+    itemNumber: '911',
+    canonicalName: 'Chicken Empanada',
+    alternateNames: [
+      'CHICKEN EMPANADA',
+      'CHKN EMPANADA',
+      'MH400020',
+    ],
+    category: 'Empanada'
+  },
+  {
+    itemNumber: '912',
+    canonicalName: 'Mushroom & Cheese Empanada',
+    alternateNames: [
+      'MUSHROOM & CHEESE EMPANADA',
+      'MUSHROOM CHEESE EMPANADA',
+      'MUSH & CHEESE EMPANADA', // MHD name
+      'MH400021',
+    ],
+    category: 'Empanada'
+  },
+  {
+    itemNumber: '611',
+    canonicalName: 'Jumbo Beef Frank Bagel Dog',
+    alternateNames: [
+      'JUMBO BEEF FRANK BAGEL DOG',
+      'BEEF FRANK BAGEL DOG',
+      'BEEF BAGEL DOG',
+      'BAGEL DOG BEEF JUMBO', // MHD name
+      'MH400022',
+    ],
+    category: 'Bagel Dog'
+  },
+  {
+    itemNumber: '612',
+    canonicalName: 'Jumbo Polish Sausage Bagel Dog',
+    alternateNames: [
+      'JUMBO POLISH SAUSAGE BAGEL DOG',
+      'POLISH SAUSAGE BAGEL DOG',
+      'POLISH BAGEL DOG',
+      'BAGEL DOG POLISH JUMBO WRAPPED', // MHD name
+      'MH400023',
+    ],
+    category: 'Bagel Dog'
+  },
+  {
+    itemNumber: '280',
+    canonicalName: 'Beef & Cheddar Handpie',
+    alternateNames: [
+      'BEEF & CHEDDAR HANDPIE',
+      'BEEF CHEDDAR HANDPIE',
+      'MH400024',
+    ],
+    category: 'Handpie'
+  },
+  {
+    itemNumber: '281',
+    canonicalName: 'Chicken Pot Pie Handpie',
+    alternateNames: [
+      'CHICKEN POT PIE HANDPIE',
+      'CHICKEN POT PIE',
+      'MH400025',
+    ],
+    category: 'Handpie'
+  },
+  {
+    itemNumber: '282',
+    canonicalName: 'Pepperoni Pizza Handpie',
+    alternateNames: [
+      'PEPPERONI PIZZA HANDPIE',
+      'PEPPERONI PIZZA',
+      'MH400026',
+    ],
+    category: 'Handpie'
+  },
+  {
+    itemNumber: '283',
+    canonicalName: 'Spinach & Four Cheese Handpie',
+    alternateNames: [
+      'SPINACH & FOUR CHEESE HANDPIE',
+      'SPINACH FOUR CHEESE HANDPIE',
+      'PIROSHKI SPINACH & CHEESE WRPD', // MHD name
+      'MH400027',
+    ],
+    category: 'Handpie'
+  },
+  {
+    itemNumber: '913',
+    canonicalName: 'Caprese Sandwich',
+    alternateNames: [
+      'CAPRESE SANDWICH',
+      'CAPRESE',
+      'MH400028',
+    ],
+    category: 'Sandwich'
+  },
+  {
+    itemNumber: '914',
+    canonicalName: 'Muffaletta Sandwich',
+    alternateNames: [
+      'MUFFALETTA SANDWICH',
+      'MUFFALETTA',
+      'MH400029',
+    ],
+    category: 'Sandwich'
+  },
+
+  // Benny's Brand
+  {
+    itemNumber: '621',
+    canonicalName: "Benny's Beef Frank Bagel Dogs",
+    alternateNames: [
+      "BENNY'S BEEF FRANK BAGEL DOGS",
+      "BENNY'S BEEF BAGEL DOGS",
+      "BENNY BEEF BAGEL DOG",
+      'MH400030',
+    ],
+    category: 'Bagel Dog'
+  },
+  {
+    itemNumber: '622',
+    canonicalName: "Benny's Polish Sausage Bagel Dogs",
+    alternateNames: [
+      "BENNY'S POLISH SAUSAGE BAGEL DOGS",
+      "BENNY'S POLISH BAGEL DOGS",
+      "BENNY POLISH BAGEL DOG",
+      'MH400031',
+    ],
+    category: 'Bagel Dog'
+  },
+  {
+    itemNumber: '623',
+    canonicalName: "Benny's Jalapeno & Cheddar Bagel Dogs",
+    alternateNames: [
+      "BENNY'S JALAPENO & CHEDDAR BAGEL DOGS",
+      "BENNY'S JALAPENO CHEDDAR BAGEL DOGS",
+      "BENNY JALAPENO BAGEL DOG",
+      'MH400032',
+    ],
+    category: 'Bagel Dog'
+  },
+
+  // MHD-specific products not in master list
+  {
+    itemNumber: '999', // Placeholder item number
+    canonicalName: 'Calzone Italian Combo Wrapped',
+    alternateNames: [
+      'CALZONE ITALIAN COMBO WRAPPED',
+      'ITALIAN COMBO CALZONE',
+      'CALZONE ITALIAN COMBO',
+    ],
+    category: 'Calzone'
+  },
+  {
+    itemNumber: '998', // Placeholder item number
+    canonicalName: 'Spanakopita',
+    alternateNames: [
+      'SPANAKOPITA',
+      'SPANAKOPITA WRAP',
+    ],
+    category: 'Greek'
+  },
+  {
+    itemNumber: '997', // Placeholder item number
+    canonicalName: 'Calzone Pesto Mushroom Wrapped',
+    alternateNames: [
+      'CALZONE PESTO MUSHROOM WRAPPED',
+      'PESTO MUSHROOM CALZONE',
+    ],
+    category: 'Calzone'
+  },
+  {
+    itemNumber: '996', // Placeholder item number
+    canonicalName: 'Chicken Fajita Wrapped Calzone',
+    alternateNames: [
+      'CHICKEN FAJITA WRAPPED CALZONE',
+      'CHICKEN FAJITA CALZONE',
+    ],
+    category: 'Calzone'
+  },
+  {
+    itemNumber: '995', // Placeholder item number
+    canonicalName: 'Calzone Spinach Feta Wrapped',
+    alternateNames: [
+      'CALZONE SPINACH FETA WRAPPED',
+      'SPINACH FETA CALZONE',
+    ],
+    category: 'Calzone'
+  },
+  {
+    itemNumber: '994', // Placeholder item number
+    canonicalName: 'Bagel Dog Turkey Jumbo Wrapped',
+    alternateNames: [
+      'BAGEL DOG TURKEY JUMBO WRAPPED',
+      'TURKEY JUMBO BAGEL DOG',
+    ],
+    category: 'Bagel Dog'
+  },
+  
+  // Breakfast Sandwiches
+  {
+    itemNumber: '841',
     canonicalName: 'Turkey Sausage Breakfast Sandwich',
     alternateNames: [
       'GAL SAND SSG TURKEY',
       'GLNT TURKEY SSAGE SANDWCH',
+      'GLNT TURKEY SSAGE', // Troia truncated name
       'TURKEY SAUSAGE SANDWICH',
       'TURKEY SSAGE SANDWICH',
+      'TURKEY SAUSAGE BFAST SANDWICH', // MHD name
+      "CLARA'S Breakfast Sandwich-Turkey",
+      'Sandwich Breakfast Turkey',
       'MH400106',
     ],
-    category: 'Breakfast Sandwich'
+    category: 'Breakfast Sandwich',
+    alpineProductCodes: ['999986'],
+    petesProductCodes: ['59986']
   },
   {
-    itemNumber: '451',
-    canonicalName: 'Provencal Pesto Breakfast Sandwich',
+    itemNumber: '831',
+    canonicalName: 'Pesto Provolone Breakfast Sandwich',
     alternateNames: [
       'GAL SAND PROV PESTO',
       'GLNT PSTO PRV BFST SNDWCH',
       'PROVENCAL PESTO SANDWICH',
       'PESTO PROVENCAL SANDWICH',
+      'PESTO PROVOLONE SANDWICH',
+      'BREAKFAST WRAP SAUSAGE', // MHD name
+      "CLARA'S Breakfast Sandwich-Pesto",
+      'SANDWICH BRKFST PEST PROV',
+      'Sandwhich Brkfst Pesto Provol',
       'MH400107',
+    ],
+    category: 'Breakfast Sandwich',
+    alpineProductCodes: ['999985'],
+    petesProductCodes: ['59985'],
+    keheProductCodes: ['611665900095']
+  },
+  {
+    itemNumber: '811',
+    canonicalName: 'Bacon Breakfast Sandwich',
+    alternateNames: [
+      'GAL SAND BRKFST BACON',
+      'GLNT BACON BREAKF SANDWCH',
+      'BACON BREAKFAST SANDWICH',
+      'BACON BRKFST SANDWICH',
+      'BACON BREAKFAST WRAP', // MHD name
+      "CLARA'S Breakfast Sandwich-Bacon",
+      'SANDWICH BREAKFAST BACON',
+      'Sandwich Breakfast Bacon',
+      'MH400102',
+    ],
+    category: 'Breakfast Sandwich',
+    alpineProductCodes: ['999982'],
+    petesProductCodes: ['59987'],
+    keheProductCodes: ['611665900101']
+  },
+  {
+    itemNumber: '821',
+    canonicalName: 'Chorizo Breakfast Sandwich',
+    alternateNames: [
+      'GAL SAND BRKFST CHORIZO',
+      'GLNT CHORIZO BFAST SNDWCH',
+      'CHORIZO BREAKFAST SANDWICH',
+      'CHORIZO BRKFST SANDWICH',
+      'BREAKFAST WRAP GREEN CHILIES', // MHD name
+      "CLARA'S Breakfast Sandwich-Chorizo",
+      'SANDWICH BREAKFST CHORIZO',
+      'Sandwhich Chorizo Breakfast',
+      'MH400105',
+    ],
+    category: 'Breakfast Sandwich',
+    alpineProductCodes: ['999984'],
+    petesProductCodes: ['59984'],
+    keheProductCodes: ['611665900118']
+  },
+  {
+    itemNumber: '851',
+    canonicalName: 'Chicken Sausage Breakfast Sandwich',
+    alternateNames: [
+      'CHICKEN SAUSAGE SANDWICH',
+      'CHKN SAUSAGE SANDWICH',
+      'MH400108',
     ],
     category: 'Breakfast Sandwich'
   },
   
-  // Bagel Dogs
+  // Piroshkies
   {
-    itemNumber: '511',
-    canonicalName: 'Beef Frank Bagel Dog',
+    itemNumber: '721',
+    canonicalName: 'Beef & Cheese Piroshkies',
+    alternateNames: [
+      'Piroshkies Beef & Cheese',
+      'BEEF & CHEESE PIROSHKIES',
+      'BEEF CHEESE PIROSHKIES',
+      'PIROSHKIES BEEF CHEESE',
+    ],
+    category: 'Piroshkies'
+  },
+  
+  // Empanadas
+  {
+    itemNumber: '711',
+    canonicalName: 'Chimichurri Beef Empanada',
+    alternateNames: [
+      'CHIMICHURRI BEEF EMPANADA',
+      'BEEF EMPANADA',
+      'MH405001',
+    ],
+    category: 'Empanada'
+  },
+  {
+    itemNumber: '721',
+    canonicalName: 'Chicken Empanada',
+    alternateNames: [
+      'CHICKEN EMPANADA',
+      'CHKN EMPANADA',
+      'MH405002',
+    ],
+    category: 'Empanada'
+  },
+  {
+    itemNumber: '731',
+    canonicalName: 'Mushroom & Cheese Empanada',
+    alternateNames: [
+      'MUSHROOM CHEESE EMPANADA',
+      'MUSHROOM & CHEESE EMPANADA',
+      'MH405003',
+    ],
+    category: 'Empanada'
+  },
+  
+  // Bagel Dogs - Standard
+  {
+    itemNumber: '611',
+    canonicalName: 'Jumbo Beef Frank Bagel Dog',
     alternateNames: [
       'GAL BAGEL DOG BEEF',
       'GAL BAGEL DOG BEEF FRANK',
       'BEEF BAGEL DOG',
       'BEEF FRANK BAGEL DOG',
+      'Bagel Dog Beef Frank',
+      'JUMBO BEEF FRANK BAGEL DOG',
+      'BEEF JUMBO BAGEL DOG',
+      'BEEF FRANK BAGEL DOGS',
       'MH404001',
     ],
-    category: 'Bagel Dog'
+    category: 'Bagel Dog',
+    alpineProductCodes: ['999978', '183922'],
+    keheProductCodes: ['611665100013', '611665200010']
   },
   {
-    itemNumber: '521',
-    canonicalName: 'Polish Sausage Bagel Dog',
+    itemNumber: '612',
+    canonicalName: 'Jumbo Polish Sausage Bagel Dog',
     alternateNames: [
       'GAL BAGEL DOG POLISH',
       'GAL BAGEL DOG POLISH SSG',
       'POLISH BAGEL DOG',
+      'Bagel Dog Polish Sausage',
       'POLISH SAUSAGE BAGEL DOG',
+      'JUMBO POLISH SAUSAGE BAGEL DOG',
+      'SAUSAGE POLISH BAGEL DOGS',
       'MH404003',
+    ],
+    category: 'Bagel Dog',
+    alpineProductCodes: ['999979', '183923'],
+    keheProductCodes: ['611665200218']
+  },
+  
+  // Handpies
+  {
+    itemNumber: '741',
+    canonicalName: 'Beef & Cheddar Handpie',
+    alternateNames: [
+      'BEEF CHEDDAR HANDPIE',
+      'BEEF & CHEDDAR HANDPIE',
+      'MH407001',
+    ],
+    category: 'Handpie'
+  },
+  {
+    itemNumber: '751',
+    canonicalName: 'Chicken Pot Pie Handpie',
+    alternateNames: [
+      'CHICKEN POT PIE HANDPIE',
+      'CHICKEN HANDPIE',
+      'MH407002',
+    ],
+    category: 'Handpie'
+  },
+  {
+    itemNumber: '761',
+    canonicalName: 'Pepperoni Pizza Handpie',
+    alternateNames: [
+      'PEPPERONI PIZZA HANDPIE',
+      'PEPPERONI HANDPIE',
+      'MH407003',
+    ],
+    category: 'Handpie'
+  },
+  {
+    itemNumber: '771',
+    canonicalName: 'Spinach & Four Cheese Handpie',
+    alternateNames: [
+      'SPINACH FOUR CHEESE HANDPIE',
+      'SPINACH & FOUR CHEESE HANDPIE',
+      'MH407004',
+    ],
+    category: 'Handpie'
+  },
+  
+  // Sandwiches
+  {
+    itemNumber: '781',
+    canonicalName: 'Caprese Sandwich',
+    alternateNames: [
+      'CAPRESE SANDWICH',
+      'MH408001',
+    ],
+    category: 'Sandwich'
+  },
+  {
+    itemNumber: '791',
+    canonicalName: 'Muffaletta Sandwich',
+    alternateNames: [
+      'MUFFALETTA SANDWICH',
+      'MUFFALETTA',
+      'MH408002',
+    ],
+    category: 'Sandwich'
+  },
+  
+  // Benny's Bagel Dogs
+  {
+    itemNumber: '512',
+    canonicalName: "Benny's Beef Frank Bagel Dogs",
+    alternateNames: [
+      "BENNY'S BEEF FRANK BAGEL DOGS",
+      "BENNYS BEEF FRANK BAGEL DOGS",
+      "BENNY'S BEEF BAGEL DOGS",
+      'MH404011',
+    ],
+    category: 'Bagel Dog'
+  },
+  {
+    itemNumber: '522',
+    canonicalName: "Benny's Polish Sausage Bagel Dogs",
+    alternateNames: [
+      "BENNY'S POLISH SAUSAGE BAGEL DOGS",
+      "BENNYS POLISH SAUSAGE BAGEL DOGS",
+      "BENNY'S POLISH BAGEL DOGS",
+      'MH404013',
     ],
     category: 'Bagel Dog'
   },
   {
     itemNumber: '531',
-    canonicalName: 'Jalapeno Cheese Bagel Dog',
+    canonicalName: "Benny's Jalapeno & Cheddar Bagel Dogs",
     alternateNames: [
       'GAL BAGEL DOG JALA CHS',
+      'Bagel Dog Jalapeno Cheddar',
       'JALAPENO CHEESE BAGEL DOG',
       'JALAPENO CHS BAGEL DOG',
+      "BENNY'S JALAPENO CHEDDAR BAGEL DOGS",
+      "BENNY'S JALAPENO & CHEDDAR BAGEL DOGS",
+      'DOGS BAGEL JALEPENO CHDDR',
       'MH404004',
     ],
-    category: 'Bagel Dog'
+    category: 'Bagel Dog',
+    alpineProductCodes: ['183924'],
+    keheProductCodes: ['611665200225']
   },
   
   // Piroshki
+  {
+    itemNumber: '611R',
+    canonicalName: 'Beef & Cheese Piroshki (retail pack)',
+    alternateNames: [
+      'BEEF CHEESE PIROSHKI RETAIL',
+      'BEEF & CHEESE PIROSHKI RETAIL',
+      'BEEF & CHEESE PIROSHKI (RETAIL PACK)',
+      'MH406016',
+    ],
+    category: 'Piroshki'
+  },
   {
     itemNumber: '611',
     canonicalName: 'Beef & Cheese Piroshki',
@@ -208,7 +863,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'BEEF & CHEESE PIROSHKI',
       'MH406015',
     ],
-    category: 'Piroshki'
+    category: 'Piroshki',
+    alpineProductCodes: ['183979']
   },
   {
     itemNumber: '612',
@@ -219,7 +875,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'BEEF & MUSHROOM PIROSHKI',
       'MH406022',
     ],
-    category: 'Piroshki'
+    category: 'Piroshki',
+    alpineProductCodes: ['184028']
   },
   {
     itemNumber: '621',
@@ -249,76 +906,6 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'SPINACH & CHEESE PIROSHKI',
     ],
     category: 'Piroshki'
-  },
-  
-  // Breakfast Folds
-  {
-    itemNumber: '371',
-    canonicalName: 'Whole Wheat Spinach Feta Breakfast Fold',
-    alternateNames: [
-      'SPINACH FETA BREAKFAST FOLD',
-      'WW SPINACH FETA FOLD',
-      'WHOLE WHEAT SPINACH FETA FOLD',
-      'MH400012',
-    ],
-    category: 'Breakfast Fold'
-  },
-  
-  // Additional Items
-  {
-    itemNumber: '811',
-    canonicalName: 'Chicken Bacon Ranch Burrito',
-    alternateNames: [
-      'GLNT CHICKEN BACON RANCH',
-      'CHICKEN BACON RANCH BURRITO',
-      'CHKN BACON RANCH BURRITO',
-      'MH400014',
-    ],
-    category: 'Burrito'
-  },
-  {
-    itemNumber: '821',
-    canonicalName: 'Chicken Curry Burrito',
-    alternateNames: [
-      'GLNT CHICKEN CURRY BURRTO',
-      'CHICKEN CURRY BURRITO',
-      'CHKN CURRY BURRITO',
-      'MH400121',
-    ],
-    category: 'Burrito'
-  },
-  {
-    itemNumber: '831',
-    canonicalName: 'Steak and Cheese Burrito',
-    alternateNames: [
-      'GLNT STEAK AND CHESE BRTO',
-      'STEAK AND CHEESE BURRITO',
-      'STEAK & CHEESE BURRITO',
-      'MH400122',
-    ],
-    category: 'Burrito'
-  },
-  {
-    itemNumber: '841',
-    canonicalName: 'Vegan Sausage Breakfast Burrito',
-    alternateNames: [
-      'GLNT VEGN SSGE BRKFST BRT',
-      'VEGAN SAUSAGE BREAKFAST BURRITO',
-      'VEGAN SSAGE BURRITO',
-      'MH400123',
-    ],
-    category: 'Breakfast Burrito'
-  },
-  {
-    itemNumber: '851',
-    canonicalName: 'Bean & Cheese Burrito',
-    alternateNames: [
-      'GLNT BEAN & CHEESE BURRTO',
-      'BEAN AND CHEESE BURRITO',
-      'BEAN & CHEESE BURRITO',
-      'MH400171',
-    ],
-    category: 'Burrito'
   },
   
   // Additional MHD codes (unknown product names - to be mapped)
@@ -356,7 +943,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'SAMPLE KIT',
       'GALANT SAMPLE KIT',
     ],
-    category: 'Other'
+    category: 'Other',
+    alpineProductCodes: ['184016']
   },
   {
     itemNumber: '902',
@@ -387,6 +975,27 @@ const createReverseLookup = (): Map<string, string> => {
     
     // Also map the item number
     lookup.set(mapping.itemNumber, mapping.canonicalName);
+    
+    // Map Alpine product codes to the canonical name
+    if (mapping.alpineProductCodes) {
+      for (const alpineCode of mapping.alpineProductCodes) {
+        lookup.set(alpineCode, mapping.canonicalName);
+      }
+    }
+    
+  // Map Pete's product codes to the canonical name
+  if (mapping.petesProductCodes) {
+    for (const petesCode of mapping.petesProductCodes) {
+      lookup.set(petesCode, mapping.canonicalName);
+    }
+  }
+
+  // Map KeHE UPC codes to the canonical name
+  if (mapping.keheProductCodes) {
+    for (const keheCode of mapping.keheProductCodes) {
+      lookup.set(keheCode, mapping.canonicalName);
+    }
+  }
   }
   
   return lookup;
@@ -444,6 +1053,36 @@ export function getAllCanonicalProductNames(): string[] {
 }
 
 /**
+ * Get item number from Alpine vendor code (the left-side code on invoice)
+ * @param alpineVendorCode The Alpine vendor code (e.g., "183981", "999982", "999986")
+ * @returns Our internal item number (e.g., "321", "431", "811")
+ */
+export function getItemNumberFromAlpineCode(alpineVendorCode: string): string | undefined {
+  if (!alpineVendorCode) return undefined;
+  
+  // Find the mapping that contains this Alpine vendor code
+  const mapping = PRODUCT_MAPPINGS.find(m => 
+    m.alpineProductCodes && m.alpineProductCodes.includes(alpineVendorCode)
+  );
+  return mapping ? mapping.itemNumber : undefined;
+}
+
+/**
+ * Get item number from Pete's Coffee vendor code
+ * @param petesVendorCode The Pete's vendor code (e.g., "59975", "59976", "59986")
+ * @returns Our internal item number (e.g., "321", "331", "841")
+ */
+export function getItemNumberFromPetesCode(petesVendorCode: string): string | undefined {
+  if (!petesVendorCode) return undefined;
+  
+  // Find the mapping that contains this Pete's vendor code
+  const mapping = PRODUCT_MAPPINGS.find(m => 
+    m.petesProductCodes && m.petesProductCodes.includes(petesVendorCode)
+  );
+  return mapping ? mapping.itemNumber : undefined;
+}
+
+/**
  * Get product mapping by item number
  */
 export function getProductByItemNumber(itemNumber: string): ProductMapping | undefined {
@@ -487,6 +1126,35 @@ export function addProductMapping(mapping: ProductMapping): void {
     lookup.set(normalizeProductName(altName), mapping.canonicalName);
   }
   lookup.set(mapping.itemNumber, mapping.canonicalName);
+  
+  // Add Alpine product codes if present
+  if (mapping.alpineProductCodes) {
+    for (const alpineCode of mapping.alpineProductCodes) {
+      lookup.set(alpineCode, mapping.canonicalName);
+    }
+  }
+  
+  // Add Pete's product codes if present
+  if (mapping.petesProductCodes) {
+    for (const petesCode of mapping.petesProductCodes) {
+      lookup.set(petesCode, mapping.canonicalName);
+    }
+  }
+
+  // Add KeHE UPC codes if present
+  if (mapping.keheProductCodes) {
+    for (const keheCode of mapping.keheProductCodes) {
+      lookup.set(keheCode, mapping.canonicalName);
+    }
+  }
+}
+
+/**
+ * Get the item number for a canonical product name
+ */
+export function getItemNumberForProduct(canonicalName: string): string | undefined {
+  const mapping = PRODUCT_MAPPINGS.find(m => m.canonicalName === canonicalName);
+  return mapping?.itemNumber;
 }
 
 const productMappingUtils = {
@@ -497,6 +1165,7 @@ const productMappingUtils = {
   getProductsByCategory,
   getAllCategories,
   addProductMapping,
+  getItemNumberForProduct,
   PRODUCT_MAPPINGS
 };
 

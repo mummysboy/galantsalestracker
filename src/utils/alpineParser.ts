@@ -1,4 +1,4 @@
-import { mapToCanonicalProductName } from './productMapping';
+import { mapToCanonicalProductName, getItemNumberFromAlpineCode } from './productMapping';
 
 export interface AlpineSalesRecord {
   customerName: string;
@@ -11,7 +11,8 @@ export interface AlpineSalesRecord {
   mfgItemNumber?: string;
   period: string; // e.g., "2025-06", "2025-07", "2025-08"
   customerId?: string;
-  productCode?: string;
+  productCode?: string; // Vendor's product code (Alpine's internal code like 183981, 999982)
+  itemNumber?: string; // Our internal item number (321, 431, 811, etc.)
   accountName?: string; // For KeHe: the customer name under a retailer
   excludeFromTotals?: boolean; // For sub-distributors like Pete's Coffee to avoid double-counting
   isAdjustment?: boolean; // For synthetic adjustment records that shouldn't appear as products
@@ -66,6 +67,8 @@ export function parseAlpineTXT(txtContent: string, reportDate: string): ParsedAl
       salesStart: headerTitlesLine.indexOf('SALES'),
       mfgStart: headerTitlesLine.indexOf('MFG ITEM #')
     };
+    console.log('[Alpine Parser] Header positions detected:', headerPositions);
+    console.log('[Alpine Parser] Header line:', headerTitlesLine);
   }
 
   
@@ -129,11 +132,18 @@ export function parseAlpineTXT(txtContent: string, reportDate: string): ParsedAl
         const slice = (start: number, end: number) =>
           (lineForParse.length > start ? lineForParse.slice(start, end).trim() : '').trim();
 
-        const itemNumber = slice(h.itemStart, h.descriptionStart).split(/\s+/).filter(Boolean).pop() || '';
-        // Derive description start based on actual item number end on this line to avoid clipping
+        // Extract item number using regex - match the leading digits after initial whitespace
+        const itemNumberMatch = lineForParse.match(/^\s*(\d+)\s+/);
+        const itemNumber = itemNumberMatch ? itemNumberMatch[1] : '';
+        
+        // Derive description start based on actual item number end on this line
         const itemTokenMatch = lineForParse.match(/^(\s*\d+\s+)/);
         const descriptionStartOnLine = itemTokenMatch ? itemTokenMatch[0].length : h.descriptionStart;
         const description = lineForParse.slice(descriptionStartOnLine, h.sizeStart).trim();
+        
+        // Debug: Log the extracted item number
+        console.log('[Alpine Parser] Line:', lineForParse.substring(0, 60));
+        console.log('[Alpine Parser] Extracted Item Number:', JSON.stringify(itemNumber), '| Description:', JSON.stringify(description.substring(0, 30)));
         const size = slice(h.sizeStart, h.casesStart) || slice(h.sizeStart, h.piecesStart); // some rows may omit CASES
         const casesStr = slice(h.casesStart, h.piecesStart);
         const piecesStr = slice(h.piecesStart, h.netLbsStart);
@@ -150,19 +160,33 @@ export function parseAlpineTXT(txtContent: string, reportDate: string): ParsedAl
           return parseFloat(t) || 0;
         };
 
+        // Try to map by Alpine product code first, then fall back to description
+        let mappedProductName = mapToCanonicalProductName(itemNumber);
+        // If the product code didn't map (returned the code itself), try the description
+        if (mappedProductName === itemNumber) {
+          mappedProductName = mapToCanonicalProductName(description);
+        }
+        
+        // Get our internal item number from the Alpine vendor code (left-side code)
+        const ourItemNumber = getItemNumberFromAlpineCode(itemNumber);
+        
         const record: AlpineSalesRecord = {
           period,
           customerName: currentCustomer,
-          productName: mapToCanonicalProductName(description), // Normalize product name
+          productName: mappedProductName, // Normalize product name using code or description
           size: size,
           customerId: currentCustomerId,
-          productCode: itemNumber,
+          productCode: itemNumber, // Vendor Code: Alpine's internal code (183981, 999982, etc.)
+          itemNumber: ourItemNumber, // Item Number: Our internal item number (321, 431, 811, etc.)
           cases: parseInt(casesStr || '0') || 0,
           pieces: parseNum(piecesStr),
           netLbs: parseNum(netLbsStr),
           revenue: parseNum(salesStr),
           mfgItemNumber: mfg
         };
+
+        // Debug: Verify codes are set correctly
+        console.log('[Alpine Parser] Created record - Vendor Code:', record.productCode, '| Item #:', record.itemNumber, '| Product:', record.productName);
 
         records.push(record);
         if (!currentProducts.includes(record.productName)) currentProducts.push(record.productName);
