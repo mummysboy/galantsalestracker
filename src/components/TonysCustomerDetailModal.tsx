@@ -222,13 +222,29 @@ const TonysCustomerDetailModal: React.FC<TonysCustomerDetailModalProps> = ({
           <div className="p-6 pb-0">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-gray-900">{customerName} • All Invoices</h3>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+        {/* Month Navigation Controls */}
+        {availablePeriods.length > 0 && (
+          <div className="px-6 py-4 border-b border-gray-200 bg-blue-50">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-medium text-blue-800">Month Navigation</h4>
               <div className="flex items-center gap-3">
                 {/* Navigation controls for period range */}
                 {availablePeriods.length > PERIOD_WINDOW_SIZE && (
-                  <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-3 py-2">
+                  <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 border">
                     <button
                       onClick={() => navigatePeriodRange('left')}
-                      className="p-1 hover:bg-gray-200 rounded disabled:opacity-50"
+                      className="p-1 hover:bg-gray-100 rounded disabled:opacity-50"
                       disabled={!periodRange || periodRange.start === 0}
                     >
                       <ChevronLeft className="w-4 h-4" />
@@ -241,24 +257,37 @@ const TonysCustomerDetailModal: React.FC<TonysCustomerDetailModalProps> = ({
                     </span>
                     <button
                       onClick={() => navigatePeriodRange('right')}
-                      className="p-1 hover:bg-gray-200 rounded disabled:opacity-50"
+                      className="p-1 hover:bg-gray-100 rounded disabled:opacity-50"
                       disabled={!periodRange || periodRange.end === availablePeriods.length - 1}
                     >
                       <ChevronRight className="w-4 h-4" />
                     </button>
                   </div>
                 )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onClose}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
+                
+                {/* Month selection buttons */}
+                <div className="flex gap-2">
+                  {(periodRange ? 
+                    availablePeriods.slice(periodRange.start, periodRange.end + 1) : 
+                    availablePeriods
+                  ).map((period) => (
+                    <button
+                      key={period}
+                      onClick={() => setSelectedPeriod(period)}
+                      className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                        selectedPeriod === period
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white text-gray-700 hover:bg-gray-100 border'
+                      }`}
+                    >
+                      {period}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
+        )}
 
         {/* Products List */}
         <div className="flex-1 overflow-y-auto">

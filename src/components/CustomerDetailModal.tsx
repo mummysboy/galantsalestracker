@@ -1,6 +1,6 @@
 import React from 'react';
 import { toTitleCase } from '../lib/utils';
-import { X, TrendingUp, TrendingDown, Package, Calendar, Users } from 'lucide-react';
+import { X, TrendingUp, TrendingDown, Package, Calendar, Users, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from './ui/button';
 import { AlpineSalesRecord, CustomerProgressAnalysis } from '../utils/alpineParser';
 
@@ -173,6 +173,8 @@ interface CustomerDetailModalProps {
   onClose: () => void;
   alpineData?: AlpineSalesRecord[];
   progressAnalysis?: CustomerProgressAnalysis;
+  selectedMonth?: string;
+  onMonthChange?: (month: string) => void;
 }
 
 const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
@@ -182,8 +184,13 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   isOpen,
   onClose,
   alpineData,
-  progressAnalysis
+  progressAnalysis,
+  selectedMonth,
+  onMonthChange
 }) => {
+  const [localSelectedMonth, setLocalSelectedMonth] = React.useState<string>('');
+  const [periodRange, setPeriodRange] = React.useState<{start: number, end: number} | null>(null);
+  const PERIOD_WINDOW_SIZE = 3;
 
   // Helper function to format period as MM/YYYY
   const formatPeriodAsMMYYYY = (period: string) => {
@@ -191,10 +198,79 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     return `${month}/${year}`;
   };
 
+  // Get available periods for this customer
+  const availablePeriods = React.useMemo(() => {
+    if (alpineData && alpineData.length > 0) {
+      const customerRecords = alpineData.filter(record => record.customerName === customerName);
+      const periods = Array.from(new Set(customerRecords.map(r => r.period))).sort();
+      return periods;
+    }
+    return [];
+  }, [alpineData, customerName]);
+
+  // Initialize month selection and period range
+  React.useEffect(() => {
+    if (availablePeriods.length > 0) {
+      const defaultMonth = selectedMonth || availablePeriods[availablePeriods.length - 1];
+      setLocalSelectedMonth(defaultMonth);
+      
+      // Initialize period range to show current month on the right
+      if (availablePeriods.length > PERIOD_WINDOW_SIZE && !periodRange) {
+        const currentIndex = availablePeriods.findIndex(period => period === defaultMonth);
+        if (currentIndex >= 0) {
+          const end = currentIndex;
+          const start = Math.max(0, end - PERIOD_WINDOW_SIZE + 1);
+          setPeriodRange({ start, end });
+        } else {
+          const start = Math.max(0, availablePeriods.length - PERIOD_WINDOW_SIZE);
+          const end = availablePeriods.length - 1;
+          setPeriodRange({ start, end });
+        }
+      }
+    }
+  }, [availablePeriods, selectedMonth, periodRange]);
+
+  // Navigation functions for period range
+  const navigatePeriodRange = (direction: 'left' | 'right') => {
+    if (!periodRange || availablePeriods.length <= PERIOD_WINDOW_SIZE) return;
+    
+    let newStart, newEnd;
+    if (direction === 'left') {
+      newStart = Math.max(0, periodRange.start - 1);
+      newEnd = Math.min(availablePeriods.length - 1, newStart + PERIOD_WINDOW_SIZE - 1);
+    } else {
+      newEnd = Math.min(availablePeriods.length - 1, periodRange.end + 1);
+      newStart = Math.max(0, newEnd - PERIOD_WINDOW_SIZE + 1);
+    }
+    
+    setPeriodRange({ start: newStart, end: newEnd });
+  };
+
+  // Handle month selection
+  const handleMonthSelect = (month: string) => {
+    setLocalSelectedMonth(month);
+    if (onMonthChange) {
+      onMonthChange(month);
+    }
+  };
+
   // Calculate customer-specific data
   const customerData = React.useMemo(() => {
     // Handle Alpine data vs CSV invoice data
     if (alpineData && alpineData.length > 0) {
+      // If a specific month is selected, filter data to that month and the previous month
+      if (localSelectedMonth && localSelectedMonth !== '') {
+        const selectedIndex = availablePeriods.indexOf(localSelectedMonth);
+        const previousMonth = selectedIndex > 0 ? availablePeriods[selectedIndex - 1] : localSelectedMonth;
+        
+        // Filter data to only include selected and previous periods
+        const filteredData = alpineData.filter(record => 
+          record.customerName === customerName && 
+          (record.period === localSelectedMonth || record.period === previousMonth)
+        );
+        
+        return calculateAlpineCustomerData(filteredData, customerName);
+      }
       return calculateAlpineCustomerData(alpineData, customerName);
     }
 
@@ -296,7 +372,7 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
         previousProductCount: new Set(previousCustomerInvoices.map(inv => inv.productName)).size
       }
     };
-  }, [customerName, currentInvoices, previousInvoices, alpineData]);
+  }, [customerName, currentInvoices, previousInvoices, alpineData, localSelectedMonth, availablePeriods]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -359,6 +435,62 @@ const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
             <X className="w-4 h-4" />
           </Button>
         </div>
+
+        {/* Month Navigation Controls */}
+        {alpineData && alpineData.length > 0 && availablePeriods.length > 0 && (
+          <div className="p-4 border-b border-gray-200 bg-blue-50">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-medium text-blue-800">Month Navigation</h4>
+              <div className="flex items-center gap-3">
+                {/* Navigation controls for range */}
+                {availablePeriods.length > PERIOD_WINDOW_SIZE && (
+                  <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 border">
+                    <button
+                      onClick={() => navigatePeriodRange('left')}
+                      className="p-1 hover:bg-gray-100 rounded disabled:opacity-50"
+                      disabled={!periodRange || periodRange.start === 0}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <span className="text-sm text-gray-700 px-2 whitespace-nowrap">
+                      {periodRange ? 
+                        `${availablePeriods[periodRange.start]} - ${availablePeriods[periodRange.end]}` :
+                        `${availablePeriods.length} periods`
+                      }
+                    </span>
+                    <button
+                      onClick={() => navigatePeriodRange('right')}
+                      className="p-1 hover:bg-gray-100 rounded disabled:opacity-50"
+                      disabled={!periodRange || periodRange.end === availablePeriods.length - 1}
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+                
+                {/* Month selection buttons */}
+                <div className="flex gap-2">
+                  {(periodRange ? 
+                    availablePeriods.slice(periodRange.start, periodRange.end + 1) : 
+                    availablePeriods
+                  ).map((period) => (
+                    <button
+                      key={period}
+                      onClick={() => handleMonthSelect(period)}
+                      className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                        localSelectedMonth === period
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white text-gray-700 hover:bg-gray-100 border'
+                      }`}
+                    >
+                      {formatPeriodAsMMYYYY(period)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Customer Summary */}
         <div className="p-6 border-b border-gray-200 bg-gray-50">

@@ -183,7 +183,7 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
       const label = pivotMode === 'month' ? r.period : periodToQuarter(r.period);
       obj.values[label] = (obj.values[label] || 0) + (r.cases || 0);
     });
-    return { columns: labels, products: Array.from(byProduct.values()) };
+    return { columns: labels, allColumns: allLabels, products: Array.from(byProduct.values()) };
   };
 
   return (
@@ -253,13 +253,13 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
                       return (
                         <>
                           {/* Navigation controls for customer pivot */}
-                          {pivot.columns.length > CUSTOMER_PIVOT_WINDOW_SIZE && (
+                          {pivot.allColumns.length > CUSTOMER_PIVOT_WINDOW_SIZE && (
                             <div className="flex items-center justify-end px-3 py-2 bg-gray-100 border-b">
                               <div className="flex items-center gap-2">
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    if (navigateCustomerPivot) navigateCustomerPivot('left', pivot.columns.length);
+                                    if (navigateCustomerPivot) navigateCustomerPivot('left', pivot.allColumns.length);
                                   }}
                                   className="p-1 hover:bg-gray-200 rounded disabled:opacity-50"
                                   disabled={!customerPivotRange || customerPivotRange.start === 0}
@@ -268,17 +268,17 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
                                 </button>
                                 <span className="text-xs text-gray-600 px-2">
                                   {customerPivotRange ? 
-                                    `${pivot.columns[customerPivotRange.start]} - ${pivot.columns[customerPivotRange.end]}` :
-                                    `${pivot.columns.length} periods`
+                                    `${pivot.allColumns[customerPivotRange.start]} - ${pivot.allColumns[customerPivotRange.end]}` :
+                                    `${pivot.allColumns.length} periods`
                                   }
                                 </span>
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    if (navigateCustomerPivot) navigateCustomerPivot('right', pivot.columns.length);
+                                    if (navigateCustomerPivot) navigateCustomerPivot('right', pivot.allColumns.length);
                                   }}
                                   className="p-1 hover:bg-gray-200 rounded disabled:opacity-50"
-                                  disabled={!customerPivotRange || customerPivotRange.end === pivot.columns.length - 1}
+                                  disabled={!customerPivotRange || customerPivotRange.end === pivot.allColumns.length - 1}
                                 >
                                   <ChevronRight className="w-4 h-4" />
                                 </button>
@@ -606,6 +606,7 @@ const Dashboard: React.FC = () => {
   const [isDistributorDropdownOpen, setIsDistributorDropdownOpen] = useState(false);
   const [showCustomReport, setShowCustomReport] = useState(false);
   const [displayMode, setDisplayMode] = useState<'revenue' | 'cases'>('cases');
+  const [timeAggregation, setTimeAggregation] = useState<'3mo' | '6mo' | '1yr' | '5yr' | 'all'>('all');
   
   // Chart navigation state
   const [chartVisibleRange, setChartVisibleRange] = useState<{start: number, end: number} | null>(null);
@@ -644,7 +645,20 @@ const Dashboard: React.FC = () => {
   const dataForTotals = useMemo(() => {
     if (selectedDistributor === 'ALL') {
       // Exclude Pete's data to avoid double-counting (it's a sub-distributor)
-      return currentData.filter(r => !r.excludeFromTotals);
+      const filtered = currentData.filter(r => !r.excludeFromTotals);
+      
+      // Debug logging for duplicate detection
+      const periodCounts = filtered.reduce((acc, record) => {
+        acc[record.period] = (acc[record.period] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      const duplicates = Object.entries(periodCounts).filter(([period, count]) => count > 1);
+      if (duplicates.length > 0) {
+        console.log('Duplicate periods detected:', duplicates);
+      }
+      
+      return filtered;
     }
     return currentData;
   }, [currentData, selectedDistributor]);
@@ -1037,39 +1051,85 @@ const Dashboard: React.FC = () => {
     };
   }, [filteredData]);
 
-  // Revenue over time data (grouped by periods) - ALWAYS use all uploaded months
+  // Time aggregation functions
+  const aggregateDataByTimePeriod = useMemo(() => {
+    if (timeAggregation === 'all') {
+      return dataForTotals;
+    }
+
+    const now = new Date();
+    const cutoffDate = new Date();
+    
+    switch (timeAggregation) {
+      case '3mo':
+        cutoffDate.setMonth(now.getMonth() - 3);
+        break;
+      case '6mo':
+        cutoffDate.setMonth(now.getMonth() - 6);
+        break;
+      case '1yr':
+        cutoffDate.setFullYear(now.getFullYear() - 1);
+        break;
+      case '5yr':
+        cutoffDate.setFullYear(now.getFullYear() - 5);
+        break;
+    }
+
+    return dataForTotals.filter(record => {
+      const [year, month] = record.period.split('-');
+      const recordDate = new Date(parseInt(year), parseInt(month) - 1);
+      return recordDate >= cutoffDate;
+    });
+  }, [dataForTotals, timeAggregation]);
+
+  // Revenue over time data (grouped by periods) - Use aggregated data based on time period selection
   const revenueOverTime = useMemo(() => {
-    const periodRevenue = dataForTotals.reduce((acc, record) => {
+    const periodRevenue = aggregateDataByTimePeriod.reduce((acc, record) => {
       const period = record.period;
       acc[period] = (acc[period] || 0) + record.revenue;
       return acc;
     }, {} as Record<string, number>);
 
-    const periodCases = dataForTotals.reduce((acc, record) => {
+    const periodCases = aggregateDataByTimePeriod.reduce((acc, record) => {
       const period = record.period;
       acc[period] = (acc[period] || 0) + record.cases;
       return acc;
     }, {} as Record<string, number>);
 
-    // Ensure we return an entry for every available period in order
-    const periods = [...availablePeriods];
-    return periods.map((period) => ({
+    // Get periods from aggregated data, not all available periods
+    const aggregatedPeriods = Array.from(new Set(aggregateDataByTimePeriod.map(r => r.period))).sort();
+    
+    // Debug logging
+    if (timeAggregation === 'all') {
+      console.log('All time data:', {
+        totalRecords: aggregateDataByTimePeriod.length,
+        uniquePeriods: aggregatedPeriods.length,
+        periods: aggregatedPeriods
+      });
+    }
+    
+    return aggregatedPeriods.map((period) => ({
       period,
       revenue: Math.round((periodRevenue[period] || 0) * 100) / 100,
       cases: periodCases[period] || 0,
     }));
-  }, [dataForTotals, availablePeriods]);
+  }, [aggregateDataByTimePeriod, timeAggregation]);
 
   // Chart navigation logic
   const CHART_WINDOW_SIZE = 8; // Show 8 periods at a time
   const CUSTOMER_PIVOT_WINDOW_SIZE = 3; // Show 3 periods at a time
   const MONTHLY_SUMMARY_WINDOW_SIZE = 6; // Show 6 months at a time
   const visibleRevenueData = useMemo(() => {
+    // When "all time" is selected, show all data without windowing
+    if (timeAggregation === 'all') {
+      return revenueOverTime;
+    }
+    
     if (!chartVisibleRange || revenueOverTime.length <= CHART_WINDOW_SIZE) {
       return revenueOverTime;
     }
     return revenueOverTime.slice(chartVisibleRange.start, chartVisibleRange.end + 1);
-  }, [revenueOverTime, chartVisibleRange]);
+  }, [revenueOverTime, chartVisibleRange, timeAggregation]);
 
   // Determine which period to highlight on the chart
   const highlightedPeriod = useMemo(() => {
@@ -1080,22 +1140,22 @@ const Dashboard: React.FC = () => {
 
   // Initialize chart range when data changes or selected month changes
   React.useEffect(() => {
+    // Don't set visible range when "all time" is selected
+    if (timeAggregation === 'all') {
+      setChartVisibleRange(null);
+      return;
+    }
+    
     if (revenueOverTime.length > CHART_WINDOW_SIZE) {
-      const currentPeriodIndex = highlightedPeriod 
-        ? revenueOverTime.findIndex(item => item.period === highlightedPeriod)
-        : revenueOverTime.length - 1;
+      // Always position the most recent month on the right
+      const end = revenueOverTime.length - 1;
+      const start = Math.max(0, end - CHART_WINDOW_SIZE + 1);
       
-      if (currentPeriodIndex >= 0) {
-        const centerIndex = Math.max(0, Math.min(revenueOverTime.length - 1, currentPeriodIndex));
-        const start = Math.max(0, centerIndex - Math.floor(CHART_WINDOW_SIZE / 2));
-        const end = Math.min(revenueOverTime.length - 1, start + CHART_WINDOW_SIZE - 1);
-        
-        setChartVisibleRange({ start, end });
-      }
+      setChartVisibleRange({ start, end });
     } else {
       setChartVisibleRange(null);
     }
-  }, [revenueOverTime, highlightedPeriod]);
+  }, [revenueOverTime, timeAggregation]);
 
   // Reset customer pivot range when data changes
   useEffect(() => {
@@ -1552,12 +1612,6 @@ const Dashboard: React.FC = () => {
                   </button>
                 </div>
               </div>
-              {selectedDistributor === 'ALL' && currentPetesData.length > 0 && (
-                <div className="mt-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
-                  <span className="font-semibold">Note:</span> Totals exclude Pete's Coffee data to prevent double-counting (sub-distributor)
-                </div>
-              )}
-              {/* Last uploaded invoice month removed with CSV uploader */}
             </div>
             <div className="flex gap-2">
               <Button
@@ -1655,25 +1709,92 @@ const Dashboard: React.FC = () => {
                         >
                           <span className="tabular-nums inline-block px-1 rounded hover:bg-blue-50 hover:text-blue-700 transition-colors">{monthlySummary.newAccountsByMonth[m] || 0}</span>
                           {(monthlySummary.newAccountsByMonth[m] || 0) > 0 && openNewAccountsTooltipMonth === m && (
-                            <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-xl z-[10003] p-2"
+                            <div className="fixed w-[800px] bg-white border border-gray-200 rounded-lg shadow-xl z-[10003] p-4"
+                              style={{
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                maxHeight: '80vh'
+                              }}
                               onMouseEnter={(e) => { e.stopPropagation(); cancelTooltipClose(); }}
                               onMouseLeave={() => scheduleTooltipClose('new')}
                             >
-                              <div className="text-[11px] font-medium text-gray-700 mb-1">New accounts in {getShortMonthLabel(m)}</div>
-                              <ul className="max-h-48 overflow-auto text-[11px] leading-5 text-gray-800">
-                                {(monthlySummary.newAccountNamesByMonth[m] || []).map((name) => (
-                                  <li
-                                    key={name}
-                                    className="truncate py-0.5 cursor-pointer hover:text-blue-700"
-                                    onClick={() => {
-                                      setPivotCustomerName(name);
-                                      setIsPivotOpen(true);
-                                    }}
-                                  >
-                                    {name}
-                                  </li>
-                                ))}
-                              </ul>
+                              <div className="text-sm font-medium text-gray-700 mb-3">New Accounts - Last 3 Months</div>
+                              <div className="max-h-96 overflow-auto">
+                                <table className="w-full text-xs">
+                                  <thead className="bg-gray-50 sticky top-0">
+                                    <tr>
+                                      <th className="p-2 text-left font-semibold">Product</th>
+                                      <th className="p-2 text-left font-semibold">Item #</th>
+                                      <th className="p-2 text-left font-semibold">Vendor Code</th>
+                                      {monthlySummary.months.slice(-3).map((month) => (
+                                        <th key={month} className="p-2 text-right font-semibold">{getShortMonthLabel(month)}</th>
+                                      ))}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {(() => {
+                                      const last3Months = monthlySummary.months.slice(-3);
+                                      const allProducts = new Map();
+                                      
+                                      // Collect all unique products from new accounts in last 3 months
+                                      last3Months.forEach(month => {
+                                        const monthData = dataForTotals.filter(r => r.period === month);
+                                        const newAccounts = monthlySummary.newAccountNamesByMonth[month] || [];
+                                        const monthRecords = monthData.filter(r => newAccounts.includes(r.customerName));
+                                        
+                                        monthRecords.forEach(record => {
+                                          const key = `${record.itemNumber || ''}-${record.productCode || ''}-${record.productName}`;
+                                          if (!allProducts.has(key)) {
+                                            allProducts.set(key, {
+                                              productName: record.productName,
+                                              itemNumber: record.itemNumber || '-',
+                                              productCode: record.productCode || '-',
+                                              months: {}
+                                            });
+                                          }
+                                          if (!allProducts.get(key).months[month]) {
+                                            allProducts.get(key).months[month] = 0;
+                                          }
+                                          allProducts.get(key).months[month] += (record.cases || 0);
+                                        });
+                                      });
+                                      
+                                      const productRows = Array.from(allProducts.values()).slice(0, 20); // Limit to 20 products
+                                      
+                                      return productRows.map((product, idx) => (
+                                        <tr key={idx} className="border-t hover:bg-gray-50">
+                                          <td className="p-2 text-left">{product.productName}</td>
+                                          <td className="p-2 text-left">{product.itemNumber}</td>
+                                          <td className="p-2 text-left">{product.productCode}</td>
+                                          {last3Months.map((month) => (
+                                            <td key={month} className="p-2 text-right tabular-nums">
+                                              {product.months[month] || 0}
+                                            </td>
+                                          ))}
+                                        </tr>
+                                      ));
+                                    })()}
+                                    <tr className="border-t-2 border-gray-300 font-semibold">
+                                      <td className="p-2 text-left">Total</td>
+                                      <td className="p-2"></td>
+                                      <td className="p-2"></td>
+                                      {monthlySummary.months.slice(-3).map((month) => {
+                                        const monthData = dataForTotals.filter(r => r.period === month);
+                                        const newAccounts = monthlySummary.newAccountNamesByMonth[month] || [];
+                                        const monthRecords = monthData.filter(r => newAccounts.includes(r.customerName));
+                                        const totalCases = monthRecords.reduce((sum, r) => sum + (r.cases || 0), 0);
+                                        return (
+                                          <td key={month} className="p-2 text-right tabular-nums">{totalCases}</td>
+                                        );
+                                      })}
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                              <div className="mt-3 text-xs text-gray-500">
+                                Sum of Cases by Product • Columns = Months
+                              </div>
                             </div>
                           )}
                         </div>
@@ -1953,53 +2074,44 @@ const Dashboard: React.FC = () => {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>{displayMode === 'revenue' ? 'Revenue by Period' : 'Cases by Period'}</CardTitle>
-                {revenueOverTime.length > CHART_WINDOW_SIZE && (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigateChart('left')}
-                      disabled={!chartVisibleRange || chartVisibleRange.start === 0}
-                      className="h-8 w-8 p-0"
+                {/* Time Period Selection */}
+                <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                  {(['3mo', '6mo', '1yr', '5yr', 'all'] as const).map((period) => (
+                    <button
+                      key={period}
+                      onClick={() => setTimeAggregation(period)}
+                      className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                        timeAggregation === period
+                          ? 'bg-blue-600 text-white'
+                          : 'text-gray-700 hover:bg-gray-200'
+                      }`}
                     >
-                      <ChevronLeft className="w-4 h-4" />
-                    </Button>
-                    <span className="text-sm text-gray-600 min-w-0">
-                      {chartVisibleRange ? `${chartVisibleRange.start + 1}-${chartVisibleRange.end + 1} of ${revenueOverTime.length}` : `${revenueOverTime.length} periods`}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigateChart('right')}
-                      disabled={!chartVisibleRange || chartVisibleRange.end === revenueOverTime.length - 1}
-                      className="h-8 w-8 p-0"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
-                  </div>
-                )}
+                      {period === 'all' ? 'all time' : period}
+                    </button>
+                  ))}
+                </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="h-64">
+              <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={visibleRevenueData} margin={{ top: 5, right: 20, bottom: 20, left: 0 }}>
+                <LineChart key={`chart-${selectedDistributor}-${timeAggregation}-${visibleRevenueData.length}`} data={visibleRevenueData} margin={{ top: 5, right: 60, bottom: visibleRevenueData.length > 10 ? 80 : 30, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis 
                       dataKey="period" 
-                      interval={0} 
-                      tickMargin={8}
-                      tick={(props: any) => {
-                        const { x, y, payload } = props;
-                        const isHighlighted = payload && payload.value === highlightedPeriod;
-                        return (
-                          <text x={x} y={y} dy={16} textAnchor="middle" fill={isHighlighted ? '#1D4ED8' : '#374151'} style={{ fontWeight: isHighlighted ? 700 as any : 500 as any, fontSize: 12 }}>
-                            {payload.value}
-                          </text>
-                        );
+                      interval={visibleRevenueData.length > 30 ? Math.ceil(visibleRevenueData.length / 8) : visibleRevenueData.length > 20 ? Math.ceil(visibleRevenueData.length / 6) : visibleRevenueData.length > 12 ? Math.ceil(visibleRevenueData.length / 4) : 0}
+                      tickMargin={12}
+                      height={40}
+                      angle={visibleRevenueData.length > 10 ? -30 : 0}
+                      textAnchor={visibleRevenueData.length > 10 ? "end" : "middle"}
+                      tick={{ 
+                        fontSize: 10,
+                        fill: '#374151'
                       }}
                     />
-                    <YAxis />
+                    <YAxis 
+                      label={{ value: displayMode === 'revenue' ? 'Revenue ($)' : 'Cases', angle: -90, position: 'insideLeft' }}
+                    />
                   <ReferenceLine x={highlightedPeriod} stroke="#93C5FD" strokeDasharray="4 4" />
                   <Tooltip 
                       formatter={(value: number) => [
@@ -2331,6 +2443,7 @@ const Dashboard: React.FC = () => {
               : selectedDistributor === 'PETES' 
                 ? currentPetesCustomerProgressions 
                 : combinedCustomerProgressions).get(selectedCustomerForModal)}
+            selectedMonth={selectedMonth}
           />
         )}
       </div>
