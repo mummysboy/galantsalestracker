@@ -606,7 +606,7 @@ const Dashboard: React.FC = () => {
   const [isDistributorDropdownOpen, setIsDistributorDropdownOpen] = useState(false);
   const [showCustomReport, setShowCustomReport] = useState(false);
   const [displayMode, setDisplayMode] = useState<'revenue' | 'cases'>('cases');
-  const [timeAggregation, setTimeAggregation] = useState<'3mo' | '6mo' | '1yr' | '5yr' | 'all'>('all');
+  const [timeAggregation, setTimeAggregation] = useState<'3mo' | '6mo' | '1yr' | '5yr'>('3mo');
   
   // Chart navigation state
   const [chartVisibleRange, setChartVisibleRange] = useState<{start: number, end: number} | null>(null);
@@ -672,12 +672,12 @@ const Dashboard: React.FC = () => {
   // Add "All" option to periods, with most recent first
   const allPeriodOptions = useMemo(() => {
     // IMPORTANT: reverse() mutates; use a copy to keep availablePeriods sorted ascending for charts
-    return ['all', ...[...availablePeriods].reverse()];
+    return [...availablePeriods].reverse();
   }, [availablePeriods]);
 
   // Filter data based on selected month
   const filteredData = useMemo(() => {
-    if (!selectedMonth || selectedMonth === 'all') return dataForTotals;
+    if (!selectedMonth) return dataForTotals;
     return dataForTotals.filter(record => record.period === selectedMonth);
   }, [dataForTotals, selectedMonth]);
 
@@ -690,7 +690,6 @@ const Dashboard: React.FC = () => {
 
   // Adjust selected month when switching distributors
   React.useEffect(() => {
-    if (selectedMonth === 'all') return; // preserve All Periods selection
     if (availablePeriods.length > 0 && !availablePeriods.includes(selectedMonth)) {
       setSelectedMonth(availablePeriods[availablePeriods.length - 1]);
     }
@@ -1053,33 +1052,77 @@ const Dashboard: React.FC = () => {
 
   // Time aggregation functions
   const aggregateDataByTimePeriod = useMemo(() => {
-    if (timeAggregation === 'all') {
+    // Check if we have enough data to warrant filtering
+    if (dataForTotals.length === 0) {
       return dataForTotals;
     }
 
-    const now = new Date();
-    const cutoffDate = new Date();
+    // Get the date range of available data
+    const periods = Array.from(new Set(dataForTotals.map(r => r.period))).sort();
+    const earliestPeriod = periods[0];
+    const latestPeriod = periods[periods.length - 1];
+    
+    const [earliestYear, earliestMonth] = earliestPeriod.split('-');
+    const [latestYear, latestMonth] = latestPeriod.split('-');
+    const earliestDate = new Date(parseInt(earliestYear), parseInt(earliestMonth) - 1);
+    const latestDate = new Date(parseInt(latestYear), parseInt(latestMonth) - 1);
+    
+    // Calculate data span in months for more accurate comparison
+    const dataSpanMonths = (latestDate.getFullYear() - earliestDate.getFullYear()) * 12 + 
+                          (latestDate.getMonth() - earliestDate.getMonth()) + 1; // +1 to include both start and end months
+
+    // Convert selected period to months
+    const selectedMonths = timeAggregation === '3mo' ? 3 : 
+                          timeAggregation === '6mo' ? 6 : 
+                          timeAggregation === '1yr' ? 12 : 
+                          timeAggregation === '5yr' ? 60 : 0;
+    
+    // If the data span is less than or equal to the selected period, return all data
+    if (dataSpanMonths <= selectedMonths) {
+      return dataForTotals;
+    }
+
+    // Calculate cutoff date based on the time period
+    let cutoffDate: Date;
     
     switch (timeAggregation) {
       case '3mo':
-        cutoffDate.setMonth(now.getMonth() - 3);
+        // For 3 months, subtract 3 months from latest date
+        cutoffDate = new Date(latestDate.getFullYear(), latestDate.getMonth() - 3, 1);
         break;
       case '6mo':
-        cutoffDate.setMonth(now.getMonth() - 6);
+        // For 6 months, subtract 6 months from latest date
+        cutoffDate = new Date(latestDate.getFullYear(), latestDate.getMonth() - 6, 1);
         break;
       case '1yr':
-        cutoffDate.setFullYear(now.getFullYear() - 1);
+        // For 1 year, subtract 1 year from latest date
+        cutoffDate = new Date(latestDate.getFullYear() - 1, latestDate.getMonth(), 1);
         break;
       case '5yr':
-        cutoffDate.setFullYear(now.getFullYear() - 5);
-        break;
+        // For 5yr, show all available data since user doesn't have more than 5 years
+        return dataForTotals;
+      default:
+        cutoffDate = new Date(latestDate);
     }
 
-    return dataForTotals.filter(record => {
+    const filteredData = dataForTotals.filter(record => {
       const [year, month] = record.period.split('-');
       const recordDate = new Date(parseInt(year), parseInt(month) - 1);
       return recordDate >= cutoffDate;
     });
+
+    // Debug logging for filtering
+    console.log('Data filtering debug:', {
+      timeAggregation,
+      originalRecords: dataForTotals.length,
+      filteredRecords: filteredData.length,
+      cutoffDate: cutoffDate.toISOString(),
+      latestDate: latestDate.toISOString(),
+      earliestDate: earliestDate.toISOString(),
+      periods: Array.from(new Set(filteredData.map(r => r.period))).sort()
+    });
+
+    return filteredData;
   }, [dataForTotals, timeAggregation]);
 
   // Revenue over time data (grouped by periods) - Use aggregated data based on time period selection
@@ -1100,13 +1143,12 @@ const Dashboard: React.FC = () => {
     const aggregatedPeriods = Array.from(new Set(aggregateDataByTimePeriod.map(r => r.period))).sort();
     
     // Debug logging
-    if (timeAggregation === 'all') {
-      console.log('All time data:', {
-        totalRecords: aggregateDataByTimePeriod.length,
-        uniquePeriods: aggregatedPeriods.length,
-        periods: aggregatedPeriods
-      });
-    }
+    console.log('Time aggregation debug:', {
+      timeAggregation,
+      totalRecords: aggregateDataByTimePeriod.length,
+      uniquePeriods: aggregatedPeriods.length,
+      periods: aggregatedPeriods
+    });
     
     return aggregatedPeriods.map((period) => ({
       period,
@@ -1116,32 +1158,26 @@ const Dashboard: React.FC = () => {
   }, [aggregateDataByTimePeriod, timeAggregation]);
 
   // Chart navigation logic
-  const CHART_WINDOW_SIZE = 8; // Show 8 periods at a time
+  const CHART_WINDOW_SIZE = 12; // Show 12 periods at a time (1 year)
   const CUSTOMER_PIVOT_WINDOW_SIZE = 3; // Show 3 periods at a time
   const MONTHLY_SUMMARY_WINDOW_SIZE = 6; // Show 6 months at a time
   const visibleRevenueData = useMemo(() => {
-    // When "all time" is selected, show all data without windowing
-    if (timeAggregation === 'all') {
-      return revenueOverTime;
-    }
-    
     if (!chartVisibleRange || revenueOverTime.length <= CHART_WINDOW_SIZE) {
       return revenueOverTime;
     }
     return revenueOverTime.slice(chartVisibleRange.start, chartVisibleRange.end + 1);
-  }, [revenueOverTime, chartVisibleRange, timeAggregation]);
+  }, [revenueOverTime, chartVisibleRange]);
 
   // Determine which period to highlight on the chart
   const highlightedPeriod = useMemo(() => {
-    if (selectedMonth && selectedMonth !== 'all') return selectedMonth;
-    // Default to most recent available period when "All Periods" is selected
+    if (selectedMonth) return selectedMonth;
+    // Default to most recent available period
     return availablePeriods.length ? availablePeriods[availablePeriods.length - 1] : '';
   }, [selectedMonth, availablePeriods]);
 
   // Initialize chart range when data changes or selected month changes
   React.useEffect(() => {
-    // Don't set visible range when "all time" is selected
-    if (timeAggregation === 'all') {
+    if (revenueOverTime.length <= CHART_WINDOW_SIZE) {
       setChartVisibleRange(null);
       return;
     }
@@ -1170,22 +1206,23 @@ const Dashboard: React.FC = () => {
     }
   }, [showMonthlySummary]);
 
-  const navigateChart = (direction: 'left' | 'right') => {
-    if (!chartVisibleRange || revenueOverTime.length <= CHART_WINDOW_SIZE) return;
-    
-    const step = Math.floor(CHART_WINDOW_SIZE / 2); // Move by half the window size
-    let newStart, newEnd;
-    
-    if (direction === 'left') {
-      newStart = Math.max(0, chartVisibleRange.start - step);
-      newEnd = Math.min(revenueOverTime.length - 1, newStart + CHART_WINDOW_SIZE - 1);
-    } else {
-      newEnd = Math.min(revenueOverTime.length - 1, chartVisibleRange.end + step);
-      newStart = Math.max(0, newEnd - CHART_WINDOW_SIZE + 1);
-    }
-    
-    setChartVisibleRange({ start: newStart, end: newEnd });
-  };
+  // Chart navigation function (currently unused, kept for future use)
+  // const navigateChart = (direction: 'left' | 'right') => {
+  //   if (!chartVisibleRange || revenueOverTime.length <= CHART_WINDOW_SIZE) return;
+  //   
+  //   const step = Math.floor(CHART_WINDOW_SIZE / 2); // Move by half the window size
+  //   let newStart, newEnd;
+  //   
+  //   if (direction === 'left') {
+  //     newStart = Math.max(0, chartVisibleRange.start - step);
+  //     newEnd = Math.min(revenueOverTime.length - 1, newStart + CHART_WINDOW_SIZE - 1);
+  //   } else {
+  //     newEnd = Math.min(revenueOverTime.length - 1, chartVisibleRange.end + step);
+  //     newStart = Math.max(0, newEnd - CHART_WINDOW_SIZE + 1);
+  //   }
+  //   
+  //   setChartVisibleRange({ start: newStart, end: newEnd });
+  // };
 
   const navigateCustomerPivot = (direction: 'left' | 'right', totalPeriods: number) => {
     if (!customerPivotRange) return;
@@ -1541,7 +1578,7 @@ const Dashboard: React.FC = () => {
                     onClick={() => setIsMonthDropdownOpen(!isMonthDropdownOpen)}
                     className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
                   >
-                    {selectedMonth === 'all' ? 'All Periods' : selectedMonth ? getShortMonthLabel(selectedMonth) : 'Select Month'}
+                    {selectedMonth ? getShortMonthLabel(selectedMonth) : 'Select Month'}
                     <ChevronDown className={`w-4 h-4 transition-transform ${isMonthDropdownOpen ? 'rotate-180' : ''}`} />
                   </Button>
                   
@@ -1566,9 +1603,9 @@ const Dashboard: React.FC = () => {
                                 selectedMonth === period ? 'text-blue-700 font-medium' : 'text-gray-700'
                               }`}
                             >
-                              {period === 'all' ? 'All Periods' : getShortMonthLabel(period)}
+                              {getShortMonthLabel(period)}
                             </button>
-                            {period !== 'all' && selectedDistributor !== 'ALL' && (
+                            {selectedDistributor !== 'ALL' && (
                               <button
                                 onClick={(e) => {
                                   e.preventDefault();
@@ -2076,7 +2113,7 @@ const Dashboard: React.FC = () => {
                 <CardTitle>{displayMode === 'revenue' ? 'Revenue by Period' : 'Cases by Period'}</CardTitle>
                 {/* Time Period Selection */}
                 <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
-                  {(['3mo', '6mo', '1yr', '5yr', 'all'] as const).map((period) => (
+                  {(['5yr', '1yr', '6mo', '3mo'] as const).map((period) => (
                     <button
                       key={period}
                       onClick={() => setTimeAggregation(period)}
@@ -2086,7 +2123,7 @@ const Dashboard: React.FC = () => {
                           : 'text-gray-700 hover:bg-gray-200'
                       }`}
                     >
-                      {period === 'all' ? 'all time' : period}
+                      {period}
                     </button>
                   ))}
                 </div>
@@ -2095,15 +2132,15 @@ const Dashboard: React.FC = () => {
             <CardContent>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                <LineChart key={`chart-${selectedDistributor}-${timeAggregation}-${visibleRevenueData.length}`} data={visibleRevenueData} margin={{ top: 5, right: 60, bottom: visibleRevenueData.length > 10 ? 80 : 30, left: 0 }}>
+                <LineChart key={`chart-${selectedDistributor}-${timeAggregation}-${visibleRevenueData.length}`} data={visibleRevenueData} margin={{ top: 5, right: 60, bottom: visibleRevenueData.length > 7 ? 80 : 30, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis 
                       dataKey="period" 
                       interval={visibleRevenueData.length > 30 ? Math.ceil(visibleRevenueData.length / 8) : visibleRevenueData.length > 20 ? Math.ceil(visibleRevenueData.length / 6) : visibleRevenueData.length > 12 ? Math.ceil(visibleRevenueData.length / 4) : 0}
                       tickMargin={12}
                       height={40}
-                      angle={visibleRevenueData.length > 10 ? -30 : 0}
-                      textAnchor={visibleRevenueData.length > 10 ? "end" : "middle"}
+                      angle={visibleRevenueData.length > 7 ? -45 : 0}
+                      textAnchor={visibleRevenueData.length > 7 ? "end" : "middle"}
                       tick={{ 
                         fontSize: 10,
                         fill: '#374151'

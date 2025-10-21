@@ -166,6 +166,7 @@ const KeHeCustomerDetailModal: React.FC<KeHeCustomerDetailModalProps> = ({
 }) => {
   const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
   const [selectedPeriod, setSelectedPeriod] = useState<string>('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [viewMode, setViewMode] = useState<'month' | 'quarter'>('month');
   const [isPeriodDropdownOpen, setIsPeriodDropdownOpen] = useState(false);
   const [periodRange, setPeriodRange] = useState<{start: number, end: number} | null>(null);
@@ -358,26 +359,6 @@ const KeHeCustomerDetailModal: React.FC<KeHeCustomerDetailModalProps> = ({
                     </button>
                   </div>
                 )}
-                
-                {/* Month selection buttons */}
-                <div className="flex gap-2">
-                  {(periodRange ? 
-                    availablePeriods.slice(periodRange.start, periodRange.end + 1) : 
-                    availablePeriods
-                  ).map((period) => (
-                    <button
-                      key={period}
-                      onClick={() => setSelectedPeriod(period)}
-                      className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                        selectedPeriod === period
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-white text-gray-700 hover:bg-gray-100 border'
-                      }`}
-                    >
-                      {period}
-                    </button>
-                  ))}
-                </div>
               </div>
             </div>
           </div>
@@ -524,32 +505,8 @@ const KeHeCustomerDetailModal: React.FC<KeHeCustomerDetailModalProps> = ({
           
           {/* Footer */}
           <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-            <div className="flex justify-between items-center">
-              <div className="text-sm text-gray-600">
-                Sum of Cases by Company • Click companies to view product breakdown
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setViewMode('month')}
-                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                    viewMode === 'month' 
-                      ? 'bg-blue-600 text-white' 
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Month
-                </button>
-                <button
-                  onClick={() => setViewMode('quarter')}
-                  className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                    viewMode === 'quarter' 
-                      ? 'bg-blue-600 text-white' 
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Quarter
-                </button>
-              </div>
+            <div className="text-sm text-gray-600">
+              Sum of Cases by Company • Click companies to view product breakdown
             </div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+// import * as XLSX from 'xlsx'; // Currently unused
 import { AlpineSalesRecord } from './alpineParser';
 import { mapToCanonicalProductName } from './productMapping';
 
@@ -26,21 +26,22 @@ function toNumber(value: any): number {
   return isParenNegative ? -num : num;
 }
 
-function parsePeriodFromReport(reportValue: any): string {
-  // Report format: 6.2024 (month.year) or 1.2025
-  const str = String(reportValue || '').trim();
-  const match = str.match(/(\d+)\.(\d{4})/);
-  if (match) {
-    const month = match[1].padStart(2, '0');
-    const year = match[2];
-    return `${year}-${month}`;
-  }
-  // Fallback to current month
-  const d = new Date();
-  const yyyy = d.getUTCFullYear();
-  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
-  return `${yyyy}-${mm}`;
-}
+// Currently unused, kept for reference
+// function parsePeriodFromReport(reportValue: any): string {
+//   // Report format: 6.2024 (month.year) or 1.2025
+//   const str = String(reportValue || '').trim();
+//   const match = str.match(/(\d+)\.(\d{4})/);
+//   if (match) {
+//     const month = match[1].padStart(2, '0');
+//     const year = match[2];
+//     return `${year}-${month}`;
+//   }
+//   // Fallback to current month
+//   const d = new Date();
+//   const yyyy = d.getUTCFullYear();
+//   const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+//   return `${yyyy}-${mm}`;
+// }
 
 export async function parseVistarCSV(file: File): Promise<ParsedVistarData> {
   const text = await file.text();
@@ -114,7 +115,7 @@ export async function parseVistarCSV(file: File): Promise<ParsedVistarData> {
   const headersLc = headers.map(h => h.toLowerCase());
 
   // Find column indices
-  const reportIdx = headersLc.findIndex(h => h === 'report');
+  // const reportIdx = headersLc.findIndex(h => h === 'report'); // Currently unused
   const opcoDescIdx = headersLc.findIndex(h => h === 'opco desc');
   const customerDescIdx = headersLc.findIndex(h => h === 'customer desc');
   const itemDescIdx = headersLc.findIndex(h => h === 'item description');

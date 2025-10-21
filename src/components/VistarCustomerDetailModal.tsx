@@ -338,26 +338,6 @@ const VistarCustomerDetailModal: React.FC<VistarCustomerDetailModalProps> = ({
                     </button>
                   </div>
                 )}
-                
-                {/* Month selection buttons */}
-                <div className="flex gap-2">
-                  {(periodRange ? 
-                    availablePeriods.slice(periodRange.start, periodRange.end + 1) : 
-                    availablePeriods
-                  ).map((period) => (
-                    <button
-                      key={period}
-                      onClick={() => setSelectedPeriod(period)}
-                      className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                        selectedPeriod === period
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-white text-gray-700 hover:bg-gray-100 border'
-                      }`}
-                    >
-                      {period}
-                    </button>
-                  ))}
-                </div>
               </div>
             </div>
           </div>

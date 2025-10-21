@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+// import * as XLSX from 'xlsx'; // Currently unused
 import { AlpineSalesRecord } from './alpineParser';
 import { mapToCanonicalProductName } from './productMapping';
 
@@ -81,14 +81,19 @@ export async function parseKeHeCSV(file: File): Promise<ParsedKeHeData> {
   // Detect period from Date Range - in CSV format, look in the first data row
   let period = '';
   if (rows.length > 1) {
+    const headerRow = rows[0];
     const firstDataRow = rows[1]; // First row after header
-    const dateRangeIdx = firstDataRow.findIndex(cell => 
-      String(cell).includes('1/1/2025 to 1/31/2025') || 
-      String(cell).includes('Date Range')
+    
+    // Find the "DateRangeSelected" column in the header (column 16, index 15)
+    const dateRangeColIdx = headerRow.findIndex(cell => 
+      String(cell).toLowerCase() === 'daterangeselected'
     );
-    if (dateRangeIdx >= 0) {
-      const dateRangeCell = String(firstDataRow[dateRangeIdx]);
-      if (dateRangeCell.includes('1/1/2025 to 1/31/2025')) {
+    
+    if (dateRangeColIdx >= 0 && firstDataRow[dateRangeColIdx]) {
+      const dateRangeCell = String(firstDataRow[dateRangeColIdx]);
+      // Look for date pattern like "2/1/2025 to 2/28/2025"
+      const dateMatch = dateRangeCell.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+to\s+(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (dateMatch) {
         period = detectPeriodFromDateRange(dateRangeCell);
       }
     }
@@ -152,7 +157,7 @@ export async function parseKeHeCSV(file: File): Promise<ParsedKeHeData> {
   
   // Find Column N - try by position 13 (N is 14th column, index 13)
   // Look for product-related data in column N
-  const productDataColIdx = 13; // Column N
+  // const productDataColIdx = 13; // Column N (currently unused)
 
   const records: AlpineSalesRecord[] = [];
   

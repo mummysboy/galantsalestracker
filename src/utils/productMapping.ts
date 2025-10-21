@@ -714,6 +714,7 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'JUMBO BEEF FRANK BAGEL DOG',
       'BEEF JUMBO BAGEL DOG',
       'BEEF FRANK BAGEL DOGS',
+      'Bagel Dog Bf Frnk W/ Ppy Sd', // Vistar abbreviation
       'MH404001',
     ],
     category: 'Bagel Dog',
