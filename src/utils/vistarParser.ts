@@ -129,24 +129,13 @@ export async function parseVistarCSV(file: File): Promise<ParsedVistarData> {
 
   // Detect period from filename or first data row
   // Vistar CSV filename format: GALANT_YYYYMMDD.CSV
-  // NOTE: The report date is when it was sent, but the data is from the previous month
   let period = '';
   const filenameMatch = file.name.match(/(\d{4})(\d{2})\d{2}/);
   if (filenameMatch) {
-    const year = parseInt(filenameMatch[1], 10);
-    const month = parseInt(filenameMatch[2], 10);
-    
-    // Create a date object and subtract 1 month
-    const reportDate = new Date(year, month - 1, 1); // month - 1 because Date months are 0-indexed
-    reportDate.setMonth(reportDate.getMonth() - 1); // Subtract 1 month for actual data period
-    
-    const actualYear = reportDate.getFullYear();
-    const actualMonth = String(reportDate.getMonth() + 1).padStart(2, '0');
-    period = `${actualYear}-${actualMonth}`;
+    period = `${filenameMatch[1]}-${filenameMatch[2]}`;
   } else {
-    // Fallback to current month minus 1
+    // Fallback to current month
     const d = new Date();
-    d.setMonth(d.getMonth() - 1);
     const yyyy = d.getUTCFullYear();
     const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
     period = `${yyyy}-${mm}`;
