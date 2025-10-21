@@ -38,6 +38,7 @@ interface BrokerReportRow {
   revenue: number;
   cases: number;
   period: string;
+  weight?: number; // Weight in pounds (pack × sizeOz × cases / 16)
 }
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('en-US', {
@@ -77,6 +78,7 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
   const [selectedCustomers, setSelectedCustomers] = React.useState<string[]>([]);
   const [selectedSubCustomers, setSelectedSubCustomers] = React.useState<string[]>([]);
   const [brokerResults, setBrokerResults] = React.useState<BrokerReportRow[]>([]);
+  const [isBrokerReportActive, setIsBrokerReportActive] = React.useState<boolean>(false);
 
   // Initialize sensible defaults when opened, clear state when closed
   React.useEffect(() => {
@@ -85,6 +87,7 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
       setResults([]);
       setBrokerResults([]);
       setError('');
+      setIsBrokerReportActive(false);
       return;
     }
     
@@ -222,6 +225,12 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
         }
 
         if (matchesPeriod && matchesCustomer && matchesSubCustomer && (record.revenue > 0 || record.cases > 0)) {
+          // Calculate weight for Vistar: (pack × sizeOz × cases) / 16 to convert oz to lbs
+          let weight: number | undefined = undefined;
+          if (record.pack && record.sizeOz && record.cases) {
+            weight = (record.pack * record.sizeOz * record.cases) / 16;
+          }
+
           rows.push({
             distributor: dist.name + (dist.isSubDistributor ? ' (Sub-Distributor)' : ''),
             customer: record.customerName,
@@ -231,7 +240,8 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
             size: record.size || undefined,
             revenue: record.revenue || 0,
             cases: record.cases || 0,
-            period: record.period
+            period: record.period,
+            weight: weight
           });
         }
       });
@@ -246,6 +256,7 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
     });
 
     setBrokerResults(rows);
+    setIsBrokerReportActive(true);
   };
 
   const handleDownloadCSV = () => {
@@ -255,15 +266,15 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
     }
 
     // Create CSV content
-    const headers = ['Distributor', 'Customer', 'Sub-Customer', 'Product', 'Size', 'Revenue', 'Cases', 'Period'];
+    const headers = ['Distributor', 'Customer', 'Sub-Customer', 'Product', 'Revenue', 'Cases', 'Weight (lbs)', 'Period'];
     const rows = brokerResults.map(row => [
       row.distributor,
       row.customer,
       row.subCustomer || '',
       row.productName,
-      row.size || '',
       row.revenue.toFixed(2),
       row.cases.toString(),
+      row.weight ? row.weight.toFixed(2) : '',
       row.period
     ]);
 
@@ -272,14 +283,15 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
       if (r.distributor.includes('Sub-Distributor')) return acc;
       acc.revenue += r.revenue;
       acc.cases += r.cases;
+      acc.weight += r.weight || 0;
       return acc;
-    }, { revenue: 0, cases: 0 });
+    }, { revenue: 0, cases: 0, weight: 0 });
 
     const csvContent = [
       headers.join(','),
       ...rows.map(row => row.join(',')),
       '', // Empty row for separation
-      `TOTALS (excl. sub-distributors),,,,,${totals.revenue.toFixed(2)},${totals.cases},`
+      `TOTALS (excl. sub-distributors),,,,${totals.revenue.toFixed(2)},${totals.cases},${totals.weight.toFixed(2)},`
     ].join('\n');
 
     // Create download link
@@ -424,7 +436,11 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[10006]" onClick={onClose}>
-      <div className="bg-white rounded-lg shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className={`bg-white rounded-lg shadow-2xl w-full overflow-hidden flex flex-col ${
+        isBrokerReportActive 
+          ? 'max-w-[95vw] max-h-[95vh]' 
+          : 'max-w-6xl max-h-[90vh]'
+      }`} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b bg-gray-50">
           <div>
             <h2 className="text-lg font-semibold">Custom Report Builder</h2>
@@ -443,7 +459,10 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
             <span className="text-sm font-medium">Report Type:</span>
             <div className="flex gap-2">
               <button
-                onClick={() => setReportMode('comparison')}
+                onClick={() => {
+                  setReportMode('comparison');
+                  setIsBrokerReportActive(false);
+                }}
                 className={`px-3 py-1.5 text-sm rounded transition-colors ${
                   reportMode === 'comparison'
                     ? 'bg-blue-600 text-white'
@@ -453,7 +472,10 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
                 Comparison Report
               </button>
               <button
-                onClick={() => setReportMode('broker')}
+                onClick={() => {
+                  setReportMode('broker');
+                  setIsBrokerReportActive(false);
+                }}
                 className={`px-3 py-1.5 text-sm rounded transition-colors ${
                   reportMode === 'broker'
                     ? 'bg-blue-600 text-white'
@@ -844,30 +866,30 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
               <div className="mb-3 text-sm text-gray-600">
                 Showing {brokerResults.length} product line{brokerResults.length !== 1 ? 's' : ''} | Periods: {selectedPeriods.join(', ')} | {selectedCustomers.length} customer{selectedCustomers.length !== 1 ? 's' : ''} selected{selectedSubCustomers.length > 0 ? ` | ${selectedSubCustomers.length} sub-customer${selectedSubCustomers.length !== 1 ? 's' : ''} selected` : ''}
               </div>
-              <table className="w-full text-sm">
+              <table className={`w-full ${isBrokerReportActive ? 'text-base' : 'text-sm'}`}>
                 <thead className="bg-gray-50 sticky top-0">
                   <tr>
-                    <th className="p-2 text-left">Distributor</th>
-                    <th className="p-2 text-left">Customer</th>
-                    <th className="p-2 text-left">Sub-Customer</th>
-                    <th className="p-2 text-left">Product</th>
-                    <th className="p-2 text-left">Size</th>
-                    <th className="p-2 text-right">Revenue</th>
-                    <th className="p-2 text-right">Cases</th>
-                    <th className="p-2 text-left">Period</th>
+                    <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-left`}>Distributor</th>
+                    <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-left`}>Customer</th>
+                    <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-left`}>Sub-Customer</th>
+                    <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-left`}>Product</th>
+                    <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right`}>Revenue</th>
+                    <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right`}>Cases</th>
+                    <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right`}>Weight (lbs)</th>
+                    <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-left`}>Period</th>
                   </tr>
                 </thead>
                 <tbody>
                   {brokerResults.map((row, index) => (
                     <tr key={index} className="border-t hover:bg-gray-50">
-                      <td className="p-2">{row.distributor}</td>
-                      <td className="p-2">{row.customer}</td>
-                      <td className="p-2">{row.subCustomer || '-'}</td>
-                      <td className="p-2">{row.productName}</td>
-                      <td className="p-2">{row.size || '-'}</td>
-                      <td className="p-2 text-right tabular-nums">{formatCurrency(row.revenue)}</td>
-                      <td className="p-2 text-right tabular-nums">{row.cases.toLocaleString()}</td>
-                      <td className="p-2">{row.period}</td>
+                      <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>{row.distributor}</td>
+                      <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>{row.customer}</td>
+                      <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>{row.subCustomer || '-'}</td>
+                      <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>{row.productName}</td>
+                      <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{formatCurrency(row.revenue)}</td>
+                      <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{row.cases.toLocaleString()}</td>
+                      <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{row.weight ? row.weight.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</td>
+                      <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>{row.period}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -878,14 +900,16 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
                       if (r.distributor.includes('Sub-Distributor')) return acc;
                       acc.revenue += r.revenue;
                       acc.cases += r.cases;
+                      acc.weight += r.weight || 0;
                       return acc;
-                    }, { revenue: 0, cases: 0 });
+                    }, { revenue: 0, cases: 0, weight: 0 });
                     return (
                       <tr className="border-t bg-gray-50 font-semibold">
-                        <td className="p-2" colSpan={5}>Total (excl. sub-distributors)</td>
-                        <td className="p-2 text-right tabular-nums">{formatCurrency(total.revenue)}</td>
-                        <td className="p-2 text-right tabular-nums">{total.cases.toLocaleString()}</td>
-                        <td className="p-2">-</td>
+                        <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`} colSpan={4}>Total (excl. sub-distributors)</td>
+                        <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{formatCurrency(total.revenue)}</td>
+                        <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{total.cases.toLocaleString()}</td>
+                        <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{total.weight.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>-</td>
                       </tr>
                     );
                   })()}

@@ -16,6 +16,8 @@ export interface AlpineSalesRecord {
   accountName?: string; // For KeHe: the customer name under a retailer
   excludeFromTotals?: boolean; // For sub-distributors like Pete's Coffee to avoid double-counting
   isAdjustment?: boolean; // For synthetic adjustment records that shouldn't appear as products
+  pack?: number; // Number of units per case (e.g., 12 for a 12-pack)
+  sizeOz?: number; // Size of each unit in ounces (e.g., 5 for 5oz)
 }
 
 export interface ParsedAlpineData {

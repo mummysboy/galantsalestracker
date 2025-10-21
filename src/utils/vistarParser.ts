@@ -125,17 +125,28 @@ export async function parseVistarCSV(file: File): Promise<ParsedVistarData> {
   const itemIdIdx = headersLc.findIndex(h => h === 'item id');
   const customerIdIdx = headersLc.findIndex(h => h === 'customer id');
   const packIdx = headersLc.findIndex(h => h === 'pack');
-  const sizePerOzIdx = headersLc.findIndex(h => h === 'size per oz');
+  const sizePerOzIdx = headersLc.findIndex(h => h === 'size');
 
   // Detect period from filename or first data row
   // Vistar CSV filename format: GALANT_YYYYMMDD.CSV
+  // NOTE: The report date is when it was sent, but the data is from the previous month
   let period = '';
   const filenameMatch = file.name.match(/(\d{4})(\d{2})\d{2}/);
   if (filenameMatch) {
-    period = `${filenameMatch[1]}-${filenameMatch[2]}`;
+    const year = parseInt(filenameMatch[1], 10);
+    const month = parseInt(filenameMatch[2], 10);
+    
+    // Create a date object and subtract 1 month
+    const reportDate = new Date(year, month - 1, 1); // month - 1 because Date months are 0-indexed
+    reportDate.setMonth(reportDate.getMonth() - 1); // Subtract 1 month for actual data period
+    
+    const actualYear = reportDate.getFullYear();
+    const actualMonth = String(reportDate.getMonth() + 1).padStart(2, '0');
+    period = `${actualYear}-${actualMonth}`;
   } else {
-    // Fallback to current month
+    // Fallback to current month minus 1
     const d = new Date();
+    d.setMonth(d.getMonth() - 1);
     const yyyy = d.getUTCFullYear();
     const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
     period = `${yyyy}-${mm}`;
@@ -170,6 +181,11 @@ export async function parseVistarCSV(file: File): Promise<ParsedVistarData> {
     const finalProductName = itemDesc || brand || 'Unknown Product';
     const sizeStr = pack && sizePerOz ? `${pack}pk x ${sizePerOz}oz` : (pack || sizePerOz || '');
 
+    // Parse pack and size as numbers for weight calculation
+    // Handle Excel formula format like ="12" and extract numeric value
+    const packNum = pack ? parseFloat(pack.replace(/[^0-9.]/g, '')) : undefined;
+    const sizeOzNum = sizePerOz ? parseFloat(sizePerOz.replace(/[^0-9.]/g, '')) : undefined;
+
     const record: AlpineSalesRecord = {
       customerName: opcoDesc, // Level 1: OPCO Desc (e.g., "Vistar Illinois")
       productName: mapToCanonicalProductName(finalProductName), // Level 3: Item Description - normalized
@@ -181,6 +197,8 @@ export async function parseVistarCSV(file: File): Promise<ParsedVistarData> {
       productCode: itemId || undefined,
       customerId: customerId || undefined,
       accountName: customerDesc, // Level 2: Customer Desc (e.g., "MONSTER VENDING LLC")
+      pack: packNum && isFinite(packNum) ? packNum : undefined,
+      sizeOz: sizeOzNum && isFinite(sizeOzNum) ? sizeOzNum : undefined,
     };
 
     allRecords.push(record);
