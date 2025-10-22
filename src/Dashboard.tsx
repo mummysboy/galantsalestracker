@@ -601,7 +601,8 @@ const Dashboard: React.FC = () => {
   const [pendingDeletePeriod, setPendingDeletePeriod] = useState<string | null>(null);
   const [showMonthlySummary, setShowMonthlySummary] = useState(false);
   const [openNewAccountsTooltipMonth, setOpenNewAccountsTooltipMonth] = useState<string | null>(null);
-  const [openDeltaTooltipMonth, setOpenDeltaTooltipMonth] = useState<string | null>(null);
+  const [deltaModalOpen, setDeltaModalOpen] = useState(false);
+  const [newAccountsModalOpen, setNewAccountsModalOpen] = useState(false);
   const [selectedDistributor, setSelectedDistributor] = useState<'ALPINE' | 'PETES' | 'KEHE' | 'VISTAR' | 'TONYS' | 'TROIA' | 'MHD' | 'ALL'>('ALPINE');
   const [isDistributorDropdownOpen, setIsDistributorDropdownOpen] = useState(false);
   const [showCustomReport, setShowCustomReport] = useState(false);
@@ -620,13 +621,21 @@ const Dashboard: React.FC = () => {
       tooltipTimerRef.current = null;
     }
   };
-  const scheduleTooltipClose = (which: 'new' | 'delta') => {
+  const scheduleTooltipClose = (which: 'new') => {
     cancelTooltipClose();
     tooltipTimerRef.current = window.setTimeout(() => {
       if (which === 'new') setOpenNewAccountsTooltipMonth(null);
-      else setOpenDeltaTooltipMonth(null);
     }, 200);
   };
+
+  const handleDeltaViewClick = () => {
+    setDeltaModalOpen(true);
+  };
+
+  const handleNewAccountsClick = () => {
+    setNewAccountsModalOpen(true);
+  };
+
 
   // Determine current dataset based on distributor
   const currentData = useMemo(() => {
@@ -1481,6 +1490,7 @@ const Dashboard: React.FC = () => {
     };
   }, [dataForTotals]);
 
+
   // Get visible months for monthly summary
   const visibleMonthlySummaryMonths = useMemo(() => {
     if (!monthlySummaryRange || monthlySummary.months.length <= MONTHLY_SUMMARY_WINDOW_SIZE) {
@@ -1504,6 +1514,35 @@ const Dashboard: React.FC = () => {
     }
     
     setMonthlySummaryRange({ start: newStart, end: newEnd });
+  };
+
+  const handleDownloadMonthlySummaryCSV = () => {
+    const csvHeaders = ['Metric', ...visibleMonthlySummaryMonths.map(m => getShortMonthLabel(m))];
+    
+    const csvRows = [
+      ['New Accounts', ...visibleMonthlySummaryMonths.map(m => (monthlySummary.newAccountsByMonth[m] || 0).toString())],
+      ['Total Accounts Ordered', ...visibleMonthlySummaryMonths.map(m => (monthlySummary.accountsOrderedByMonth[m] || 0).toString())],
+      ['Δ', ...visibleMonthlySummaryMonths.map(m => (monthlySummary.deltaAccountsByMonth[m] || 0).toString())],
+      ['Total Cases Sold', ...visibleMonthlySummaryMonths.map(m => (monthlySummary.totalCasesByMonth[m] || 0).toString())],
+      ['Average Cases / Account', ...visibleMonthlySummaryMonths.map(m => (monthlySummary.avgCasesPerAccountByMonth[m] || 0).toFixed(1))]
+    ];
+
+    const csvContent = [csvHeaders, ...csvRows]
+      .map(row => row.map(cell => `"${cell}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    const dateRange = monthlySummaryRange ? 
+      `${getShortMonthLabel(monthlySummary.months[monthlySummaryRange.start])}_to_${getShortMonthLabel(monthlySummary.months[monthlySummaryRange.end])}` :
+      'all_months';
+    link.setAttribute('download', `Monthly_Accounts_Cases_Summary_${dateRange}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Initialize monthly summary range when modal opens or data changes
@@ -1721,6 +1760,12 @@ const Dashboard: React.FC = () => {
                     </button>
                   </div>
                 )}
+                <button
+                  onClick={handleDownloadMonthlySummaryCSV}
+                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                >
+                  Download CSV
+                </button>
                 <Button variant="ghost" size="sm" onClick={() => setShowMonthlySummary(false)} className="h-7 px-2">✕</Button>
               </div>
             </div>
@@ -1729,14 +1774,29 @@ const Dashboard: React.FC = () => {
                 <thead className="bg-gray-50 sticky top-0">
                   <tr>
                     <th className="p-2 text-left w-56">Metric</th>
+                    <th className="p-2 w-16"></th>
                     {visibleMonthlySummaryMonths.map((m) => (
                       <th key={m} className="p-2 text-right whitespace-nowrap">{getShortMonthLabel(m)}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
+                  <tr 
+                    className="hover:bg-gray-100 transition-colors duration-150 cursor-pointer"
+                    onClick={handleNewAccountsClick}
+                  >
                     <td className="p-2 font-medium">New Accounts</td>
+                    <td className="p-2 text-center">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleNewAccountsClick();
+                        }}
+                        className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                      >
+                        View
+                      </button>
+                    </td>
                     {visibleMonthlySummaryMonths.map((m) => (
                       <td key={m} className="p-2 text-right">
                         <div 
@@ -1838,87 +1898,41 @@ const Dashboard: React.FC = () => {
                       </td>
                     ))}
                   </tr>
-                  <tr>
+                  <tr className="hover:bg-gray-100 transition-colors duration-150">
                     <td className="p-2 font-medium">Total Accounts Ordered</td>
+                    <td className="p-2 text-center"></td>
                     {visibleMonthlySummaryMonths.map((m) => (
                       <td key={m} className="p-2 text-right tabular-nums">{monthlySummary.accountsOrderedByMonth[m] || 0}</td>
                     ))}
                   </tr>
-                  <tr>
+                  <tr className="hover:bg-gray-100 transition-colors duration-150">
                     <td className="p-2 font-medium">Δ</td>
+                    <td className="p-2 text-center">
+                      <button
+                        onClick={handleDeltaViewClick}
+                        className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+                      >
+                        View
+                      </button>
+                    </td>
                     {visibleMonthlySummaryMonths.map((m, idx) => (
                       <td key={m} className="p-2 text-right">
-                        <div 
-                          className="relative inline-block group"
-                          onMouseEnter={() => { cancelTooltipClose(); setOpenDeltaTooltipMonth(m); }}
-                          onMouseLeave={() => scheduleTooltipClose('delta')}
-                        >
-                          <span className={`tabular-nums inline-block px-1 rounded ${((monthlySummary.deltaAccountsByMonth[m] || 0) >= 0) ? 'hover:bg-green-50 hover:text-green-700' : 'hover:bg-red-50 hover:text-red-700'} transition-colors`}>
-                            {monthlySummary.deltaAccountsByMonth[m] || 0}
-                          </span>
-                          {(idx > 0) && openDeltaTooltipMonth === m && (
-                            <div className="absolute right-0 top-full mt-1 w-72 bg-white border border-gray-200 rounded-lg shadow-xl z-[10003] p-2"
-                              onMouseEnter={(e) => { e.stopPropagation(); cancelTooltipClose(); }}
-                              onMouseLeave={() => scheduleTooltipClose('delta')}
-                            >
-                              <div className="text-[11px] font-medium text-gray-700 mb-1 flex items-center justify-between">
-                                <span>Change vs {getShortMonthLabel(monthlySummary.months[idx - 1])}</span>
-                                <span className={`${((monthlySummary.deltaAccountsByMonth[m] || 0) >= 0) ? 'text-green-700' : 'text-red-700'} font-semibold`}>
-                                  {monthlySummary.deltaAccountsByMonth[m] || 0}
-                                </span>
-                              </div>
-                              <div className="grid grid-cols-2 gap-2 text-[11px]">
-                                <div>
-                                  <div className="font-medium text-green-700 mb-1">Gained</div>
-                                  <ul className="max-h-40 overflow-auto">
-                                    {(monthlySummary.gainedVsPrevByMonth[m] || []).length === 0 && <li className="text-gray-500 italic">None</li>}
-                                    {(monthlySummary.gainedVsPrevByMonth[m] || []).map((name) => (
-                                      <li
-                                        key={`g-${name}`}
-                                        className="truncate cursor-pointer hover:text-blue-700"
-                                        onClick={() => {
-                                          setPivotCustomerName(name);
-                                          setIsPivotOpen(true);
-                                        }}
-                                      >
-                                        {name}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                                <div>
-                                  <div className="font-medium text-red-700 mb-1">Lost</div>
-                                  <ul className="max-h-40 overflow-auto">
-                                    {(monthlySummary.lostVsPrevByMonth[m] || []).length === 0 && <li className="text-gray-500 italic">None</li>}
-                                    {(monthlySummary.lostVsPrevByMonth[m] || []).map((name) => (
-                                      <li
-                                        key={`l-${name}`}
-                                        className="truncate cursor-pointer hover:text-blue-700"
-                                        onClick={() => {
-                                          setPivotCustomerName(name);
-                                          setIsPivotOpen(true);
-                                        }}
-                                      >
-                                        {name}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                        <span className={`tabular-nums px-1 rounded ${((monthlySummary.deltaAccountsByMonth[m] || 0) >= 0) ? 'text-green-700' : 'text-red-700'}`}>
+                          {monthlySummary.deltaAccountsByMonth[m] || 0}
+                        </span>
                       </td>
                     ))}
                   </tr>
-                  <tr>
+                  <tr className="hover:bg-gray-100 transition-colors duration-150">
                     <td className="p-2 font-medium">Total Cases Sold</td>
+                    <td className="p-2 text-center"></td>
                     {visibleMonthlySummaryMonths.map((m) => (
                       <td key={m} className="p-2 text-right tabular-nums">{monthlySummary.totalCasesByMonth[m] || 0}</td>
                     ))}
                   </tr>
-                  <tr>
+                  <tr className="hover:bg-gray-100 transition-colors duration-150">
                     <td className="p-2 font-medium">Average Cases / Account</td>
+                    <td className="p-2 text-center"></td>
                     {visibleMonthlySummaryMonths.map((m) => (
                       <td key={m} className="p-2 text-right tabular-nums">{(monthlySummary.avgCasesPerAccountByMonth[m] || 0).toFixed(1)}</td>
                     ))}
@@ -2482,6 +2496,181 @@ const Dashboard: React.FC = () => {
                 : combinedCustomerProgressions).get(selectedCustomerForModal)}
             selectedMonth={selectedMonth}
           />
+        )}
+
+        {/* Delta Details Modal */}
+        {deltaModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[10004]">
+            <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Account Changes - All Periods
+                </h2>
+                <button
+                  onClick={() => setDeltaModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {monthlySummary.months.map((month, monthIndex) => {
+                    const monthIdx = monthlySummary.months.indexOf(month);
+                    const prevMonth = monthIdx > 0 ? monthlySummary.months[monthIdx - 1] : null;
+                    
+                    return (
+                      <div key={month} className="bg-gray-50 rounded-lg p-4">
+                        <div className="mb-4">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                            {getShortMonthLabel(month)}
+                          </h3>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-600">
+                              Change vs {prevMonth ? getShortMonthLabel(prevMonth) : 'Previous Month'}
+                            </span>
+                            <span className={`font-semibold ${
+                              ((monthlySummary.deltaAccountsByMonth[month] || 0) >= 0) 
+                                ? 'text-green-700' 
+                                : 'text-red-700'
+                            }`}>
+                              {monthlySummary.deltaAccountsByMonth[month] || 0}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          {/* Gained Customers */}
+                          <div>
+                            <div className="font-medium text-green-700 mb-2 text-sm">Gained</div>
+                            <div className="bg-green-50 border border-green-200 rounded p-3 max-h-48 overflow-y-auto">
+                              {(monthlySummary.gainedVsPrevByMonth[month] || []).length === 0 ? (
+                                <div className="text-gray-500 italic text-xs">None</div>
+                              ) : (
+                                <ul className="space-y-1">
+                                  {(monthlySummary.gainedVsPrevByMonth[month] || []).map((name) => (
+                                    <li
+                                      key={`g-${name}-${month}`}
+                                      className="text-xs p-2 bg-white rounded border border-green-200 cursor-pointer hover:bg-green-100 hover:text-blue-700 transition-colors truncate"
+                                      onClick={() => {
+                                        setPivotCustomerName(name);
+                                        setIsPivotOpen(true);
+                                      }}
+                                      title={name}
+                                    >
+                                      {name}
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Lost Customers */}
+                          <div>
+                            <div className="font-medium text-red-700 mb-2 text-sm">Lost</div>
+                            <div className="bg-red-50 border border-red-200 rounded p-3 max-h-48 overflow-y-auto">
+                              {(monthlySummary.lostVsPrevByMonth[month] || []).length === 0 ? (
+                                <div className="text-gray-500 italic text-xs">None</div>
+                              ) : (
+                                <ul className="space-y-1">
+                                  {(monthlySummary.lostVsPrevByMonth[month] || []).map((name) => (
+                                    <li
+                                      key={`l-${name}-${month}`}
+                                      className="text-xs p-2 bg-white rounded border border-red-200 cursor-pointer hover:bg-red-100 hover:text-blue-700 transition-colors truncate"
+                                      onClick={() => {
+                                        setPivotCustomerName(name);
+                                        setIsPivotOpen(true);
+                                      }}
+                                      title={name}
+                                    >
+                                      {name}
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* New Accounts Modal */}
+        {newAccountsModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[10004]">
+            <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  New Accounts - All Periods
+                </h2>
+                <button
+                  onClick={() => setNewAccountsModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {monthlySummary.months.map((month) => {
+                    const newAccountsForMonth = monthlySummary.newAccountNamesByMonth[month] || [];
+                    
+                    return (
+                      <div key={month} className="bg-gray-50 rounded-lg p-4">
+                        <div className="mb-4">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                            {getShortMonthLabel(month)}
+                          </h3>
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-600">
+                              New accounts this month
+                            </span>
+                            <span className="font-semibold text-blue-700">
+                              {newAccountsForMonth.length}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="bg-blue-50 border border-blue-200 rounded p-3 max-h-64 overflow-y-auto">
+                          {newAccountsForMonth.length === 0 ? (
+                            <div className="text-gray-500 italic text-sm">No new accounts this month</div>
+                          ) : (
+                            <ul className="space-y-2">
+                              {newAccountsForMonth.map((name) => (
+                                <li
+                                  key={`new-${name}-${month}`}
+                                  className="text-sm p-2 bg-white rounded border border-blue-200 cursor-pointer hover:bg-blue-100 hover:text-blue-700 transition-colors truncate"
+                                  onClick={() => {
+                                    setPivotCustomerName(name);
+                                    setIsPivotOpen(true);
+                                  }}
+                                  title={name}
+                                >
+                                  {name}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
