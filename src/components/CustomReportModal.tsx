@@ -69,9 +69,8 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
   const [groupMode, setGroupMode] = React.useState<GroupMode>('customer');
   const [results, setResults] = React.useState<AggregatedRow[]>([]);
   const [error, setError] = React.useState<string>('');
-  const [hoveredCustomer, setHoveredCustomer] = React.useState<string | null>(null);
+  const [clickedCustomer, setClickedCustomer] = React.useState<string | null>(null);
   const [tooltipPosition, setTooltipPosition] = React.useState<{ left: number; top: number }>({ left: 0, top: 0 });
-  const hoverTimerRef = React.useRef<number | null>(null);
   
   // Broker report specific states
   const [selectedPeriods, setSelectedPeriods] = React.useState<string[]>([]);
@@ -149,16 +148,80 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
     return map;
   };
 
-  const cancelHoverClose = () => {
-    if (hoverTimerRef.current) {
-      window.clearTimeout(hoverTimerRef.current);
-      hoverTimerRef.current = null;
-    }
+  const handleDownloadProductBreakdownCSV = (customerName: string) => {
+    const productBreakdown = getProductBreakdown(customerName);
+    if (!productBreakdown || productBreakdown.length === 0) return;
+
+    // Create CSV content
+    const headers = ['Product', 'A Revenue', 'B Revenue', 'Revenue Δ', 'A Cases', 'B Cases', 'Cases Δ'];
+    const rows = productBreakdown.map(product => {
+      const prodDeltaRevenue = product.bRevenue - product.aRevenue;
+      const prodDeltaCases = product.bCases - product.aCases;
+      return [
+        product.productName,
+        product.aRevenue.toFixed(2),
+        product.bRevenue.toFixed(2),
+        prodDeltaRevenue.toFixed(2),
+        product.aCases.toString(),
+        product.bCases.toString(),
+        prodDeltaCases.toString()
+      ];
+    });
+
+    // Calculate totals
+    const totals = productBreakdown.reduce((acc, product) => {
+      acc.aRevenue += product.aRevenue;
+      acc.bRevenue += product.bRevenue;
+      acc.aCases += product.aCases;
+      acc.bCases += product.bCases;
+      return acc;
+    }, { aRevenue: 0, bRevenue: 0, aCases: 0, bCases: 0 });
+
+    const totalDeltaRevenue = totals.bRevenue - totals.aRevenue;
+    const totalDeltaCases = totals.bCases - totals.aCases;
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(',')),
+      '', // Empty row for separation
+      `"TOTAL","${totals.aRevenue.toFixed(2)}","${totals.bRevenue.toFixed(2)}","${totalDeltaRevenue.toFixed(2)}","${totals.aCases}","${totals.bCases}","${totalDeltaCases}"`
+    ].join('\n');
+
+    // Create download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    // Create a concise filename with normal text
+    const sanitizedCustomer = customerName.replace(/[^a-zA-Z0-9\s]/g, '');
+    const filename = `Breakdown ${sanitizedCustomer} ${rangeAStart} to ${rangeAEnd} vs ${rangeBStart} to ${rangeBEnd}.csv`;
+    
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
-  const scheduleHoverClose = () => {
-    cancelHoverClose();
-    hoverTimerRef.current = window.setTimeout(() => setHoveredCustomer(null), 200);
+  const handleCustomerClick = (customerName: string, event: React.MouseEvent) => {
+    const productBreakdown = groupMode === 'customer' ? getProductBreakdown(customerName) : null;
+    if (productBreakdown && productBreakdown.length > 0) {
+      if (clickedCustomer === customerName) {
+        // If clicking the same customer, close the popup
+        setClickedCustomer(null);
+      } else {
+        // Show popup for this customer
+        setClickedCustomer(customerName);
+        const rect = event.currentTarget.getBoundingClientRect();
+        // Position tooltip above the row, accounting for its height
+        const tooltipHeight = 500; // Estimated tooltip height
+        const topPosition = Math.max(20, rect.top - tooltipHeight);
+        setTooltipPosition({
+          left: Math.max(20, Math.min(rect.left, window.innerWidth - 820)), // 800px width + 20px margin
+          top: topPosition
+        });
+      }
+    }
   };
 
   const handleGenerate = () => {
@@ -543,6 +606,30 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
     };
   }, [isOpen]);
 
+  // Close popup when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (clickedCustomer) {
+        const target = event.target as Node;
+        const popup = document.querySelector('[data-popup="customer-breakdown"]');
+        
+        // Close if clicking outside both the modal and the popup
+        if (modalRef.current && !modalRef.current.contains(target) && 
+            (!popup || !popup.contains(target))) {
+          setClickedCustomer(null);
+        }
+      }
+    };
+
+    if (clickedCustomer) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [clickedCustomer]);
+
 
   // Get product breakdown for a specific customer across both periods
   const getProductBreakdown = (customerName: string) => {
@@ -886,17 +973,9 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
                                   <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>-</td>
                                 </tr>
                               )}
-                              {/* Main Distributors Total */}
-                              <tr className="border-t bg-gray-50 font-semibold">
-                                <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`} colSpan={4}>Main Distributors Total</td>
-                                <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{formatCurrency(totalExcludingSubDist.revenue)}</td>
-                                <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{totalExcludingSubDist.cases.toLocaleString()}</td>
-                                <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{totalExcludingSubDist.weight.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                                <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>-</td>
-                              </tr>
-                              {/* Grand Total */}
+                              {/* Total */}
                               <tr className="border-t bg-green-50 font-bold">
-                                <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`} colSpan={4}>Grand Total (All Distributors)</td>
+                                <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`} colSpan={4}>Total</td>
                                 <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{formatCurrency(grandTotal.revenue)}</td>
                                 <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{grandTotal.cases.toLocaleString()}</td>
                                 <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{grandTotal.weight.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
@@ -1173,38 +1252,48 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
                     return (
                       <tr 
                         key={row.key} 
-                        className={`border-t ${showTooltip ? 'cursor-pointer' : ''}`}
-                        onMouseEnter={(e) => {
-                          if (showTooltip) {
-                            cancelHoverClose();
-                            setHoveredCustomer(row.key);
-                            const rect = e.currentTarget.getBoundingClientRect();
-                            // Position tooltip above the row, accounting for its height
-                            const tooltipHeight = 500; // Estimated tooltip height
-                            const topPosition = Math.max(20, rect.top - tooltipHeight);
-                            setTooltipPosition({
-                              left: Math.max(20, Math.min(rect.left, window.innerWidth - 820)), // 800px width + 20px margin
-                              top: topPosition
-                            });
-                          }
-                        }}
-                        onMouseLeave={() => showTooltip ? scheduleHoverClose() : undefined}
+                        className={`border-t ${showTooltip ? 'cursor-pointer hover:bg-gray-100 group' : ''} ${clickedCustomer === row.key ? 'bg-gray-200' : ''}`}
+                        onClick={(e) => showTooltip ? handleCustomerClick(row.key, e) : undefined}
                       >
                         <td className="p-2 relative" data-customer={row.key}>
-                          <div className="truncate" title={row.key}>{row.key}</div>
-                          {hoveredCustomer === row.key && showTooltip && (
+                          <div className="flex items-center justify-between">
+                            <div className="truncate flex-1" title={row.key}>{row.key}</div>
+                            {showTooltip && (
+                              <div className="ml-2 text-xs text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                View
+                              </div>
+                            )}
+                          </div>
+                          {clickedCustomer === row.key && showTooltip && (
                             <div 
                               className="fixed w-[800px] bg-white border border-gray-300 rounded-lg shadow-2xl z-[10010] p-4"
+                              data-popup="customer-breakdown"
                               style={{
                                 left: tooltipPosition.left,
                                 top: tooltipPosition.top,
                                 maxHeight: '90vh'
                               }}
-                              onMouseEnter={() => cancelHoverClose()}
-                              onMouseLeave={() => scheduleHoverClose()}
                             >
-                              <div className="text-sm font-semibold text-gray-800 mb-3 border-b pb-2">
-                                Product Breakdown: {row.key}
+                              <div className="flex items-center justify-between mb-3 border-b pb-2">
+                                <div className="text-sm font-semibold text-gray-800">
+                                  Product Breakdown: {row.key}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => handleDownloadProductBreakdownCSV(row.key)}
+                                    className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                                    title="Download CSV"
+                                  >
+                                    Print CSV
+                                  </button>
+                                  <button
+                                    onClick={() => setClickedCustomer(null)}
+                                    className="text-gray-500 hover:text-gray-700 text-lg font-bold leading-none"
+                                    title="Close"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
                               </div>
                               <div className="text-xs text-gray-600 mb-3">
                                 A: {rangeAStart} to {rangeAEnd} vs B: {rangeBStart} to {rangeBEnd}
@@ -1256,7 +1345,7 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
                                 </table>
                               </div>
                               <div className="mt-3 pt-2 border-t text-xs text-gray-500">
-                                Showing {productBreakdown!.length} products • Hover over product names for details
+                                Showing {productBreakdown!.length} products • Click customer row to close
                               </div>
                             </div>
                           )}
