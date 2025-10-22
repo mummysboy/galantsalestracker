@@ -232,9 +232,15 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
         }
 
         if (matchesPeriod && matchesCustomer && matchesSubCustomer && (record.revenue > 0 || record.cases > 0)) {
-          // Calculate weight for Vistar: (pack × sizeOz × cases) / 16 to convert oz to lbs
+          // Calculate weight based on distributor type
           let weight: number | undefined = undefined;
-          if (record.pack && record.sizeOz && record.cases) {
+          
+          // For Alpine: use netLbs field directly from the NET LBS column
+          if (dist.name === 'Alpine' && record.netLbs) {
+            weight = record.netLbs;
+          }
+          // For Vistar: calculate from pack × sizeOz × cases / 16 to convert oz to lbs
+          else if (record.pack && record.sizeOz && record.cases) {
             weight = (record.pack * record.sizeOz * record.cases) / 16;
           }
 
@@ -301,11 +307,16 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
       return acc;
     }, { revenue: 0, cases: 0, weight: 0 });
 
+    // Format numbers with proper formatting
+    const formatCurrency = (amount: number) => `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const formatWeight = (weight: number) => `${weight.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} lbs`;
+    const formatCases = (cases: number) => cases.toLocaleString('en-US');
+
     const csvContent = [
       headers.join(','),
       ...rows.map(row => row.join(',')),
       '', // Empty row for separation
-      `TOTALS (excl. sub-distributors),,,,${totals.revenue.toFixed(2)},${totals.cases},${totals.weight.toFixed(2)},`
+      `"TOTALS (excl. sub-distributors)","","","","${formatCurrency(totals.revenue)}","${formatCases(totals.cases)}","${formatWeight(totals.weight)}",""`
     ].join('\n');
 
     // Create download link
