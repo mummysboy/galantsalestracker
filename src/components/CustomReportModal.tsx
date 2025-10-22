@@ -79,6 +79,13 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
   const [selectedSubCustomers, setSelectedSubCustomers] = React.useState<string[]>([]);
   const [brokerResults, setBrokerResults] = React.useState<BrokerReportRow[]>([]);
   const [isBrokerReportActive, setIsBrokerReportActive] = React.useState<boolean>(false);
+  
+  // Resizable splitter state
+  const [splitterPosition, setSplitterPosition] = React.useState<number>(40); // Percentage of top panel
+  const [isDragging, setIsDragging] = React.useState<boolean>(false);
+  const modalRef = React.useRef<HTMLDivElement>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const topPanelRef = React.useRef<HTMLDivElement>(null);
 
   // Initialize sensible defaults when opened, clear state when closed
   React.useEffect(() => {
@@ -257,6 +264,13 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
 
     setBrokerResults(rows);
     setIsBrokerReportActive(true);
+    
+    // Scroll top panel to bottom to show the results
+    setTimeout(() => {
+      if (topPanelRef.current) {
+        topPanelRef.current.scrollTop = topPanelRef.current.scrollHeight;
+      }
+    }, 100);
   };
 
   const handleDownloadCSV = () => {
@@ -397,6 +411,102 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
     }
   };
 
+  // Resizable splitter handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleMouseMove = React.useCallback((e: MouseEvent) => {
+    if (!isDragging) return;
+    
+    const containerElement = containerRef.current;
+    if (!containerElement) return;
+    
+    const rect = containerElement.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const percentage = Math.max(20, Math.min(80, (y / rect.height) * 100));
+    setSplitterPosition(percentage);
+  }, [isDragging, splitterPosition]);
+
+  const handleMouseUp = React.useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // Prevent scroll event propagation to prevent background page scrolling
+  const handleTopPanelScroll = React.useCallback((e: React.UIEvent) => {
+    e.stopPropagation();
+  }, []);
+
+  const handleBottomPanelScroll = React.useCallback((e: React.UIEvent) => {
+    e.stopPropagation();
+  }, []);
+
+  const handleContainerScroll = React.useCallback((e: React.UIEvent) => {
+    e.stopPropagation();
+  }, []);
+
+  // Prevent scroll events from bubbling up to the background page
+  const handleModalScroll = React.useCallback((e: React.UIEvent) => {
+    e.stopPropagation();
+  }, []);
+
+  // Prevent wheel events from scrolling the background page
+  const handleWheel = React.useCallback((e: WheelEvent) => {
+    // Check if the wheel event is happening within the modal
+    const modalElement = modalRef.current;
+    if (modalElement && modalElement.contains(e.target as Node)) {
+      // Allow scrolling within the modal
+      return;
+    }
+    // Prevent scrolling outside the modal
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  // Handle wheel events on modal containers
+  const handleModalWheel = React.useCallback((e: React.WheelEvent) => {
+    e.stopPropagation();
+  }, []);
+
+  React.useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'ns-resize';
+      document.body.style.userSelect = 'none';
+    } else {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isDragging, handleMouseMove, handleMouseUp]);
+
+  // Prevent background page scrolling when modal is open
+  React.useEffect(() => {
+    if (isOpen) {
+      // Lock body scroll
+      document.body.style.overflow = 'hidden';
+    } else {
+      // Restore body scroll
+      document.body.style.overflow = '';
+    }
+
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+
   // Get product breakdown for a specific customer across both periods
   const getProductBreakdown = (customerName: string) => {
     if (groupMode !== 'customer') return null;
@@ -436,12 +546,18 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[10006]" onClick={onClose}>
-      <div className={`bg-white rounded-lg shadow-2xl w-full overflow-hidden flex flex-col ${
-        isBrokerReportActive 
-          ? 'max-w-[95vw] max-h-[95vh]' 
-          : 'max-w-6xl max-h-[90vh]'
-      }`} onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-4 border-b bg-gray-50">
+      <div 
+        ref={modalRef}
+        className={`bg-white rounded-lg shadow-2xl w-full overflow-hidden flex flex-col custom-report-modal ${
+          isBrokerReportActive 
+            ? 'max-w-[95vw] max-h-[95vh]' 
+            : 'max-w-6xl max-h-[90vh]'
+        }`} 
+        onClick={(e) => e.stopPropagation()}
+        onScroll={handleModalScroll}
+        onWheel={handleModalWheel}
+      >
+        <div className="flex items-center justify-between p-4 border-b bg-gray-50 relative z-10">
           <div>
             <h2 className="text-lg font-semibold">Custom Report Builder</h2>
             <p className="text-xs text-gray-600">
@@ -453,41 +569,310 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
           <Button variant="outline" size="sm" onClick={onClose}>✕</Button>
         </div>
 
-        <div className="p-4 border-b overflow-y-auto flex-1">
-          {/* Report Mode Toggle */}
-          <div className="mb-4 flex items-center gap-3 pb-3 border-b">
-            <span className="text-sm font-medium">Report Type:</span>
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  setReportMode('comparison');
-                  setIsBrokerReportActive(false);
-                }}
-                className={`px-3 py-1.5 text-sm rounded transition-colors ${
-                  reportMode === 'comparison'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                Comparison Report
-              </button>
-              <button
-                onClick={() => {
-                  setReportMode('broker');
-                  setIsBrokerReportActive(false);
-                }}
-                className={`px-3 py-1.5 text-sm rounded transition-colors ${
-                  reportMode === 'broker'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                Broker Report
-              </button>
+        {reportMode === 'broker' && isBrokerReportActive ? (
+          // Resizable layout for broker report
+          <div 
+            ref={containerRef}
+            className="flex-1 overflow-hidden relative"
+            style={{ 
+              height: 'calc(100vh - 200px)',
+              display: 'grid',
+              gridTemplateRows: `${splitterPosition}% 12px ${100 - splitterPosition}%`,
+              zIndex: 1
+            }}
+            onScroll={handleContainerScroll}
+            onWheel={handleModalWheel}
+          >
+            {/* Top panel - Configuration */}
+            <div 
+              ref={topPanelRef}
+              className="overflow-y-auto border-b relative"
+              style={{ 
+                minHeight: '200px',
+                maxHeight: '80vh',
+                zIndex: 5
+              }}
+              onScroll={handleTopPanelScroll}
+              onWheel={handleModalWheel}
+            >
+              <div className="p-4">
+                {/* Report Mode Toggle */}
+                <div className="mb-4 flex items-center gap-3 pb-3 border-b">
+                  <span className="text-sm font-medium">Report Type:</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setReportMode('comparison');
+                        setIsBrokerReportActive(false);
+                      }}
+                      className="px-3 py-1.5 text-sm rounded transition-colors bg-gray-200 text-gray-700 hover:bg-gray-300"
+                    >
+                      Comparison Report
+                    </button>
+                    <button
+                      onClick={() => {
+                        setReportMode('broker');
+                        setIsBrokerReportActive(false);
+                      }}
+                      className="px-3 py-1.5 text-sm rounded transition-colors bg-blue-600 text-white"
+                    >
+                      Broker Report
+                    </button>
+                  </div>
+                </div>
+
+                {/* Broker Report Configuration */}
+                <div className="space-y-4">
+                  {/* Period Selection */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Select Periods</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap gap-2">
+                        {availablePeriods.map(period => (
+                          <button
+                            key={period}
+                            onClick={() => togglePeriodSelection(period)}
+                            className={`px-3 py-1.5 text-sm rounded border transition-colors ${
+                              selectedPeriods.includes(period)
+                                ? 'bg-blue-600 text-white border-blue-600'
+                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            {period}
+                          </button>
+                        ))}
+                      </div>
+                      {selectedPeriods.length > 0 && (
+                        <div className="mt-3 text-sm text-gray-600">
+                          Selected: {selectedPeriods.join(', ')}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Customer Selection */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Select Customers</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="mb-3">
+                        <button
+                          onClick={toggleAllCustomers}
+                          className="px-3 py-1.5 text-sm rounded border bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200"
+                        >
+                          {selectedCustomers.length === 0 ? 'Select All' : 'Deselect All'}
+                        </button>
+                        <span className="ml-2 text-sm text-gray-600">
+                          {selectedCustomers.length} customer{selectedCustomers.length !== 1 ? 's' : ''} selected
+                        </span>
+                      </div>
+                      <div className="max-h-48 overflow-y-auto border rounded p-2 bg-gray-50">
+                        <div className="grid grid-cols-1 gap-1">
+                          {(() => {
+                            // Use only customers from current dashboard data
+                            const allCustomers = new Set<string>();
+                            data.forEach(record => allCustomers.add(record.customerName));
+                            return Array.from(allCustomers).sort().map(customer => (
+                              <label key={customer} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedCustomers.includes(customer)}
+                                  onChange={() => toggleCustomerSelection(customer)}
+                                  className="rounded"
+                                />
+                                <span className="text-sm text-gray-700 truncate" title={customer}>
+                                  {customer}
+                                </span>
+                              </label>
+                            ));
+                          })()}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Sub-Customer Selection */}
+                  {getAvailableSubCustomers().length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">Select Sub-Customers</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="mb-3">
+                          <button
+                            onClick={toggleAllSubCustomers}
+                            className="px-3 py-1.5 text-sm rounded border bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200"
+                          >
+                            {selectedSubCustomers.length === 0 ? 'Select All' : 'Deselect All'}
+                          </button>
+                          <span className="ml-2 text-sm text-gray-600">
+                            {getAvailableSubCustomers().length} sub-customer{getAvailableSubCustomers().length !== 1 ? 's' : ''} available | {selectedSubCustomers.length} selected
+                          </span>
+                        </div>
+                        <div className="max-h-48 overflow-y-auto border rounded p-2 bg-gray-50">
+                          <div className="grid grid-cols-1 gap-1">
+                            {getAvailableSubCustomers().map(subCustomer => (
+                              <label key={subCustomer} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedSubCustomers.includes(subCustomer)}
+                                  onChange={() => toggleSubCustomerSelection(subCustomer)}
+                                  className="rounded"
+                                />
+                                <span className="text-sm text-gray-700 truncate" title={subCustomer}>
+                                  {subCustomer}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-2">
+                          Sub-customers are locations, stores, or accounts under the selected customers
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  <div className="flex gap-2">
+                    <Button onClick={handleGenerateBrokerReport}>Generate Broker Report</Button>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="mt-3 text-sm text-red-600">{error}</div>
+                )}
+              </div>
+            </div>
+
+            {/* Resizable Splitter */}
+            <div 
+              className="h-3 bg-gray-200 hover:bg-gray-300 cursor-ns-resize flex items-center justify-center border-y border-gray-300 relative"
+              onMouseDown={handleMouseDown}
+              style={{ 
+                backgroundColor: isDragging ? '#d1d5db' : '#e5e7eb',
+                zIndex: 15
+              }}
+            >
+              <div className="w-12 h-1 bg-gray-500 rounded"></div>
+            </div>
+
+            {/* Bottom panel - Results */}
+            <div 
+              className="overflow-y-auto relative"
+              style={{ 
+                minHeight: '200px',
+                maxHeight: '80vh',
+                zIndex: 10
+              }}
+              onScroll={handleBottomPanelScroll}
+              onWheel={handleModalWheel}
+            >
+              <div className="px-4 pb-4">
+                {brokerResults.length === 0 ? (
+                  <div className="text-sm text-gray-500">No results yet. Select periods, customers, and click Generate Broker Report.</div>
+                ) : (
+                  <>
+                    {/* Bottom panel header with Download CSV button */}
+                    <div className="flex justify-end items-center p-3 bg-white border-b border-gray-200 sticky top-0 z-20">
+                      <Button onClick={handleDownloadCSV} variant="outline" size="sm">
+                        Download CSV
+                      </Button>
+                    </div>
+                    <table className={`w-full ${isBrokerReportActive ? 'text-base' : 'text-sm'}`}>
+                      <thead className="bg-gray-50 sticky top-12 z-10">
+                        <tr>
+                          <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-left`}>Distributor</th>
+                          <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-left`}>Customer</th>
+                          <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-left`}>Sub-Customer</th>
+                          <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-left`}>Product</th>
+                          <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right`}>Revenue</th>
+                          <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right`}>Cases</th>
+                          <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right`}>Weight (lbs)</th>
+                          <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-left`}>Period</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {brokerResults.map((row, index) => (
+                          <tr key={index} className="border-t hover:bg-gray-50">
+                            <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>{row.distributor}</td>
+                            <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>{row.customer}</td>
+                            <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>{row.subCustomer || '-'}</td>
+                            <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>{row.productName}</td>
+                            <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{formatCurrency(row.revenue)}</td>
+                            <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{row.cases.toLocaleString()}</td>
+                            <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{row.weight ? row.weight.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}</td>
+                            <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>{row.period}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        {(() => {
+                          const total = brokerResults.reduce((acc, r) => {
+                            // Exclude sub-distributors from totals to avoid double-counting
+                            if (r.distributor.includes('Sub-Distributor')) return acc;
+                            acc.revenue += r.revenue;
+                            acc.cases += r.cases;
+                            acc.weight += r.weight || 0;
+                            return acc;
+                          }, { revenue: 0, cases: 0, weight: 0 });
+                          return (
+                            <tr className="border-t bg-gray-50 font-semibold">
+                              <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`} colSpan={4}>Total (excl. sub-distributors)</td>
+                              <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{formatCurrency(total.revenue)}</td>
+                              <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{total.cases.toLocaleString()}</td>
+                              <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{total.weight.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                              <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>-</td>
+                            </tr>
+                          );
+                        })()}
+                      </tfoot>
+                    </table>
+                  </>
+                )}
+              </div>
             </div>
           </div>
+        ) : (
+          // Original layout for comparison report and broker report configuration
+          <>
+            <div className="p-4 border-b overflow-y-auto flex-1">
+              {/* Report Mode Toggle */}
+              <div className="mb-4 flex items-center gap-3 pb-3 border-b">
+                <span className="text-sm font-medium">Report Type:</span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setReportMode('comparison');
+                      setIsBrokerReportActive(false);
+                    }}
+                    className={`px-3 py-1.5 text-sm rounded transition-colors ${
+                      reportMode === 'comparison'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Comparison Report
+                  </button>
+                  <button
+                    onClick={() => {
+                      setReportMode('broker');
+                      setIsBrokerReportActive(false);
+                    }}
+                    className={`px-3 py-1.5 text-sm rounded transition-colors ${
+                      reportMode === 'broker'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Broker Report
+                  </button>
+                </div>
+              </div>
 
-          {reportMode === 'comparison' ? (
+              {reportMode === 'comparison' ? (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card>
@@ -548,7 +933,7 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
             </>
           ) : (
             <>
-              {/* Broker Report Mode */}
+              {/* Broker Report Mode - Configuration Only */}
               <div className="space-y-4">
                 {/* Period Selection */}
                 <Card>
@@ -663,29 +1048,6 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
                   </Card>
                 )}
 
-                {/* Sub-Distributor Selection - Disabled for now as sub-distributors are already marked in data */}
-                {/* <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Select Sub-Distributors</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <label className="flex items-center space-x-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={selectedSubDistributors.includes("Pete's Coffee")}
-                          onChange={() => toggleSubDistributorSelection("Pete's Coffee")}
-                          className="rounded"
-                        />
-                        <span className="text-sm text-gray-700">Pete's Coffee (Sub-Distributor)</span>
-                      </label>
-                      <div className="text-xs text-gray-500">
-                        Sub-distributors are marked separately to avoid double-counting in totals
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card> */}
-
                 <div className="flex gap-2">
                   <Button onClick={handleGenerateBrokerReport}>Generate Broker Report</Button>
                   {brokerResults.length > 0 && (
@@ -696,12 +1058,12 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
             </>
           )}
 
-          {error && (
-            <div className="mt-3 text-sm text-red-600">{error}</div>
-          )}
-        </div>
+              {error && (
+                <div className="mt-3 text-sm text-red-600">{error}</div>
+              )}
+            </div>
 
-        <div className="p-4 overflow-y-auto flex-1">
+            <div className="p-4 overflow-y-auto flex-1">
           {reportMode === 'comparison' ? (
             results.length === 0 ? (
               <div className="text-sm text-gray-500">No results yet. Select ranges and click Generate.</div>
@@ -859,6 +1221,7 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
             </>
           )
         ) : (
+          // Broker report results in original layout (when not active)
           brokerResults.length === 0 ? (
             <div className="text-sm text-gray-500">No results yet. Select periods, customers, and click Generate Broker Report.</div>
           ) : (
@@ -918,7 +1281,9 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
             </>
           )
         )}
-        </div>
+            </div>
+          </>
+        )}
 
         <div className="p-3 border-t bg-gray-50 text-[11px] text-gray-600 flex-shrink-0">
           Data source: current dashboard selection. Period ranges are inclusive.
