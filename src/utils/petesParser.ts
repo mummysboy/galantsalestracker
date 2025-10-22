@@ -360,6 +360,8 @@ export async function parsePetesXLSX(file: File): Promise<ParsedPetesData> {
     // Try to map by Pete's product code first, then fall back to description
     let mappedProductName = productName;
     let ourItemNumber: string | undefined = undefined;
+    let pack: number | undefined = undefined;
+    let sizeOz: number | undefined = undefined;
     
     if (currentProductCode) {
       // Try mapping by Pete's code
@@ -369,6 +371,18 @@ export async function parsePetesXLSX(file: File): Promise<ParsedPetesData> {
         mappedProductName = codeMapping;
         // Get our internal item number from Pete's code
         ourItemNumber = getItemNumberFromPetesCode(currentProductCode);
+        
+        // Set pack and size based on Pete's product code
+        // Burritos: 12/8oz cases
+        if (['59975', '59976', '59977'].includes(currentProductCode)) {
+          pack = 12;
+          sizeOz = 8;
+        }
+        // Sandwiches: 12/cs (count varies by product)
+        else if (['59984', '59985', '59986', '59987'].includes(currentProductCode)) {
+          pack = 12;
+          sizeOz = undefined; // Sandwiches don't have standard weight per unit
+        }
       } else {
         // Code didn't map, try description
         mappedProductName = mapToCanonicalProductName(productName);
@@ -376,6 +390,30 @@ export async function parsePetesXLSX(file: File): Promise<ParsedPetesData> {
     } else {
       // No Pete's code available, map by description
       mappedProductName = mapToCanonicalProductName(productName);
+    }
+    
+    // Fallback: Set pack and size based on mapped product name if not already set
+    if (pack === undefined && sizeOz === undefined) {
+      const productNameLower = mappedProductName.toLowerCase();
+      
+      // Check for burrito products
+      if (productNameLower.includes('burrito') && 
+          (productNameLower.includes('bacon') || 
+           productNameLower.includes('sausage') || 
+           productNameLower.includes('chile') || 
+           productNameLower.includes('verde'))) {
+        pack = 12;
+        sizeOz = 8;
+      }
+      // Check for sandwich products
+      else if (productNameLower.includes('sandwich') && 
+               (productNameLower.includes('chorizo') || 
+                productNameLower.includes('pesto') || 
+                productNameLower.includes('turkey') || 
+                productNameLower.includes('bacon'))) {
+        pack = 12;
+        sizeOz = undefined; // Sandwiches don't have standard weight per unit
+      }
     }
     
     const rec: AlpineSalesRecord = {
@@ -387,6 +425,8 @@ export async function parsePetesXLSX(file: File): Promise<ParsedPetesData> {
       period,
       productCode: currentProductCode || (codeVal ? String(codeVal) : undefined), // Use Pete's code if available
       itemNumber: ourItemNumber, // Our internal item number (321, 331, etc.)
+      pack: pack, // Pack size for weight calculation
+      sizeOz: sizeOz, // Size in ounces for weight calculation
       excludeFromTotals: true, // Pete's is a sub-distributor; exclude to avoid double-counting
     };
     records.push(rec);

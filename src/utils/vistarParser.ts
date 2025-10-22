@@ -1,6 +1,6 @@
 // import * as XLSX from 'xlsx'; // Currently unused
 import { AlpineSalesRecord } from './alpineParser';
-import { mapToCanonicalProductName } from './productMapping';
+import { mapToCanonicalProductName, getItemNumberFromVistarCode, PRODUCT_MAPPINGS } from './productMapping';
 
 export interface ParsedVistarData {
   records: AlpineSalesRecord[];
@@ -190,15 +190,32 @@ export async function parseVistarCSV(file: File): Promise<ParsedVistarData> {
     const packNum = pack ? parseFloat(pack.replace(/[^0-9.]/g, '')) : undefined;
     const sizeOzNum = sizePerOz ? parseFloat(sizePerOz.replace(/[^0-9.]/g, '')) : undefined;
 
+    // Get our internal item number from Vistar product code
+    const ourItemNumber = getItemNumberFromVistarCode(itemId);
+    
+    // Get the canonical product name from the Vistar product code if available
+    let canonicalProductName = finalProductName;
+    if (ourItemNumber) {
+      // Find the canonical name for this item number
+      const mapping = PRODUCT_MAPPINGS.find(m => m.itemNumber === ourItemNumber);
+      if (mapping) {
+        canonicalProductName = mapping.canonicalName;
+      }
+    } else {
+      // Fallback to mapping by product description
+      canonicalProductName = mapToCanonicalProductName(finalProductName);
+    }
+
     const record: AlpineSalesRecord = {
       customerName: opcoDesc, // Level 1: OPCO Desc (e.g., "Vistar Illinois")
-      productName: mapToCanonicalProductName(finalProductName), // Level 3: Item Description - normalized
+      productName: canonicalProductName, // Level 3: Item Description - normalized
       size: sizeStr || undefined,
       cases: Math.round(qty),
       pieces: 0,
       revenue: Math.round(cost * 100) / 100,
       period,
-      productCode: itemId || undefined,
+      productCode: itemId || undefined, // Vistar GFO code (GFO12001, GFO10001, etc.)
+      itemNumber: ourItemNumber, // Galant item number (621, 611, etc.)
       customerId: customerId || undefined,
       accountName: customerDesc, // Level 2: Customer Desc (e.g., "MONSTER VENDING LLC")
       pack: packNum && isFinite(packNum) ? packNum : undefined,

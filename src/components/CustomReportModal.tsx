@@ -239,8 +239,16 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
           if (dist.name === 'Alpine' && record.netLbs) {
             weight = record.netLbs;
           }
+          // For Pete's Coffee: calculate from pack × sizeOz × cases / 16 to convert oz to lbs
+          else if (dist.name === "Pete's Coffee" && record.pack && record.cases) {
+            if (record.sizeOz) {
+              // Burritos: calculate weight from pack × sizeOz × cases / 16
+              weight = (record.pack * record.sizeOz * record.cases) / 16;
+            }
+            // Note: Sandwiches have pack but no sizeOz, so no weight calculation
+          }
           // For Vistar: calculate from pack × sizeOz × cases / 16 to convert oz to lbs
-          else if (record.pack && record.sizeOz && record.cases) {
+          else if (dist.name === 'Vistar' && record.pack && record.sizeOz && record.cases) {
             weight = (record.pack * record.sizeOz * record.cases) / 16;
           }
 
@@ -298,9 +306,25 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
       row.period
     ]);
 
-    // Calculate totals (excluding sub-distributors)
-    const totals = brokerResults.reduce((acc, r) => {
+    // Calculate different totals
+    const totalsExcludingSubDist = brokerResults.reduce((acc, r) => {
       if (r.distributor.includes('Sub-Distributor')) return acc;
+      acc.revenue += r.revenue;
+      acc.cases += r.cases;
+      acc.weight += r.weight || 0;
+      return acc;
+    }, { revenue: 0, cases: 0, weight: 0 });
+
+    const petesTotals = brokerResults.reduce((acc, r) => {
+      if (r.distributor.includes("Pete's Coffee")) {
+        acc.revenue += r.revenue;
+        acc.cases += r.cases;
+        acc.weight += r.weight || 0;
+      }
+      return acc;
+    }, { revenue: 0, cases: 0, weight: 0 });
+
+    const grandTotals = brokerResults.reduce((acc, r) => {
       acc.revenue += r.revenue;
       acc.cases += r.cases;
       acc.weight += r.weight || 0;
@@ -316,7 +340,9 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
       headers.join(','),
       ...rows.map(row => row.join(',')),
       '', // Empty row for separation
-      `"TOTALS (excl. sub-distributors)","","","","${formatCurrency(totals.revenue)}","${formatCases(totals.cases)}","${formatWeight(totals.weight)}",""`
+      ...(petesTotals.revenue > 0 ? [`"PETE'S COFFEE SUB-TOTAL","","","","${formatCurrency(petesTotals.revenue)}","${formatCases(petesTotals.cases)}","${formatWeight(petesTotals.weight)}",""`] : []),
+      `"MAIN DISTRIBUTORS TOTAL","","","","${formatCurrency(totalsExcludingSubDist.revenue)}","${formatCases(totalsExcludingSubDist.cases)}","${formatWeight(totalsExcludingSubDist.weight)}",""`,
+      `"GRAND TOTAL (ALL DISTRIBUTORS)","","","","${formatCurrency(grandTotals.revenue)}","${formatCases(grandTotals.cases)}","${formatWeight(grandTotals.weight)}",""`
     ].join('\n');
 
     // Create download link
@@ -821,22 +847,62 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
                       </tbody>
                       <tfoot>
                         {(() => {
-                          const total = brokerResults.reduce((acc, r) => {
-                            // Exclude sub-distributors from totals to avoid double-counting
+                          // Calculate totals excluding sub-distributors
+                          const totalExcludingSubDist = brokerResults.reduce((acc, r) => {
                             if (r.distributor.includes('Sub-Distributor')) return acc;
                             acc.revenue += r.revenue;
                             acc.cases += r.cases;
                             acc.weight += r.weight || 0;
                             return acc;
                           }, { revenue: 0, cases: 0, weight: 0 });
+
+                          // Calculate Pete's Coffee totals separately
+                          const petesTotal = brokerResults.reduce((acc, r) => {
+                            if (r.distributor.includes("Pete's Coffee")) {
+                              acc.revenue += r.revenue;
+                              acc.cases += r.cases;
+                              acc.weight += r.weight || 0;
+                            }
+                            return acc;
+                          }, { revenue: 0, cases: 0, weight: 0 });
+
+                          // Calculate grand total including Pete's Coffee
+                          const grandTotal = brokerResults.reduce((acc, r) => {
+                            acc.revenue += r.revenue;
+                            acc.cases += r.cases;
+                            acc.weight += r.weight || 0;
+                            return acc;
+                          }, { revenue: 0, cases: 0, weight: 0 });
+
                           return (
-                            <tr className="border-t bg-gray-50 font-semibold">
-                              <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`} colSpan={4}>Total (excl. sub-distributors)</td>
-                              <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{formatCurrency(total.revenue)}</td>
-                              <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{total.cases.toLocaleString()}</td>
-                              <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{total.weight.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                              <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>-</td>
-                            </tr>
+                            <>
+                              {/* Pete's Coffee Sub-Total */}
+                              {petesTotal.revenue > 0 && (
+                                <tr className="border-t bg-blue-50 font-medium">
+                                  <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`} colSpan={4}>Pete's Coffee Sub-Total</td>
+                                  <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{formatCurrency(petesTotal.revenue)}</td>
+                                  <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{petesTotal.cases.toLocaleString()}</td>
+                                  <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{petesTotal.weight.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                  <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>-</td>
+                                </tr>
+                              )}
+                              {/* Main Distributors Total */}
+                              <tr className="border-t bg-gray-50 font-semibold">
+                                <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`} colSpan={4}>Main Distributors Total</td>
+                                <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{formatCurrency(totalExcludingSubDist.revenue)}</td>
+                                <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{totalExcludingSubDist.cases.toLocaleString()}</td>
+                                <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{totalExcludingSubDist.weight.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>-</td>
+                              </tr>
+                              {/* Grand Total */}
+                              <tr className="border-t bg-green-50 font-bold">
+                                <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`} colSpan={4}>Grand Total (All Distributors)</td>
+                                <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{formatCurrency(grandTotal.revenue)}</td>
+                                <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{grandTotal.cases.toLocaleString()}</td>
+                                <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{grandTotal.weight.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>-</td>
+                              </tr>
+                            </>
                           );
                         })()}
                       </tfoot>

@@ -11,6 +11,7 @@ export interface ProductMapping {
   alpineProductCodes?: string[]; // Alpine-specific product codes
   petesProductCodes?: string[]; // Pete's Coffee product codes (CLARA'S brand)
   keheProductCodes?: string[]; // KeHE UPC codes (CLARA'S KITCHEN & BENNY'S brands)
+  vistarProductCodes?: string[]; // Vistar GFO product codes
 }
 
 /**
@@ -486,7 +487,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       "BENNY BEEF BAGEL DOG",
       'MH400030',
     ],
-    category: 'Bagel Dog'
+    category: 'Bagel Dog',
+    vistarProductCodes: ['GFO12001']
   },
   {
     itemNumber: '622',
@@ -719,7 +721,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     ],
     category: 'Bagel Dog',
     alpineProductCodes: ['999978', '183922'],
-    keheProductCodes: ['611665100013', '611665200010']
+    keheProductCodes: ['611665100013', '611665200010'],
+    vistarProductCodes: ['GFO10001']
   },
   {
     itemNumber: '612',
@@ -991,12 +994,19 @@ const createReverseLookup = (): Map<string, string> => {
     }
   }
 
-  // Map KeHE UPC codes to the canonical name
-  if (mapping.keheProductCodes) {
-    for (const keheCode of mapping.keheProductCodes) {
-      lookup.set(keheCode, mapping.canonicalName);
+    // Map KeHE UPC codes to the canonical name
+    if (mapping.keheProductCodes) {
+      for (const keheCode of mapping.keheProductCodes) {
+        lookup.set(keheCode, mapping.canonicalName);
+      }
     }
-  }
+
+    // Map Vistar GFO codes to the canonical name
+    if (mapping.vistarProductCodes) {
+      for (const vistarCode of mapping.vistarProductCodes) {
+        lookup.set(vistarCode, mapping.canonicalName);
+      }
+    }
   }
   
   return lookup;
@@ -1084,6 +1094,21 @@ export function getItemNumberFromPetesCode(petesVendorCode: string): string | un
 }
 
 /**
+ * Get item number from Vistar GFO product code
+ * @param vistarProductCode The Vistar GFO code (e.g., "GFO12001", "GFO10001")
+ * @returns Our internal item number (e.g., "621", "611")
+ */
+export function getItemNumberFromVistarCode(vistarProductCode: string): string | undefined {
+  if (!vistarProductCode) return undefined;
+  
+  // Find the mapping that contains this Vistar product code
+  const mapping = PRODUCT_MAPPINGS.find(m => 
+    m.vistarProductCodes && m.vistarProductCodes.includes(vistarProductCode)
+  );
+  return mapping ? mapping.itemNumber : undefined;
+}
+
+/**
  * Get product mapping by item number
  */
 export function getProductByItemNumber(itemNumber: string): ProductMapping | undefined {
@@ -1146,6 +1171,13 @@ export function addProductMapping(mapping: ProductMapping): void {
   if (mapping.keheProductCodes) {
     for (const keheCode of mapping.keheProductCodes) {
       lookup.set(keheCode, mapping.canonicalName);
+    }
+  }
+
+  // Add Vistar GFO codes if present
+  if (mapping.vistarProductCodes) {
+    for (const vistarCode of mapping.vistarProductCodes) {
+      lookup.set(vistarCode, mapping.canonicalName);
     }
   }
 }
