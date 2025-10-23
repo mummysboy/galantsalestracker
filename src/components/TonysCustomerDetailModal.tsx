@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, Package, ChevronRight, ChevronLeft } from 'lucide-react';
+import { X, Package, ChevronRight } from 'lucide-react';
 import { Button } from './ui/button';
 import { getItemNumberForProduct } from '../utils/productMapping';
 import { AlpineSalesRecord } from '../utils/alpineParser';
@@ -200,24 +200,6 @@ const TonysCustomerDetailModal: React.FC<TonysCustomerDetailModalProps> = ({
         });
     }
   }, [isOpen, masterPricingData.length, isLoadingPricing]);
-
-  // Navigation functions for period range
-  const navigatePeriodRange = (direction: 'left' | 'right') => {
-    if (!periodRange || availablePeriods.length <= PERIOD_WINDOW_SIZE) return;
-    
-    let newStart, newEnd;
-    if (direction === 'left') {
-      // Move window left by 1 period
-      newStart = Math.max(0, periodRange.start - 1);
-      newEnd = Math.min(availablePeriods.length - 1, newStart + PERIOD_WINDOW_SIZE - 1);
-    } else {
-      // Move window right by 1 period
-      newEnd = Math.min(availablePeriods.length - 1, periodRange.end + 1);
-      newStart = Math.max(0, newEnd - PERIOD_WINDOW_SIZE + 1);
-    }
-    
-    setPeriodRange({ start: newStart, end: newEnd });
-  };
 
   // Get visible periods based on range
   const visiblePeriods = useMemo(() => {
