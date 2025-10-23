@@ -31,6 +31,8 @@ import TroiaReportUpload from './components/TroiaReportUpload';
 import TroiaCustomerDetailModal from './components/TroiaCustomerDetailModal';
 import MhdReportUpload from './components/MhdReportUpload';
 import MhdCustomerDetailModal from './components/MhdCustomerDetailModal';
+import { useDynamoDB } from './hooks/useDynamoDB';
+import { dynamoDBService } from './services/dynamodb';
 
 // Revenue by Customer Component
 interface RevenueByCustomerProps {
@@ -619,6 +621,12 @@ const RevenueByProductComponent: React.FC<RevenueByProductProps> = ({ revenueByP
 };
 
 const Dashboard: React.FC = () => {
+  // DynamoDB hook for persisting data
+  const {
+    saveSalesRecords,
+    saveCustomerProgression,
+  } = useDynamoDB();
+
   // Customer modal handlers
   const handleCustomerClick = (customerName: string) => {
     setSelectedCustomerForModal(customerName);
@@ -765,6 +773,61 @@ const Dashboard: React.FC = () => {
   React.useEffect(() => {
     localStorage.setItem('salesTracker_selectedMonth', selectedMonth);
   }, [selectedMonth]);
+
+  // Load data from DynamoDB on component mount (for incognito/fresh sessions)
+  React.useEffect(() => {
+    const loadFromDynamoDB = async () => {
+      try {
+        console.log('Loading data from DynamoDB...');
+        
+        // Load data for each distributor
+        const distributors = ['ALPINE', 'PETES', 'KEHE', 'VISTAR', 'TONYS', 'TROIA', 'MHD'] as const;
+        
+        for (const distributor of distributors) {
+          try {
+            const records = await dynamoDBService.getSalesRecordsByDistributor(distributor);
+            console.log(`Loaded ${records.length} records for ${distributor} from DynamoDB`);
+            
+            // Convert SalesRecord back to AlpineSalesRecord format and update appropriate state
+            const convertedRecords: AlpineSalesRecord[] = records.map(r => ({
+              period: r.period,
+              customerName: r.customerName,
+              productName: r.productName,
+              productCode: r.productCode || '',
+              cases: r.cases,
+              pieces: 0, // Default value since not stored in DynamoDB
+              revenue: r.revenue,
+            }));
+
+            if (distributor === 'ALPINE') {
+              setCurrentAlpineData(convertedRecords);
+            } else if (distributor === 'PETES') {
+              setCurrentPetesData(convertedRecords);
+            } else if (distributor === 'KEHE') {
+              setCurrentKeHeData(convertedRecords);
+            } else if (distributor === 'VISTAR') {
+              setCurrentVistarData(convertedRecords);
+            } else if (distributor === 'TONYS') {
+              setCurrentTonysData(convertedRecords);
+            } else if (distributor === 'TROIA') {
+              setCurrentTroiaData(convertedRecords);
+            } else if (distributor === 'MHD') {
+              setCurrentMhdData(convertedRecords);
+            }
+          } catch (error) {
+            console.log(`Note: Could not load ${distributor} from DynamoDB (may not have data yet):`, error instanceof Error ? error.message : error);
+          }
+        }
+        
+        console.log('DynamoDB data load complete');
+      } catch (error) {
+        console.error('Error loading from DynamoDB:', error);
+      }
+    };
+
+    loadFromDynamoDB();
+  }, []);
+
   const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
   // Removed CSV invoice upload; no longer tracking last uploaded invoice month
   // const [lastUploadedInvoiceMonth, setLastUploadedInvoiceMonth] = useState<string | null>(null);
@@ -1050,6 +1113,38 @@ const Dashboard: React.FC = () => {
     });
     
     setCurrentCustomerProgressions(updatedCustomerProgressions);
+    
+    // Save to DynamoDB
+    (async () => {
+      try {
+        // Convert to SalesRecord format for DynamoDB
+        const salesRecords = data.records.map(record => ({
+          distributor: 'ALPINE',
+          period: record.period,
+          customerName: record.customerName,
+          productName: record.productName,
+          productCode: record.productCode,
+          cases: record.cases,
+          revenue: record.revenue,
+          invoiceKey: `ALPINE-${record.period}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          source: 'Alpine Upload',
+          timestamp: new Date().toISOString(),
+        }));
+
+        // Save to DynamoDB
+        await saveSalesRecords(salesRecords);
+        
+        // Save customer progressions
+        for (const [customerName, progression] of Array.from(data.customerProgressions.entries())) {
+          await saveCustomerProgression('ALPINE', customerName, progression);
+        }
+        
+        console.log('Data successfully saved to DynamoDB');
+      } catch (error) {
+        console.error('Failed to save Alpine data to DynamoDB:', error);
+      }
+    })();
+    
     // If new periods were uploaded, select the most recent one to reflect upload
     const newestUploadedPeriod = Array.from(newPeriods).sort().slice(-1)[0];
     if (newestUploadedPeriod) {
@@ -1074,6 +1169,34 @@ const Dashboard: React.FC = () => {
       updatedCustomerProgressions.set(customer, progress);
     });
     setCurrentPetesCustomerProgressions(updatedCustomerProgressions);
+
+    // Save to DynamoDB
+    (async () => {
+      try {
+        const salesRecords = data.records.map(record => ({
+          distributor: 'PETES',
+          period: record.period,
+          customerName: record.customerName,
+          productName: record.productName,
+          productCode: record.productCode,
+          cases: record.cases,
+          revenue: record.revenue,
+          invoiceKey: `PETES-${record.period}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          source: 'Pete\'s Upload',
+          timestamp: new Date().toISOString(),
+        }));
+
+        await saveSalesRecords(salesRecords);
+        
+        for (const [customerName, progression] of Array.from(data.customerProgressions.entries())) {
+          await saveCustomerProgression('PETES', customerName, progression);
+        }
+        
+        console.log('Pete\'s data successfully saved to DynamoDB');
+      } catch (error) {
+        console.error('Failed to save Pete\'s data to DynamoDB:', error);
+      }
+    })();
 
     const newestUploadedPeriod = Array.from(newPeriods).sort().slice(-1)[0];
     if (newestUploadedPeriod) {
@@ -1109,6 +1232,34 @@ const Dashboard: React.FC = () => {
     });
     setCurrentKeHeCustomerProgressions(updatedCustomerProgressions);
 
+    // Save to DynamoDB
+    (async () => {
+      try {
+        const salesRecords = data.records.map(record => ({
+          distributor: 'KEHE',
+          period: record.period,
+          customerName: record.customerName,
+          productName: record.productName,
+          productCode: record.productCode,
+          cases: record.cases,
+          revenue: record.revenue,
+          invoiceKey: `KEHE-${record.period}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          source: 'KeHe Upload',
+          timestamp: new Date().toISOString(),
+        }));
+
+        await saveSalesRecords(salesRecords);
+        
+        for (const [customerName, progression] of Array.from(data.customerProgressions.entries())) {
+          await saveCustomerProgression('KEHE', customerName, progression);
+        }
+        
+        console.log('KeHe data successfully saved to DynamoDB');
+      } catch (error) {
+        console.error('Failed to save KeHe data to DynamoDB:', error);
+      }
+    })();
+
     const newestUploadedPeriod = Array.from(newPeriods).sort().slice(-1)[0];
     if (newestUploadedPeriod) {
       setSelectedMonth(newestUploadedPeriod);
@@ -1136,6 +1287,34 @@ const Dashboard: React.FC = () => {
       updatedCustomerProgressions.set(customer, progress);
     });
 
+    // Save to DynamoDB
+    (async () => {
+      try {
+        const salesRecords = data.records.map(record => ({
+          distributor: 'VISTAR',
+          period: record.period,
+          customerName: record.customerName,
+          productName: record.productName,
+          productCode: record.productCode,
+          cases: record.cases,
+          revenue: record.revenue,
+          invoiceKey: `VISTAR-${record.period}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          source: 'Vistar Upload',
+          timestamp: new Date().toISOString(),
+        }));
+
+        await saveSalesRecords(salesRecords);
+        
+        for (const [customerName, progression] of Array.from(data.customerProgressions.entries())) {
+          await saveCustomerProgression('VISTAR', customerName, progression);
+        }
+        
+        console.log('Vistar data successfully saved to DynamoDB');
+      } catch (error) {
+        console.error('Failed to save Vistar data to DynamoDB:', error);
+      }
+    })();
+
     const newestUploadedPeriod = Array.from(newPeriods).sort().slice(-1)[0];
     if (newestUploadedPeriod) {
       setSelectedMonth(newestUploadedPeriod);
@@ -1161,6 +1340,35 @@ const Dashboard: React.FC = () => {
       const progress = analyzeCustomerProgress(mergedData, customer);
       updatedCustomerProgressions.set(customer, progress);
     });
+    setCurrentTonysCustomerProgressions(updatedCustomerProgressions);
+
+    // Save to DynamoDB
+    (async () => {
+      try {
+        const salesRecords = data.records.map(record => ({
+          distributor: 'TONYS',
+          period: record.period,
+          customerName: record.customerName,
+          productName: record.productName,
+          productCode: record.productCode,
+          cases: record.cases,
+          revenue: record.revenue,
+          invoiceKey: `TONYS-${record.period}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          source: 'Tony\'s Upload',
+          timestamp: new Date().toISOString(),
+        }));
+
+        await saveSalesRecords(salesRecords);
+        
+        for (const [customerName, progression] of Array.from(data.customerProgressions.entries())) {
+          await saveCustomerProgression('TONYS', customerName, progression);
+        }
+        
+        console.log('Tony\'s data successfully saved to DynamoDB');
+      } catch (error) {
+        console.error('Failed to save Tony\'s data to DynamoDB:', error);
+      }
+    })();
 
     const newestUploadedPeriod = Array.from(newPeriods).sort().slice(-1)[0];
     if (newestUploadedPeriod) {
@@ -1188,6 +1396,35 @@ const Dashboard: React.FC = () => {
       const progress = analyzeCustomerProgress(mergedData, customer);
       updatedCustomerProgressions.set(customer, progress);
     });
+    setCurrentTroiaCustomerProgressions(updatedCustomerProgressions);
+
+    // Save to DynamoDB
+    (async () => {
+      try {
+        const salesRecords = data.records.map(record => ({
+          distributor: 'TROIA',
+          period: record.period,
+          customerName: record.customerName,
+          productName: record.productName,
+          productCode: record.productCode,
+          cases: record.cases,
+          revenue: record.revenue,
+          invoiceKey: `TROIA-${record.period}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          source: 'Troia Upload',
+          timestamp: new Date().toISOString(),
+        }));
+
+        await saveSalesRecords(salesRecords);
+        
+        for (const [customerName, progression] of Array.from(data.customerProgressions.entries())) {
+          await saveCustomerProgression('TROIA', customerName, progression);
+        }
+        
+        console.log('Troia data successfully saved to DynamoDB');
+      } catch (error) {
+        console.error('Failed to save Troia data to DynamoDB:', error);
+      }
+    })();
 
     const newestUploadedPeriod = Array.from(newPeriods).sort().slice(-1)[0];
     if (newestUploadedPeriod) {
@@ -1208,6 +1445,34 @@ const Dashboard: React.FC = () => {
     const mergedData = [...filteredExistingData, ...data.records];
 
     setCurrentMhdData(mergedData);
+
+    // Save to DynamoDB
+    (async () => {
+      try {
+        const salesRecords = data.records.map(record => ({
+          distributor: 'MHD',
+          period: record.period,
+          customerName: record.customerName,
+          productName: record.productName,
+          productCode: record.productCode,
+          cases: record.cases,
+          revenue: record.revenue,
+          invoiceKey: `MHD-${record.period}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          source: 'Mike Hudson Upload',
+          timestamp: new Date().toISOString(),
+        }));
+
+        await saveSalesRecords(salesRecords);
+        
+        for (const [customerName, progression] of Array.from(data.customerProgressions.entries())) {
+          await saveCustomerProgression('MHD', customerName, progression);
+        }
+        
+        console.log('MHD data successfully saved to DynamoDB');
+      } catch (error) {
+        console.error('Failed to save MHD data to DynamoDB:', error);
+      }
+    })();
 
     const newestUploadedPeriod = Array.from(newPeriods).sort().slice(-1)[0];
     if (newestUploadedPeriod) {
