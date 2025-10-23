@@ -794,7 +794,8 @@ const Dashboard: React.FC = () => {
   const [displayMode, setDisplayMode] = useState<'revenue' | 'cases'>('cases');
   const [timeAggregation, setTimeAggregation] = useState<'3mo' | '6mo' | '1yr' | '5yr'>('3mo');
   
-  // Function to clear all localStorage data
+  // Function to clear all localStorage data (available for future use)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const clearAllData = () => {
     localStorage.removeItem('salesTracker_alpineData');
     localStorage.removeItem('salesTracker_petesData');
