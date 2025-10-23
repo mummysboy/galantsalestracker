@@ -1149,6 +1149,7 @@ const Dashboard: React.FC = () => {
     const newestUploadedPeriod = Array.from(newPeriods).sort().slice(-1)[0];
     if (newestUploadedPeriod) {
       setSelectedMonth(newestUploadedPeriod);
+      setSelectedDistributor('ALPINE');
     }
     // Don't hide upload section immediately - let user see the results
     // setShowUploadSection(false); // Hide upload section after successful upload
@@ -1201,6 +1202,7 @@ const Dashboard: React.FC = () => {
     const newestUploadedPeriod = Array.from(newPeriods).sort().slice(-1)[0];
     if (newestUploadedPeriod) {
       setSelectedMonth(newestUploadedPeriod);
+      setSelectedDistributor('PETES');
     }
   };
 
@@ -1260,9 +1262,11 @@ const Dashboard: React.FC = () => {
       }
     })();
 
+    // Automatically switch to KeHe distributor and set the newest period
     const newestUploadedPeriod = Array.from(newPeriods).sort().slice(-1)[0];
     if (newestUploadedPeriod) {
       setSelectedMonth(newestUploadedPeriod);
+      setSelectedDistributor('KEHE');
     }
   };
 
@@ -1318,6 +1322,7 @@ const Dashboard: React.FC = () => {
     const newestUploadedPeriod = Array.from(newPeriods).sort().slice(-1)[0];
     if (newestUploadedPeriod) {
       setSelectedMonth(newestUploadedPeriod);
+      setSelectedDistributor('VISTAR');
     }
   };
 
@@ -1373,6 +1378,7 @@ const Dashboard: React.FC = () => {
     const newestUploadedPeriod = Array.from(newPeriods).sort().slice(-1)[0];
     if (newestUploadedPeriod) {
       setSelectedMonth(newestUploadedPeriod);
+      setSelectedDistributor('TONYS');
     }
   };
 
@@ -1429,6 +1435,7 @@ const Dashboard: React.FC = () => {
     const newestUploadedPeriod = Array.from(newPeriods).sort().slice(-1)[0];
     if (newestUploadedPeriod) {
       setSelectedMonth(newestUploadedPeriod);
+      setSelectedDistributor('TROIA');
     }
   };
 
@@ -1477,6 +1484,7 @@ const Dashboard: React.FC = () => {
     const newestUploadedPeriod = Array.from(newPeriods).sort().slice(-1)[0];
     if (newestUploadedPeriod) {
       setSelectedMonth(newestUploadedPeriod);
+      setSelectedDistributor('MHD');
     }
   };
 
