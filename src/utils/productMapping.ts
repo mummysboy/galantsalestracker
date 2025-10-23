@@ -1155,6 +1155,16 @@ export function getItemNumberForProduct(canonicalName: string): string | undefin
   return mapping?.itemNumber;
 }
 
+/**
+ * Get the item number from a KeHe UPC code
+ */
+export function getItemNumberFromKeHeUPC(keheUPC: string): string | undefined {
+  const mapping = PRODUCT_MAPPINGS.find(m => 
+    m.keheProductCodes && m.keheProductCodes.includes(keheUPC)
+  );
+  return mapping?.itemNumber;
+}
+
 const productMappingUtils = {
   mapToCanonicalProductName,
   getAllCanonicalProductNames,

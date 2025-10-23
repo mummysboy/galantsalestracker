@@ -74,7 +74,7 @@ function calculateCustomerProductDataAllPeriods(vistarData: AlpineSalesRecord[],
   
   // Get all unique products for this customer
   const productsMap = new Map<string, Map<string, number>>();
-  const productMetadata = new Map<string, { size?: string; productCode?: string }>();
+  const productMetadata = new Map<string, { size?: string; productCode?: string; itemNumber?: string }>();
 
   // Convert to quarter format if needed
   const periodToQuarter = (period: string) => {
@@ -103,6 +103,7 @@ function calculateCustomerProductDataAllPeriods(vistarData: AlpineSalesRecord[],
       productMetadata.set(productName, {
         size: record.size,
         productCode: record.productCode,
+        itemNumber: record.itemNumber,
       });
     }
 
@@ -117,6 +118,7 @@ function calculateCustomerProductDataAllPeriods(vistarData: AlpineSalesRecord[],
     periodData: periodData,
     size: productMetadata.get(productName)?.size,
     productCode: productMetadata.get(productName)?.productCode,
+    itemNumber: productMetadata.get(productName)?.itemNumber,
   }));
 
   // Sort by total quantity across all periods
@@ -418,7 +420,7 @@ const VistarCustomerDetailModal: React.FC<VistarCustomerDetailModalProps> = ({
                                               {toTitleCase(product.productName)}
                                             </td>
                                             <td className="px-4 py-3 text-sm text-center text-gray-900">
-                                              {getItemNumberForProduct(product.productName) || ''}
+                                              {product.itemNumber || ''}
                                             </td>
                                             <td className="px-4 py-3 text-sm text-center text-gray-900">
                                               {product.productCode || ''}
