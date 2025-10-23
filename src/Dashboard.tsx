@@ -669,6 +669,14 @@ const Dashboard: React.FC = () => {
   const [displayMode, setDisplayMode] = useState<'revenue' | 'cases'>('cases');
   const [timeAggregation, setTimeAggregation] = useState<'3mo' | '6mo' | '1yr' | '5yr'>('3mo');
   
+  // Debug logging
+  console.log('Dashboard component rendering, selectedMonth:', selectedMonth, 'selectedDistributor:', selectedDistributor);
+  
+  // Debug selectedMonth changes
+  React.useEffect(() => {
+    console.log('selectedMonth changed to:', selectedMonth);
+  }, [selectedMonth]);
+  
   // Chart navigation state
   const [chartVisibleRange, setChartVisibleRange] = useState<{start: number, end: number} | null>(null);
   const [customerPivotRange, setCustomerPivotRange] = useState<{start: number, end: number} | null>(null);
@@ -711,6 +719,19 @@ const Dashboard: React.FC = () => {
 
   // Data for calculations - excludes sub-distributors when viewing "All Businesses"
   const dataForTotals = useMemo(() => {
+    console.log('DataForTotals calculation:', {
+      selectedMonth,
+      selectedDistributor,
+      currentDataLength: currentData.length,
+      currentDataPeriods: Array.from(new Set(currentData.map(r => r.period))).sort()
+    });
+    
+    // When "All Months" is selected, show all data for the current distributor
+    if (selectedMonth === 'ALL_MONTHS') {
+      console.log('ALL_MONTHS selected for distributor:', selectedDistributor, currentData.length, 'records');
+      return currentData;
+    }
+    
     if (selectedDistributor === 'ALL') {
       // Exclude Pete's data to avoid double-counting (it's a sub-distributor)
       const filtered = currentData.filter(r => !r.excludeFromTotals);
@@ -726,10 +747,13 @@ const Dashboard: React.FC = () => {
         console.log('Duplicate periods detected:', duplicates);
       }
       
+      console.log('ALL distributors (specific month):', filtered.length, 'records');
       return filtered;
     }
+    
+    console.log('Specific distributor:', selectedDistributor, currentData.length, 'records');
     return currentData;
-  }, [currentData, selectedDistributor]);
+  }, [currentData, selectedDistributor, selectedMonth]);
 
   // Get available periods and set default to most recent
   const availablePeriods = useMemo(() => {
@@ -740,14 +764,29 @@ const Dashboard: React.FC = () => {
   // Add "All" option to periods, with most recent first
   const allPeriodOptions = useMemo(() => {
     // IMPORTANT: reverse() mutates; use a copy to keep availablePeriods sorted ascending for charts
-    return [...availablePeriods].reverse();
+    const options = ['ALL_MONTHS', ...availablePeriods.slice().reverse()];
+    console.log('allPeriodOptions generated:', options);
+    return options;
   }, [availablePeriods]);
 
   // Filter data based on selected month
   const filteredData = useMemo(() => {
-    if (!selectedMonth) return dataForTotals;
-    return dataForTotals.filter(record => record.period === selectedMonth);
-  }, [dataForTotals, selectedMonth]);
+    console.log('FilteredData calculation:', {
+      selectedMonth,
+      selectedDistributor,
+      dataForTotalsLength: dataForTotals.length,
+      dataForTotalsPeriods: Array.from(new Set(dataForTotals.map(r => r.period))).sort()
+    });
+    
+    if (!selectedMonth || selectedMonth === 'ALL_MONTHS') {
+      console.log('Returning all data for totals:', dataForTotals.length, 'records');
+      return dataForTotals;
+    }
+    
+    const filtered = dataForTotals.filter(record => record.period === selectedMonth);
+    console.log('Filtered to specific month:', selectedMonth, filtered.length, 'records');
+    return filtered;
+  }, [dataForTotals, selectedMonth, selectedDistributor]);
 
   // Set default month to most recent when data changes
   React.useEffect(() => {
@@ -758,7 +797,7 @@ const Dashboard: React.FC = () => {
 
   // Adjust selected month when switching distributors
   React.useEffect(() => {
-    if (availablePeriods.length > 0 && !availablePeriods.includes(selectedMonth)) {
+    if (availablePeriods.length > 0 && !availablePeriods.includes(selectedMonth) && selectedMonth !== 'ALL_MONTHS') {
       setSelectedMonth(availablePeriods[availablePeriods.length - 1]);
     }
   }, [selectedDistributor, availablePeriods, selectedMonth]);
@@ -808,6 +847,7 @@ const Dashboard: React.FC = () => {
 
   // Short month label, e.g., Jan-25
   const getShortMonthLabel = (period: string) => {
+    if (period === 'ALL_MONTHS') return 'All Months';
     const [yearStr, monthStr] = period.split('-');
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const yy = yearStr.slice(-2);
@@ -1083,7 +1123,7 @@ const Dashboard: React.FC = () => {
 
     if (selectedMonth === periodToDelete) {
       const remainingPeriods = Array.from(new Set(dataForTotals.filter(r => r.period !== periodToDelete).map(r => r.period))).sort();
-      setSelectedMonth(remainingPeriods.length > 0 ? remainingPeriods[remainingPeriods.length - 1] : 'all');
+      setSelectedMonth(remainingPeriods.length > 0 ? remainingPeriods[remainingPeriods.length - 1] : 'ALL_MONTHS');
     }
 
     console.log('Period deleted:', periodToDelete);
@@ -1093,6 +1133,18 @@ const Dashboard: React.FC = () => {
   const kpis = useMemo(() => {
     const totalRevenue = filteredData.reduce((sum, record) => sum + record.revenue, 0);
     const totalCases = filteredData.reduce((sum, record) => sum + record.cases, 0);
+    
+    console.log('KPI Calculation:', {
+      selectedMonth,
+      selectedDistributor,
+      filteredDataLength: filteredData.length,
+      totalRevenue,
+      totalCases,
+      revenueByPeriod: filteredData.reduce((acc, record) => {
+        acc[record.period] = (acc[record.period] || 0) + record.revenue;
+        return acc;
+      }, {} as Record<string, number>)
+    });
     
     // Top customer by revenue
     const customerRevenue = filteredData.reduce((acc, record) => {
@@ -1116,7 +1168,7 @@ const Dashboard: React.FC = () => {
       topCustomer: topCustomer ? topCustomer[0] : 'N/A',
       topProduct: topProduct ? topProduct[0] : 'N/A',
     };
-  }, [filteredData]);
+  }, [filteredData, selectedMonth, selectedDistributor]);
 
   // Time aggregation functions
   const aggregateDataByTimePeriod = useMemo(() => {
@@ -1694,7 +1746,10 @@ const Dashboard: React.FC = () => {
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
+                                console.log('Month dropdown clicked:', period, 'Current selectedMonth:', selectedMonth);
+                                console.log('Setting selectedMonth to:', period);
                                 setSelectedMonth(period);
+                                console.log('Selected month set, closing dropdown');
                                 setIsMonthDropdownOpen(false);
                               }}
                               className={`flex-1 text-left px-2 py-2 text-sm rounded hover:bg-gray-50 ${
@@ -1703,7 +1758,7 @@ const Dashboard: React.FC = () => {
                             >
                               {getShortMonthLabel(period)}
                             </button>
-                            {selectedDistributor !== 'ALL' && (
+                            {selectedDistributor !== 'ALL' && period !== 'ALL_MONTHS' && (
                               <button
                                 onClick={(e) => {
                                   e.preventDefault();
