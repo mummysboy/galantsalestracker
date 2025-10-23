@@ -18,6 +18,7 @@ export interface AlpineSalesRecord {
   isAdjustment?: boolean; // For synthetic adjustment records that shouldn't appear as products
   pack?: number; // Number of units per case (e.g., 12 for a 12-pack)
   sizeOz?: number; // Size of each unit in ounces (e.g., 5 for 5oz)
+  weightLbs?: number; // Total weight in pounds (cases × weight per case)
 }
 
 export interface ParsedAlpineData {

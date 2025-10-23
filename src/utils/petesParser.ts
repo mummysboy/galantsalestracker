@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import { AlpineSalesRecord } from './alpineParser';
 import { mapToCanonicalProductName, getItemNumberFromPetesCode } from './productMapping';
+import { loadPricingData, getProductWeight } from './pricingLoader';
 
 export interface ParsedPetesData {
   records: AlpineSalesRecord[];
@@ -112,6 +113,9 @@ function excelSerialToISODate(value: number): string | null {
 }
 
 export async function parsePetesXLSX(file: File): Promise<ParsedPetesData> {
+  // Load pricing data for weight calculations
+  const pricingDb = await loadPricingData();
+  
   const arrayBuffer = await file.arrayBuffer();
   const wb = XLSX.read(arrayBuffer, { type: 'array' });
   const sheetName = wb.SheetNames[0];
@@ -169,7 +173,6 @@ export async function parsePetesXLSX(file: File): Promise<ParsedPetesData> {
   }
 
   const headers = (rows[headerRowIdx] || []).map(c => String(c || '').trim());
-  const headersLc = headers.map(h => String(h ?? '').trim().toLowerCase());
   // Map columns: in Claras mode, favor exact header matches first
   const idxOf = (names: string[]) => {
     const lc = headers.map(h => normalizeHeader(h));
@@ -201,7 +204,13 @@ export async function parsePetesXLSX(file: File): Promise<ParsedPetesData> {
         const exact = idxOf(['ext', 'amount', 'extended', 'sales', '$']);
         return exact >= 0 ? exact : chooseRevenueColumn(headers);
       })()
-    : chooseRevenueColumn(headers);
+    : (() => {
+        // For Pete's Coffee, prioritize "Amount" column directly
+        const amountIdx = headers.findIndex(h => h && h.toLowerCase().includes('amount'));
+        if (amountIdx >= 0) return amountIdx;
+        return chooseRevenueColumn(headers);
+      })();
+
   const priceIdx = clarifiedMode
     ? (() => {
         const exact = idxOf(['price', 'unit price', 'u/p', 'unit', 'each', 'cost']);
@@ -221,15 +230,6 @@ export async function parsePetesXLSX(file: File): Promise<ParsedPetesData> {
       })()
     : chooseColumn(headers, ['code', 'sku', 'item #', 'item#', 'product code']);
 
-  // Detect a dedicated Balance column for reported totals (not per-line amounts)
-  const balanceIdx = (() => {
-    for (let i = 0; i < headersLc.length; i++) {
-      const h = headersLc[i];
-      if (!h) continue;
-      if (h.includes('balance') || h.includes('balance due')) return i;
-    }
-    return -1;
-  })();
 
   // Attempt to detect a sheet-level customer name if not present in row data
   let sheetLevelCustomer: string | null = null;
@@ -261,8 +261,6 @@ export async function parsePetesXLSX(file: File): Promise<ParsedPetesData> {
   const fallbackPeriod = detectPeriodFromFileName(file.name || '');
 
   const records: AlpineSalesRecord[] = [];
-  let reportedTotalCases: number | null = null;
-  let reportedTotalRevenue: number | null = null;
   let currentProductCode: string | null = null; // Track Pete's product code from grouped headers
   
   for (let r = headerRowIdx + 1; r < rows.length; r++) {
@@ -314,19 +312,6 @@ export async function parsePetesXLSX(file: File): Promise<ParsedPetesData> {
     const rowTextJoined = row.map(c => String(c ?? '').toLowerCase()).join(' ');
     const looksLikeTotalRow = /(^|\s)(total|subtotal|grand total|balance|balance due)(:)?(\s|$)/.test(rowTextJoined);
     if (!productName || looksLikeTotalRow) {
-      // Capture reported bottom-line totals if present in the same qty/revenue columns
-      if (qtyIdx >= 0) {
-        const q = toNumber(row[qtyIdx]);
-        if (isFinite(q) && q !== 0) reportedTotalCases = q;
-      }
-      // Prefer a dedicated Balance column; fall back to revenue column in total rows
-      if (balanceIdx >= 0) {
-        const bal = toNumber(row[balanceIdx]);
-        if (isFinite(bal) && bal !== 0) reportedTotalRevenue = Math.round(bal * 100) / 100;
-      } else if (revenueIdx >= 0) {
-        const rev = toNumber(row[revenueIdx]);
-        if (isFinite(rev) && rev !== 0) reportedTotalRevenue = Math.round(rev * 100) / 100;
-      }
       if (looksLikeTotalRow) {
         continue; // skip summary/total rows
       }
@@ -349,8 +334,9 @@ export async function parsePetesXLSX(file: File): Promise<ParsedPetesData> {
     const rawQty = toNumber(quantityVal);
     const cases = Math.round(rawQty);
     let revenue = Math.round(toNumber(revenueVal) * 100) / 100;
-    // If revenue is missing or likely mis-identified, try unit price × quantity
-    if ((!revenue || revenue === cases) && priceIdx >= 0) {
+    
+    // Only use unit price × quantity as fallback if Amount column is truly empty or zero
+    if (revenue === 0 && priceIdx >= 0) {
       const unitPrice = toNumber(row[priceIdx]);
       if (unitPrice && rawQty) {
         revenue = Math.round(unitPrice * rawQty * 100) / 100;
@@ -416,6 +402,22 @@ export async function parsePetesXLSX(file: File): Promise<ParsedPetesData> {
       }
     }
     
+    // Calculate weight in pounds using pricing data
+    const weightPerCase = getProductWeight(pricingDb, ourItemNumber, mappedProductName);
+    const totalWeight = cases * weightPerCase;
+    
+    // Debug logging for sandwiches
+    if (mappedProductName.toLowerCase().includes('sandwich')) {
+      console.log(`Sandwich weight calculation:`, {
+        itemNumber: ourItemNumber,
+        productName: mappedProductName,
+        cases,
+        weightPerCase,
+        totalWeight,
+        pricingDbSize: pricingDb.byItemNumber.size
+      });
+    }
+    
     const rec: AlpineSalesRecord = {
       customerName,
       productName: mappedProductName, // Use mapped canonical name
@@ -427,52 +429,46 @@ export async function parsePetesXLSX(file: File): Promise<ParsedPetesData> {
       itemNumber: ourItemNumber, // Our internal item number (321, 331, etc.)
       pack: pack, // Pack size for weight calculation
       sizeOz: sizeOz, // Size in ounces for weight calculation
+      weightLbs: totalWeight, // Total weight in pounds
       excludeFromTotals: true, // Pete's is a sub-distributor; exclude to avoid double-counting
     };
+    
     records.push(rec);
   }
 
-  // Reconcile to reported bottom-line totals by adding a synthetic adjustment record
-  let computedRevenue = records.reduce((s, r) => s + r.revenue, 0);
-  let computedCases = records.reduce((s, r) => s + r.cases, 0);
-  if (reportedTotalRevenue !== null || reportedTotalCases !== null) {
-    const period = records.length > 0 ? records[0].period : fallbackPeriod;
-    const revTarget = reportedTotalRevenue !== null ? reportedTotalRevenue : computedRevenue;
-    const casesTarget = reportedTotalCases !== null ? Math.round(reportedTotalCases) : computedCases;
-    const revDiff = Math.round((revTarget - computedRevenue) * 100) / 100;
-    const casesDiff = Math.round(casesTarget - computedCases);
-    if (Math.abs(revDiff) > 0.009 || casesDiff !== 0) {
-      // Add adjustment record with proper customer name from existing data
-      const existingCustomer = records.length > 0 ? records[0].customerName : 'Unknown Customer';
-      records.push({
-        customerName: existingCustomer,
-        productName: 'Sheet Bottom-Line Adjustment',
-        cases: casesDiff,
-        pieces: 0,
-        revenue: revDiff,
-        period,
-        productCode: 'ADJ',
-        excludeFromTotals: true, // Pete's is a sub-distributor; exclude to avoid double-counting
-        isAdjustment: true, // Mark as adjustment record so it doesn't appear as a product
-      });
-      // Update computed totals to match targets
-      computedRevenue = revTarget;
-      computedCases = casesTarget;
+  // Aggregate records by customer, product, and period to combine multiple transactions
+  const aggregatedRecords = new Map<string, AlpineSalesRecord>();
+  
+  records.forEach(record => {
+    const key = `${record.customerName}|${record.productName}|${record.period}`;
+    
+    if (aggregatedRecords.has(key)) {
+      // Combine with existing record
+      const existing = aggregatedRecords.get(key)!;
+      existing.cases += record.cases;
+      existing.revenue = Math.round((existing.revenue + record.revenue) * 100) / 100;
+      existing.pieces += record.pieces;
+      existing.weightLbs = (existing.weightLbs || 0) + (record.weightLbs || 0);
+    } else {
+      // Create new aggregated record
+      aggregatedRecords.set(key, { ...record });
     }
-  }
+  });
+  
+  const finalRecords = Array.from(aggregatedRecords.values());
 
-  const customers = Array.from(new Set(records.map(r => r.customerName)));
-  const products = Array.from(new Set(records.map(r => r.productName)));
-  const periods = Array.from(new Set(records.map(r => r.period))).sort();
-  const totalRevenue = Math.round(computedRevenue * 100) / 100;
-  const totalCases = computedCases;
+  const customers = Array.from(new Set(finalRecords.map(r => r.customerName)));
+  const products = Array.from(new Set(finalRecords.map(r => r.productName)));
+  const periods = Array.from(new Set(finalRecords.map(r => r.period))).sort();
+  const totalRevenue = Math.round(finalRecords.reduce((s, r) => s + r.revenue, 0) * 100) / 100;
+  const totalCases = finalRecords.reduce((s, r) => s + r.cases, 0);
   const periodRevenue: Record<string, number> = {};
-  records.forEach(r => {
+  finalRecords.forEach(r => {
     periodRevenue[r.period] = (periodRevenue[r.period] || 0) + r.revenue;
   });
 
   return {
-    records,
+    records: finalRecords,
     metadata: {
       supplier: "PETE'S COFFEE",
       periods,

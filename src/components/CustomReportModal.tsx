@@ -39,6 +39,8 @@ interface BrokerReportRow {
   cases: number;
   period: string;
   weight?: number; // Weight in pounds (pack × sizeOz × cases / 16)
+  productCode?: string; // Product code/item number
+  customerId?: string; // Customer ID/vendor code
 }
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('en-US', {
@@ -99,17 +101,17 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
     
     if (availablePeriods.length === 0) return;
 
-    // Defaults: A = last 2 periods; B = prior 2 periods (or repeat last if not enough)
+    // Defaults: A = earlier period; B = later period
     const periods = [...availablePeriods];
     const last = periods[periods.length - 1];
     const prev = periods[periods.length - 2] || last;
     const prev2 = periods[periods.length - 3] || prev;
     const prev3 = periods[periods.length - 4] || prev2;
 
-    setRangeAStart(prev);
-    setRangeAEnd(last);
-    setRangeBStart(prev3);
-    setRangeBEnd(prev2);
+    setRangeAStart(prev3);
+    setRangeAEnd(prev2);
+    setRangeBStart(prev);
+    setRangeBEnd(last);
     setResults([]);
     setBrokerResults([]);
     setError('');
@@ -146,6 +148,110 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
       agg.cases += r.cases || 0;
     });
     return map;
+  };
+
+
+  const handleDownloadComparisonCSV = () => {
+    if (results.length === 0) {
+      setError('No comparison report data to download.');
+      return;
+    }
+
+    // Helper function to properly escape CSV fields
+    const escapeCSVField = (field: string | number): string => {
+      const str = String(field);
+      // If field contains comma, quote, or newline, wrap in quotes and escape internal quotes
+      if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const csvRows: string[] = [];
+    
+    // Add headers
+    const headers = ['Customer/Product', 'A Revenue', 'B Revenue', 'Revenue Δ', 'Revenue Δ %', 'A Cases', 'B Cases', 'Cases Δ'];
+    csvRows.push(headers.map(escapeCSVField).join(','));
+
+    // Add customer data with indented product breakdowns
+    results.forEach(customer => {
+      const deltaRevenue = customer.bRevenue - customer.aRevenue;
+      const pct = customer.aRevenue > 0 ? (deltaRevenue / customer.aRevenue) * 100 : (customer.bRevenue > 0 ? 100 : 0);
+      const deltaCases = customer.bCases - customer.aCases;
+      
+      // Add customer row
+      csvRows.push([
+        escapeCSVField(customer.key),
+        escapeCSVField(customer.aRevenue.toFixed(2)),
+        escapeCSVField(customer.bRevenue.toFixed(2)),
+        escapeCSVField(deltaRevenue.toFixed(2)),
+        escapeCSVField(pct.toFixed(1) + '%'),
+        escapeCSVField(customer.aCases.toString()),
+        escapeCSVField(customer.bCases.toString()),
+        escapeCSVField(deltaCases.toString())
+      ].join(','));
+
+      // Add product breakdown rows (indented)
+      if (groupMode === 'customer') {
+        const productBreakdown = getProductBreakdown(customer.key);
+        if (productBreakdown && productBreakdown.length > 0) {
+          productBreakdown.forEach(product => {
+            const prodDeltaRevenue = product.bRevenue - product.aRevenue;
+            const prodDeltaCases = product.bCases - product.aCases;
+            
+            csvRows.push([
+              escapeCSVField(`  ${product.productName}`), // Indented with 2 spaces
+              escapeCSVField(product.aRevenue.toFixed(2)),
+              escapeCSVField(product.bRevenue.toFixed(2)),
+              escapeCSVField(prodDeltaRevenue.toFixed(2)),
+              escapeCSVField(''), // No percentage for individual products
+              escapeCSVField(product.aCases.toString()),
+              escapeCSVField(product.bCases.toString()),
+              escapeCSVField(prodDeltaCases.toString())
+            ].join(','));
+          });
+        }
+      }
+    });
+
+    // Add totals row
+    const totals = results.reduce((acc, r) => {
+      acc.aRev += r.aRevenue; 
+      acc.bRev += r.bRevenue; 
+      acc.aCases += r.aCases; 
+      acc.bCases += r.bCases; 
+      return acc;
+    }, { aRev: 0, bRev: 0, aCases: 0, bCases: 0 });
+    
+    const dRev = totals.bRev - totals.aRev;
+    const dPct = totals.aRev > 0 ? (dRev / totals.aRev) * 100 : (totals.bRev > 0 ? 100 : 0);
+    const dCases = totals.bCases - totals.aCases;
+    
+    csvRows.push(''); // Empty row for separation
+    csvRows.push([
+      escapeCSVField('TOTAL'),
+      escapeCSVField(totals.aRev.toFixed(2)),
+      escapeCSVField(totals.bRev.toFixed(2)),
+      escapeCSVField(dRev.toFixed(2)),
+      escapeCSVField(dPct.toFixed(1) + '%'),
+      escapeCSVField(totals.aCases.toString()),
+      escapeCSVField(totals.bCases.toString()),
+      escapeCSVField(dCases.toString())
+    ].join(','));
+
+    const csvContent = csvRows.join('\n');
+
+    // Create download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    const filename = `comparison_report_${rangeAStart}_to_${rangeAEnd}_vs_${rangeBStart}_to_${rangeBEnd}.csv`;
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleDownloadProductBreakdownCSV = (customerName: string) => {
@@ -221,6 +327,24 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
           top: topPosition
         });
       }
+    }
+  };
+
+  const handleBrokerCustomerClick = (customerName: string, event: React.MouseEvent) => {
+    if (clickedCustomer === customerName) {
+      // If clicking the same customer, close the popup
+      setClickedCustomer(null);
+    } else {
+      // Show popup for this customer
+      setClickedCustomer(customerName);
+      const rect = event.currentTarget.getBoundingClientRect();
+      // Position tooltip above the row, accounting for its height
+      const tooltipHeight = 500; // Estimated tooltip height
+      const topPosition = Math.max(20, rect.top - tooltipHeight);
+      setTooltipPosition({
+        left: Math.max(20, Math.min(rect.left, window.innerWidth - 820)), // 800px width + 20px margin
+        top: topPosition
+      });
     }
   };
 
@@ -302,13 +426,45 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
           if (dist.name === 'Alpine' && record.netLbs) {
             weight = record.netLbs;
           }
-          // For Pete's Coffee: calculate from pack × sizeOz × cases / 16 to convert oz to lbs
-          else if (dist.name === "Pete's Coffee" && record.pack && record.cases) {
-            if (record.sizeOz) {
-              // Burritos: calculate weight from pack × sizeOz × cases / 16
+          // For Pete's Coffee: use weightLbs field if available, otherwise calculate from pack × sizeOz × cases / 16
+          else if (dist.name === "Pete's Coffee" && record.cases) {
+            if (record.weightLbs) {
+              // Use the weightLbs field calculated from Master Pricing data
+              weight = record.weightLbs;
+            } else if (record.pack && record.sizeOz) {
+              // Fallback: calculate weight from pack × sizeOz × cases / 16 for burritos
               weight = (record.pack * record.sizeOz * record.cases) / 16;
             }
-            // Note: Sandwiches have pack but no sizeOz, so no weight calculation
+          }
+          // For KeHe: use weightLbs field if available, otherwise calculate from pack × sizeOz × cases / 16
+          else if (dist.name === 'KeHe' && record.cases) {
+            if (record.weightLbs) {
+              // Use the weightLbs field calculated from Master Pricing data
+              weight = record.weightLbs;
+            } else if (record.pack && record.sizeOz) {
+              // Fallback: calculate weight from pack × sizeOz × cases / 16
+              weight = (record.pack * record.sizeOz * record.cases) / 16;
+            }
+          }
+          // For Troia: use weightLbs field if available, otherwise calculate from pack × sizeOz × cases / 16
+          else if (dist.name === 'Troia Foods' && record.cases) {
+            if (record.weightLbs) {
+              // Use the weightLbs field calculated from Master Pricing data
+              weight = record.weightLbs;
+            } else if (record.pack && record.sizeOz) {
+              // Fallback: calculate weight from pack × sizeOz × cases / 16
+              weight = (record.pack * record.sizeOz * record.cases) / 16;
+            }
+          }
+          // For Mike Hudson: use weightLbs field if available, otherwise calculate from pack × sizeOz × cases / 16
+          else if (dist.name === 'Mike Hudson' && record.cases) {
+            if (record.weightLbs) {
+              // Use the weightLbs field calculated from Master Pricing data
+              weight = record.weightLbs;
+            } else if (record.pack && record.sizeOz) {
+              // Fallback: calculate weight from pack × sizeOz × cases / 16
+              weight = (record.pack * record.sizeOz * record.cases) / 16;
+            }
           }
           // For Vistar: calculate from pack × sizeOz × cases / 16 to convert oz to lbs
           else if (dist.name === 'Vistar' && record.pack && record.sizeOz && record.cases) {
@@ -325,7 +481,9 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
             revenue: record.revenue || 0,
             cases: record.cases || 0,
             period: record.period,
-            weight: weight
+            weight: weight,
+            productCode: record.productCode || undefined,
+            customerId: record.customerId || undefined
           });
         }
       });
@@ -356,28 +514,40 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
       return;
     }
 
+    // Helper function to properly escape CSV fields
+    const escapeCSVField = (field: string | number): string => {
+      const str = String(field);
+      // If field contains comma, quote, or newline, wrap in quotes and escape internal quotes
+      if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
     // Create CSV content
-    const headers = ['Distributor', 'Customer', 'Sub-Customer', 'Product', 'Revenue', 'Cases', 'Weight (lbs)', 'Period'];
-    const rows = brokerResults.map(row => [
-      row.distributor,
-      row.customer,
-      row.subCustomer || '',
-      row.productName,
-      row.revenue.toFixed(2),
-      row.cases.toString(),
-      row.weight ? row.weight.toFixed(2) : '',
-      row.period
-    ]);
+    const headers = shouldShowSubCustomerColumn() 
+      ? ['Distributor', 'Customer', 'Sub-Customer', 'Product', 'Revenue', 'Cases', 'Weight (lbs)', 'Period']
+      : ['Distributor', 'Customer', 'Product', 'Revenue', 'Cases', 'Weight (lbs)', 'Period'];
+    const rows = brokerResults.map(row => {
+      const baseRow = [
+        escapeCSVField(row.distributor),
+        escapeCSVField(row.customer),
+        escapeCSVField(row.productName),
+        escapeCSVField(row.revenue.toFixed(2)),
+        escapeCSVField(row.cases.toString()),
+        escapeCSVField(row.weight ? row.weight.toFixed(2) : ''),
+        escapeCSVField(row.period)
+      ];
+      
+      // Insert sub-customer column if needed
+      if (shouldShowSubCustomerColumn()) {
+        baseRow.splice(2, 0, escapeCSVField(row.subCustomer || ''));
+      }
+      
+      return baseRow;
+    });
 
     // Calculate different totals
-    const totalsExcludingSubDist = brokerResults.reduce((acc, r) => {
-      if (r.distributor.includes('Sub-Distributor')) return acc;
-      acc.revenue += r.revenue;
-      acc.cases += r.cases;
-      acc.weight += r.weight || 0;
-      return acc;
-    }, { revenue: 0, cases: 0, weight: 0 });
-
     const petesTotals = brokerResults.reduce((acc, r) => {
       if (r.distributor.includes("Pete's Coffee")) {
         acc.revenue += r.revenue;
@@ -400,12 +570,17 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
     const formatCases = (cases: number) => cases.toLocaleString('en-US');
 
     const csvContent = [
-      headers.join(','),
+      headers.map(escapeCSVField).join(','),
       ...rows.map(row => row.join(',')),
       '', // Empty row for separation
-      ...(petesTotals.revenue > 0 ? [`"PETE'S COFFEE SUB-TOTAL","","","","${formatCurrency(petesTotals.revenue)}","${formatCases(petesTotals.cases)}","${formatWeight(petesTotals.weight)}",""`] : []),
-      `"MAIN DISTRIBUTORS TOTAL","","","","${formatCurrency(totalsExcludingSubDist.revenue)}","${formatCases(totalsExcludingSubDist.cases)}","${formatWeight(totalsExcludingSubDist.weight)}",""`,
-      `"GRAND TOTAL (ALL DISTRIBUTORS)","","","","${formatCurrency(grandTotals.revenue)}","${formatCases(grandTotals.cases)}","${formatWeight(grandTotals.weight)}",""`
+      ...(petesTotals.revenue > 0 ? [
+        shouldShowSubCustomerColumn() 
+          ? `"PETE'S COFFEE SUB-TOTAL","","","","${formatCurrency(petesTotals.revenue)}","${formatCases(petesTotals.cases)}","${formatWeight(petesTotals.weight)}",""`
+          : `"PETE'S COFFEE SUB-TOTAL","","","${formatCurrency(petesTotals.revenue)}","${formatCases(petesTotals.cases)}","${formatWeight(petesTotals.weight)}",""`
+      ] : []),
+      shouldShowSubCustomerColumn() 
+        ? `"GRAND TOTAL (ALL DISTRIBUTORS)","","","","${formatCurrency(grandTotals.revenue)}","${formatCases(grandTotals.cases)}","${formatWeight(grandTotals.weight)}",""`
+        : `"GRAND TOTAL (ALL DISTRIBUTORS)","","","${formatCurrency(grandTotals.revenue)}","${formatCases(grandTotals.cases)}","${formatWeight(grandTotals.weight)}",""`
     ].join('\n');
 
     // Create download link
@@ -451,6 +626,20 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
     });
   };
 
+  // Check if we should show sub-customer column (hide for MHD-only reports)
+  const shouldShowSubCustomerColumn = (): boolean => {
+    // If we have MHD data, check if there are any sub-customers
+    if (mhdData.length > 0) {
+      const hasSubCustomers = mhdData.some(record => record.accountName && record.accountName.trim() !== '');
+      return hasSubCustomers;
+    }
+    
+    // For other distributors, show sub-customer column if any have sub-customers
+    return keheData.some(record => record.accountName) || 
+           tonysData.some(record => record.accountName) || 
+           vistarData.some(record => record.accountName);
+  };
+
   // Get available sub-customers for selected customers
   const getAvailableSubCustomers = () => {
     const subCustomers = new Set<string>();
@@ -470,12 +659,14 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
         }
       });
       
-      // Check MHD data for accountName (sub-customers/locations)
-      mhdData.forEach(record => {
-        if (record.customerName === customerName && record.accountName) {
-          subCustomers.add(`${customerName} → ${record.accountName}`);
-        }
-      });
+      // Check MHD data for accountName (sub-customers/locations) - only if MHD has sub-customers
+      if (shouldShowSubCustomerColumn()) {
+        mhdData.forEach(record => {
+          if (record.customerName === customerName && record.accountName) {
+            subCustomers.add(`${customerName} → ${record.accountName}`);
+          }
+        });
+      }
       
       // Check Vistar data for accountName (customer descriptions)
       vistarData.forEach(record => {
@@ -528,7 +719,7 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
     const y = e.clientY - rect.top;
     const percentage = Math.max(20, Math.min(80, (y / rect.height) * 100));
     setSplitterPosition(percentage);
-  }, [isDragging, splitterPosition]);
+  }, [isDragging]);
 
   const handleMouseUp = React.useCallback(() => {
     setIsDragging(false);
@@ -552,18 +743,6 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
     e.stopPropagation();
   }, []);
 
-  // Prevent wheel events from scrolling the background page
-  const handleWheel = React.useCallback((e: WheelEvent) => {
-    // Check if the wheel event is happening within the modal
-    const modalElement = modalRef.current;
-    if (modalElement && modalElement.contains(e.target as Node)) {
-      // Allow scrolling within the modal
-      return;
-    }
-    // Prevent scrolling outside the modal
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
 
   // Handle wheel events on modal containers
   const handleModalWheel = React.useCallback((e: React.WheelEvent) => {
@@ -629,7 +808,6 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [clickedCustomer]);
-
 
   // Get product breakdown for a specific customer across both periods
   const getProductBreakdown = (customerName: string) => {
@@ -910,7 +1088,9 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
                         <tr>
                           <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-left`}>Distributor</th>
                           <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-left`}>Customer</th>
-                          <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-left`}>Sub-Customer</th>
+                          {shouldShowSubCustomerColumn() && (
+                            <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-left`}>Sub-Customer</th>
+                          )}
                           <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-left`}>Product</th>
                           <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right`}>Revenue</th>
                           <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right`}>Cases</th>
@@ -922,8 +1102,15 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
                         {brokerResults.map((row, index) => (
                           <tr key={index} className="border-t hover:bg-gray-50">
                             <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>{row.distributor}</td>
-                            <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>{row.customer}</td>
-                            <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>{row.subCustomer || '-'}</td>
+                            <td 
+                              className={`${isBrokerReportActive ? 'p-3' : 'p-2'} ${row.distributor === 'Mike Hudson' ? 'cursor-pointer hover:bg-gray-100' : ''}`}
+                              onClick={row.distributor === 'Mike Hudson' ? (e) => handleBrokerCustomerClick(row.customer, e) : undefined}
+                            >
+                              {row.customer}
+                            </td>
+                            {shouldShowSubCustomerColumn() && (
+                              <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>{row.subCustomer || '-'}</td>
+                            )}
                             <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>{row.productName}</td>
                             <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{formatCurrency(row.revenue)}</td>
                             <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{row.cases.toLocaleString()}</td>
@@ -935,13 +1122,6 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
                       <tfoot>
                         {(() => {
                           // Calculate totals excluding sub-distributors
-                          const totalExcludingSubDist = brokerResults.reduce((acc, r) => {
-                            if (r.distributor.includes('Sub-Distributor')) return acc;
-                            acc.revenue += r.revenue;
-                            acc.cases += r.cases;
-                            acc.weight += r.weight || 0;
-                            return acc;
-                          }, { revenue: 0, cases: 0, weight: 0 });
 
                           // Calculate Pete's Coffee totals separately
                           const petesTotal = brokerResults.reduce((acc, r) => {
@@ -966,7 +1146,7 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
                               {/* Pete's Coffee Sub-Total */}
                               {petesTotal.revenue > 0 && (
                                 <tr className="border-t bg-blue-50 font-medium">
-                                  <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`} colSpan={4}>Pete's Coffee Sub-Total</td>
+                                  <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`} colSpan={shouldShowSubCustomerColumn() ? 4 : 3}>Pete's Coffee Sub-Total</td>
                                   <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{formatCurrency(petesTotal.revenue)}</td>
                                   <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{petesTotal.cases.toLocaleString()}</td>
                                   <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{petesTotal.weight.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
@@ -975,7 +1155,7 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
                               )}
                               {/* Total */}
                               <tr className="border-t bg-green-50 font-bold">
-                                <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`} colSpan={4}>Total</td>
+                                <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`} colSpan={shouldShowSubCustomerColumn() ? 4 : 3}>Total</td>
                                 <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{formatCurrency(grandTotal.revenue)}</td>
                                 <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{grandTotal.cases.toLocaleString()}</td>
                                 <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{grandTotal.weight.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
@@ -1225,8 +1405,13 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
               <div className="text-sm text-gray-500">No results yet. Select ranges and click Generate.</div>
             ) : (
               <>
-                <div className="mb-3 text-sm text-gray-600">
-                  Showing {results.length} {groupMode === 'customer' ? 'customers' : 'products'} | A: {rangeAStart} to {rangeAEnd} vs B: {rangeBStart} to {rangeBEnd}
+                <div className="mb-3 flex justify-between items-center">
+                  <div className="text-sm text-gray-600">
+                    Showing {results.length} {groupMode === 'customer' ? 'customers' : 'products'} | A: {rangeAStart} to {rangeAEnd} vs B: {rangeBStart} to {rangeBEnd}
+                  </div>
+                  <Button onClick={handleDownloadComparisonCSV} variant="outline" size="sm">
+                    Download CSV
+                  </Button>
                 </div>
                 <table className="w-full text-sm">
                 <thead className="bg-gray-50 sticky top-0">
@@ -1284,7 +1469,7 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
                                     className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
                                     title="Download CSV"
                                   >
-                                    Print CSV
+                                    Download CSV
                                   </button>
                                   <button
                                     onClick={() => setClickedCustomer(null)}
@@ -1400,7 +1585,9 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
                   <tr>
                     <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-left`}>Distributor</th>
                     <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-left`}>Customer</th>
-                    <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-left`}>Sub-Customer</th>
+                    {shouldShowSubCustomerColumn() && (
+                      <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-left`}>Sub-Customer</th>
+                    )}
                     <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-left`}>Product</th>
                     <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right`}>Revenue</th>
                     <th className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right`}>Cases</th>
@@ -1412,8 +1599,15 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
                   {brokerResults.map((row, index) => (
                     <tr key={index} className="border-t hover:bg-gray-50">
                       <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>{row.distributor}</td>
-                      <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>{row.customer}</td>
-                      <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>{row.subCustomer || '-'}</td>
+                      <td 
+                        className={`${isBrokerReportActive ? 'p-3' : 'p-2'} ${row.distributor === 'Mike Hudson' ? 'cursor-pointer hover:bg-gray-100' : ''}`}
+                        onClick={row.distributor === 'Mike Hudson' ? (e) => handleBrokerCustomerClick(row.customer, e) : undefined}
+                      >
+                        {row.customer}
+                      </td>
+                      {shouldShowSubCustomerColumn() && (
+                        <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>{row.subCustomer || '-'}</td>
+                      )}
                       <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`}>{row.productName}</td>
                       <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{formatCurrency(row.revenue)}</td>
                       <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{row.cases.toLocaleString()}</td>
@@ -1434,7 +1628,7 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
                     }, { revenue: 0, cases: 0, weight: 0 });
                     return (
                       <tr className="border-t bg-gray-50 font-semibold">
-                        <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`} colSpan={4}>Total (excl. sub-distributors)</td>
+                        <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'}`} colSpan={shouldShowSubCustomerColumn() ? 4 : 3}>Total (excl. sub-distributors)</td>
                         <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{formatCurrency(total.revenue)}</td>
                         <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{total.cases.toLocaleString()}</td>
                         <td className={`${isBrokerReportActive ? 'p-3' : 'p-2'} text-right tabular-nums`}>{total.weight.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
@@ -1446,6 +1640,142 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
               </table>
             </>
           )
+        )}
+
+        {/* MHD Customer Popup */}
+        {clickedCustomer && brokerResults.some(r => r.distributor === 'Mike Hudson' && r.customer === clickedCustomer) && (
+          <div 
+            className="fixed w-[800px] bg-white border border-gray-300 rounded-lg shadow-2xl z-[10010] p-4"
+            data-popup="mhd-customer-breakdown"
+            style={{
+              left: tooltipPosition.left,
+              top: tooltipPosition.top,
+              maxHeight: '90vh'
+            }}
+          >
+            <div className="flex items-center justify-between mb-3 border-b pb-2">
+              <div className="text-sm font-semibold text-gray-800">
+                {clickedCustomer} • All Invoices
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    // Create CSV for this customer
+                    const customerData = brokerResults.filter(r => r.customer === clickedCustomer);
+                    const csvContent = [
+                      'Product,Item #,Vendor Code,' + selectedPeriods.join(','),
+                      ...customerData.map(row => [
+                        row.productName,
+                        row.productCode || '',
+                        row.customerId || '',
+                        ...selectedPeriods.map(period => {
+                          const periodData = customerData.find(r => r.period === period && r.productName === row.productName);
+                          return periodData ? periodData.cases : 0;
+                        })
+                      ].join(','))
+                    ].join('\n');
+                    
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', `${clickedCustomer}_breakdown.csv`);
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
+                  className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                  title="Download CSV"
+                >
+                  CSV
+                </button>
+                <button
+                  onClick={() => setClickedCustomer(null)}
+                  className="text-gray-500 hover:text-gray-700 text-lg font-bold leading-none"
+                  title="Close"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            
+            <div className="mb-3">
+              <input
+                type="text"
+                placeholder="Filter by product, item #"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            
+            <div className="max-h-[70vh] overflow-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead className="bg-gray-100 sticky top-0">
+                  <tr>
+                    <th className="p-2 text-left border-b font-semibold">Product</th>
+                    <th className="p-2 text-left border-b font-semibold">Item #</th>
+                    <th className="p-2 text-left border-b font-semibold">Vendor Code</th>
+                    {selectedPeriods.map(period => (
+                      <th key={period} className="p-2 text-center border-b font-semibold">{period}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    const customerData = brokerResults.filter(r => r.customer === clickedCustomer);
+                    const products = Array.from(new Set(customerData.map(r => r.productName)));
+                    
+                    return products.map(product => {
+                      const productData = customerData.filter(r => r.productName === product);
+                      const firstRow = productData[0];
+                      
+                      return (
+                        <tr key={product} className="hover:bg-gray-50">
+                          <td className="p-2 border-b">{product}</td>
+                          <td className="p-2 border-b">{firstRow.productCode || ''}</td>
+                          <td className="p-2 border-b">{firstRow.customerId || ''}</td>
+                          {selectedPeriods.map(period => {
+                            const periodData = productData.find(r => r.period === period);
+                            return (
+                              <td key={period} className="p-2 text-center border-b">
+                                {periodData ? periodData.cases : 0}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    });
+                  })()}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-gray-50 font-semibold">
+                    <td className="p-2 border-t">Total</td>
+                    <td className="p-2 border-t"></td>
+                    <td className="p-2 border-t"></td>
+                    {selectedPeriods.map(period => {
+                      const total = brokerResults
+                        .filter(r => r.customer === clickedCustomer && r.period === period)
+                        .reduce((sum, r) => sum + r.cases, 0);
+                      return (
+                        <td key={period} className="p-2 text-center border-t">
+                          {total}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            
+            <div className="mt-3 pt-2 border-t text-xs text-gray-500">
+              Sum of Cases by Product • Columns = Months
+            </div>
+            
+            <div className="mt-2 flex gap-2">
+              <button className="px-3 py-1 text-xs bg-blue-600 text-white rounded">Month</button>
+              <button className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded">Quarter</button>
+            </div>
+          </div>
         )}
             </div>
           </>

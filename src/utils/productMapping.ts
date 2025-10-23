@@ -331,6 +331,7 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'PIROSHKI BEEF & CHEESE WRAPPED', // MHD name
       'PIROSHKI BEEF WRAPPED', // MHD name
       'Beef & Cheese Piroshki',
+      'Beef and Cheese Piroshki', // MHD variation with "and"
     ],
     category: 'Piroshki'
   },
@@ -342,6 +343,7 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'BEEF CHEESE PIROSHKI RETAIL',
       'PIROSHKI BEEF CHEESE RETAIL',
       'Beef & Cheese Piroshki (retail pack)',
+      'Beef and Cheese Piroshki (retail pack)', // MHD variation with "and"
     ],
     category: 'Piroshki'
   },
@@ -395,25 +397,42 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     itemNumber: '611',
     canonicalName: 'Jumbo Beef Frank Bagel Dog',
     alternateNames: [
+      'GAL BAGEL DOG BEEF',
+      'GAL BAGEL DOG BEEF FRANK',
       'JUMBO BEEF FRANK BAGEL DOG',
       'BEEF FRANK BAGEL DOG',
       'BEEF BAGEL DOG',
       'BAGEL DOG BEEF JUMBO', // MHD name
+      'Bagel Dog Beef Frank',
+      'BEEF JUMBO BAGEL DOG',
+      'BEEF FRANK BAGEL DOGS',
+      'Bagel Dog Bf Frnk W/ Ppy Sd', // Vistar abbreviation
       'MH400022',
+      'MH404001',
     ],
-    category: 'Bagel Dog'
+    category: 'Bagel Dog',
+    alpineProductCodes: ['999978', '183922'],
+    keheProductCodes: ['611665100013', '611665200010'],
+    vistarProductCodes: ['GFO10001']
   },
   {
     itemNumber: '612',
     canonicalName: 'Jumbo Polish Sausage Bagel Dog',
     alternateNames: [
+      'GAL BAGEL DOG POLISH',
+      'GAL BAGEL DOG POLISH SSG',
       'JUMBO POLISH SAUSAGE BAGEL DOG',
       'POLISH SAUSAGE BAGEL DOG',
       'POLISH BAGEL DOG',
       'BAGEL DOG POLISH JUMBO WRAPPED', // MHD name
+      'Bagel Dog Polish Sausage',
+      'SAUSAGE POLISH BAGEL DOGS',
       'MH400023',
+      'MH404003',
     ],
-    category: 'Bagel Dog'
+    category: 'Bagel Dog',
+    alpineProductCodes: ['999979', '183923'],
+    keheProductCodes: ['611665200218']
   },
   {
     itemNumber: '280',
@@ -513,50 +532,58 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     category: 'Bagel Dog'
   },
 
-  // MHD-specific products not in master list
+  // MHD-specific products - Calzone items with correct Master Pricing item numbers and names
   {
-    itemNumber: '999', // Placeholder item number
-    canonicalName: 'Calzone Italian Combo Wrapped',
+    itemNumber: '131', // Correct item number from Master Pricing
+    canonicalName: 'Italian Combo Calzone', // Exact name from Master Pricing
     alternateNames: [
       'CALZONE ITALIAN COMBO WRAPPED',
       'ITALIAN COMBO CALZONE',
+      'ITALIAN COMBO CALZONE WRAPPED',
+      'Calzone Italian Combo Wrapped', // MHD name
+      'ITALIAN COMBO CALZONE WRAPPED',
       'CALZONE ITALIAN COMBO',
+      'ITALIAN COMBO CALZONE WRAP',
     ],
     category: 'Calzone'
   },
   {
-    itemNumber: '998', // Placeholder item number
-    canonicalName: 'Spanakopita',
-    alternateNames: [
-      'SPANAKOPITA',
-      'SPANAKOPITA WRAP',
-    ],
-    category: 'Greek'
-  },
-  {
-    itemNumber: '997', // Placeholder item number
-    canonicalName: 'Calzone Pesto Mushroom Wrapped',
+    itemNumber: '111', // Correct item number from Master Pricing
+    canonicalName: 'Pesto Mushroom Calzone', // Exact name from Master Pricing
     alternateNames: [
       'CALZONE PESTO MUSHROOM WRAPPED',
       'PESTO MUSHROOM CALZONE',
+      'PESTO MUSHROOM CALZONE WRAPPED',
+      'Calzone Pesto Mushroom Wrapped', // MHD name
+      'PESTO MUSHROOM CALZONE WRAP',
+      'CALZONE PESTO MUSHROOM',
+      'PESTO MUSHROOM CALZONE WRAP',
     ],
     category: 'Calzone'
   },
   {
-    itemNumber: '996', // Placeholder item number
-    canonicalName: 'Chicken Fajita Wrapped Calzone',
+    itemNumber: '141', // Correct item number from Master Pricing
+    canonicalName: 'Chicken Fajita Calzone', // Exact name from Master Pricing
     alternateNames: [
       'CHICKEN FAJITA WRAPPED CALZONE',
       'CHICKEN FAJITA CALZONE',
+      'Chicken Fajita Wrapped Calzone', // MHD name
+      'CHICKEN FAJITA CALZONE WRAPPED',
+      'CALZONE CHICKEN FAJITA',
+      'CHICKEN FAJITA CALZONE WRAP',
     ],
     category: 'Calzone'
   },
   {
-    itemNumber: '995', // Placeholder item number
-    canonicalName: 'Calzone Spinach Feta Wrapped',
+    itemNumber: '122', // Correct item number from Master Pricing
+    canonicalName: 'Spinach Feta Calzone', // Exact name from Master Pricing
     alternateNames: [
       'CALZONE SPINACH FETA WRAPPED',
       'SPINACH FETA CALZONE',
+      'Calzone Spinach Feta Wrapped', // MHD name
+      'SPINACH FETA CALZONE WRAPPED',
+      'CALZONE SPINACH FETA',
+      'SPINACH FETA CALZONE WRAP',
     ],
     category: 'Calzone'
   },
@@ -703,44 +730,6 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     category: 'Empanada'
   },
   
-  // Bagel Dogs - Standard
-  {
-    itemNumber: '611',
-    canonicalName: 'Jumbo Beef Frank Bagel Dog',
-    alternateNames: [
-      'GAL BAGEL DOG BEEF',
-      'GAL BAGEL DOG BEEF FRANK',
-      'BEEF BAGEL DOG',
-      'BEEF FRANK BAGEL DOG',
-      'Bagel Dog Beef Frank',
-      'JUMBO BEEF FRANK BAGEL DOG',
-      'BEEF JUMBO BAGEL DOG',
-      'BEEF FRANK BAGEL DOGS',
-      'Bagel Dog Bf Frnk W/ Ppy Sd', // Vistar abbreviation
-      'MH404001',
-    ],
-    category: 'Bagel Dog',
-    alpineProductCodes: ['999978', '183922'],
-    keheProductCodes: ['611665100013', '611665200010'],
-    vistarProductCodes: ['GFO10001']
-  },
-  {
-    itemNumber: '612',
-    canonicalName: 'Jumbo Polish Sausage Bagel Dog',
-    alternateNames: [
-      'GAL BAGEL DOG POLISH',
-      'GAL BAGEL DOG POLISH SSG',
-      'POLISH BAGEL DOG',
-      'Bagel Dog Polish Sausage',
-      'POLISH SAUSAGE BAGEL DOG',
-      'JUMBO POLISH SAUSAGE BAGEL DOG',
-      'SAUSAGE POLISH BAGEL DOGS',
-      'MH404003',
-    ],
-    category: 'Bagel Dog',
-    alpineProductCodes: ['999979', '183923'],
-    keheProductCodes: ['611665200218']
-  },
   
   // Handpies
   {
@@ -857,30 +846,6 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'MH406016',
     ],
     category: 'Piroshki'
-  },
-  {
-    itemNumber: '611',
-    canonicalName: 'Beef & Cheese Piroshki',
-    alternateNames: [
-      'GAL PIROSHKI BEEF CHS N/S',
-      'BEEF CHEESE PIROSHKI',
-      'BEEF & CHEESE PIROSHKI',
-      'MH406015',
-    ],
-    category: 'Piroshki',
-    alpineProductCodes: ['183979']
-  },
-  {
-    itemNumber: '612',
-    canonicalName: 'Beef & Mushroom Piroshki',
-    alternateNames: [
-      'GAL PIROSHKI BF MUSH  N/S',
-      'BEEF MUSHROOM PIROSHKI',
-      'BEEF & MUSHROOM PIROSHKI',
-      'MH406022',
-    ],
-    category: 'Piroshki',
-    alpineProductCodes: ['184028']
   },
   {
     itemNumber: '621',

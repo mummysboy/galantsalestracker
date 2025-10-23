@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import { AlpineSalesRecord } from './alpineParser';
 import { mapToCanonicalProductName } from './productMapping';
+import { loadPricingData, getProductPricing, getProductWeight } from './pricingLoader';
 
 export interface ParsedMhdData {
   records: AlpineSalesRecord[];
@@ -178,6 +179,9 @@ function detectMonthColumns(headers: string[], headersLc: string[], year: string
 }
 
 export async function parseMhdXLSX(file: File): Promise<ParsedMhdData> {
+  // Load pricing data for weight calculations
+  const pricingDb = await loadPricingData();
+  
   const arrayBuffer = await file.arrayBuffer();
   const wb = XLSX.read(arrayBuffer, { type: 'array' });
   const sheetName = wb.SheetNames[0];
@@ -274,27 +278,8 @@ export async function parseMhdXLSX(file: File): Promise<ParsedMhdData> {
   }
   if (level1Idx === -1) level1Idx = 0; // Ultimate fallback to first column
   
-  // Level 2: Sub-customer/location/store column (different from Customer column)
-  let level2Idx = headersLc.findIndex((h, idx) => 
-    idx !== level1Idx && (
-      h.includes('location') || 
-      h.includes('store') || 
-      h.includes('ship to') || 
-      h.includes('ship-to') ||
-      h.includes('site') ||
-      h === 'name' ||
-      (h.includes('customer') && h.includes('name'))
-    )
-  );
-  if (level2Idx === -1 || level2Idx === level1Idx) {
-    // Try to find a second name-related column
-    for (let i = 0; i < headersLc.length; i++) {
-      if (i !== level1Idx && (headersLc[i].includes('name') || headersLc[i].includes('location'))) {
-        level2Idx = i;
-        break;
-      }
-    }
-  }
+  // MHD has no sub-customers, so we skip Level 2 parsing
+  const level2Idx = -1;
   
   // Level 3: Product column - look for specific product-related headers
   let productIdx = headersLc.findIndex(h => 
@@ -342,10 +327,9 @@ export async function parseMhdXLSX(file: File): Promise<ParsedMhdData> {
     headers: headers.slice(0, 15),
     level1Idx,
     level1Header: headers[level1Idx],
-    level2Idx,
-    level2Header: level2Idx >= 0 ? headers[level2Idx] : 'N/A',
     productIdx,
-    productHeader: productIdx >= 0 ? headers[productIdx] : 'N/A'
+    productHeader: productIdx >= 0 ? headers[productIdx] : 'N/A',
+    note: 'MHD has no sub-customers'
   });
 
   // Additional columns
@@ -372,7 +356,6 @@ export async function parseMhdXLSX(file: File): Promise<ParsedMhdData> {
 
     // Extract entity data (shared across all months)
     const level1Name = level1Idx >= 0 ? String(row[level1Idx] || '').trim() : '';
-    const level2Name = level2Idx >= 0 && level2Idx !== level1Idx ? String(row[level2Idx] || '').trim() : '';
     const productName = productIdx >= 0 ? String(row[productIdx] || '').trim() : '';
     const productCode = productCodeIdx >= 0 ? String(row[productCodeIdx] || '').trim() : '';
     const customerId = customerIdIdx >= 0 ? String(row[customerIdIdx] || '').trim() : '';
@@ -383,9 +366,8 @@ export async function parseMhdXLSX(file: File): Promise<ParsedMhdData> {
       continue;
     }
     
-    // Determine the best names for each level
+    // Determine the best names for each level (MHD has no sub-customers)
     const finalLevel1 = level1Name || 'Unknown Retailer';
-    const finalLevel2 = level2Name || level1Name || 'Unknown Location';
     const finalProduct = productName || 'Unknown Product';
 
     // Create one record per month that has data
@@ -398,17 +380,47 @@ export async function parseMhdXLSX(file: File): Promise<ParsedMhdData> {
         continue;
       }
 
+      // Calculate weight and revenue using pricing data
+      const mappedProductName = mapToCanonicalProductName(finalProduct);
+      
+      // Calculate weight using Master Pricing case weight × cases
+      const caseWeightLbs = getProductWeight(pricingDb, undefined, mappedProductName);
+      const totalWeight = Math.round(qty * caseWeightLbs * 100) / 100; // cases × case weight in pounds
+      
+      // Calculate revenue using Master Pricing data (Column J - Case Cost)
+      // Use the mapped canonical name for pricing lookup
+      const pricing = getProductPricing(pricingDb, undefined, mappedProductName);
+      const calculatedRevenue = Math.round(qty * pricing.caseCost * 100) / 100; // cases × case cost
+      
+      // Debug logging for all products
+      console.log('MHD Debug:', {
+        originalProduct: finalProduct,
+        mappedProduct: mappedProductName,
+        cases: qty,
+        originalRevenue: revenue,
+        caseWeightLbs: caseWeightLbs,
+        totalWeightLbs: totalWeight,
+        caseCost: pricing.caseCost,
+        calculatedRevenue: calculatedRevenue,
+        pricingLookup: `${mappedProductName} → $${pricing.caseCost} (${caseWeightLbs} lbs/case)`,
+        pricingDbSize: pricingDb.byItemNumber.size,
+        pricingDbProducts: Array.from(pricingDb.byProductName.keys()).slice(0, 5),
+        isCalzone: mappedProductName.toLowerCase().includes('calzone'),
+        isUsingFallback: pricingDb.byItemNumber.size < 100 // Rough check if using fallback data
+      });
+
       const record: AlpineSalesRecord = {
         customerName: finalLevel1, // Level 1: Main customer/retailer
-        productName: mapToCanonicalProductName(finalProduct), // Level 3: Product - normalized
+        productName: mappedProductName, // Level 3: Product - normalized
         size: size || undefined,
         cases: Math.round(qty),
         pieces: 0,
-        revenue: Math.round(revenue * 100) / 100,
+        revenue: calculatedRevenue, // Use calculated revenue from Master Pricing data
         period: monthCol.period, // Use the month-specific period
         productCode: productCode || undefined,
         customerId: customerId || undefined,
-        accountName: finalLevel2, // Level 2: Sub-customer/location
+        accountName: undefined, // MHD has no sub-customers
+        weightLbs: totalWeight, // Total weight in pounds
       };
 
       records.push(record);

@@ -1,6 +1,7 @@
 // import * as XLSX from 'xlsx'; // Currently unused
 import { AlpineSalesRecord } from './alpineParser';
 import { mapToCanonicalProductName } from './productMapping';
+import { loadPricingData, getProductWeight } from './pricingLoader';
 
 export interface ParsedKeHeData {
   records: AlpineSalesRecord[];
@@ -41,6 +42,9 @@ function detectPeriodFromDateRange(dateRangeStr: string): string {
 }
 
 export async function parseKeHeCSV(file: File): Promise<ParsedKeHeData> {
+  // Load pricing data for weight calculations
+  const pricingDb = await loadPricingData();
+  
   const text = await file.text();
   const lines = text.split('\n');
   const rows: string[][] = lines.map(line => {
@@ -230,6 +234,10 @@ export async function parseKeHeCSV(file: File): Promise<ParsedKeHeData> {
     // Build size string
     const sizeStr = productSize && uom ? `${productSize} ${uom}` : (productSize || uom || '');
     
+    // Calculate weight using pricing data
+    const weightPerCase = getProductWeight(pricingDb, undefined, finalProductName);
+    const totalWeight = Math.round(qty / 12) * weightPerCase;
+    
     const record: AlpineSalesRecord = {
       customerName: retailerName, // Level 1: Retailer Name (Column B)
       productName: finalProductName, // Level 3: Product Data (Column N) - normalized
@@ -241,6 +249,7 @@ export async function parseKeHeCSV(file: File): Promise<ParsedKeHeData> {
       productCode: keheUPC || upc || undefined, // Use KeHE UPC if available, fallback to original UPC
       customerId: addressBookNumber || undefined,
       accountName: fullCompanyName, // Level 2: Customer Name (Column C or derived)
+      weightLbs: totalWeight, // Total weight in pounds
     };
 
     records.push(record);

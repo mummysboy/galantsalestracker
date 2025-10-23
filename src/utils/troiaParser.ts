@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import { AlpineSalesRecord } from './alpineParser';
 import { mapToCanonicalProductName } from './productMapping';
+import { loadPricingData, getProductWeight, getProductPricing } from './pricingLoader';
 
 export interface ParsedTroiaData {
   records: AlpineSalesRecord[];
@@ -84,6 +85,9 @@ function extractPeriodFromReport(rows: any[][]): string | null {
 }
 
 export async function parseTroiaXLSX(file: File): Promise<ParsedTroiaData> {
+  // Load pricing data for weight calculations
+  const pricingDb = await loadPricingData();
+  
   const arrayBuffer = await file.arrayBuffer();
   const wb = XLSX.read(arrayBuffer, { type: 'array' });
   const sheetName = wb.SheetNames[0];
@@ -227,16 +231,26 @@ export async function parseTroiaXLSX(file: File): Promise<ParsedTroiaData> {
         continue;
       }
       
+      // Calculate weight and revenue using pricing data
+      const mappedProductName = mapToCanonicalProductName(productCol.name);
+      const weightPerCase = getProductWeight(pricingDb, undefined, mappedProductName);
+      const totalWeight = Math.round(qty) * weightPerCase;
+      
+      // Calculate revenue using Master Pricing data
+      const pricing = getProductPricing(pricingDb, undefined, mappedProductName);
+      const revenue = Math.round(qty * pricing.caseCost * 100) / 100; // cases × case cost
+      
       const record: AlpineSalesRecord = {
         customerName,
-        productName: mapToCanonicalProductName(productCol.name),
+        productName: mappedProductName,
         cases: Math.round(qty),
         pieces: 0,
-        revenue: 0, // Troia data doesn't include revenue
+        revenue: revenue, // Calculate revenue from Master Pricing data
         period,
         productCode: productCol.code, // Troia's product code/number from row 1
         customerId: customerNum || undefined,
         excludeFromTotals: false, // Troia is a direct distributor, include in totals
+        weightLbs: totalWeight, // Total weight in pounds
       };
       
       records.push(record);

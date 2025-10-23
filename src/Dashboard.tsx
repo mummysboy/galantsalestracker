@@ -20,7 +20,7 @@ import InvoiceList from './components/InvoiceList';
 import CustomReportModal from './components/CustomReportModal';
 import { AlpineSalesRecord, analyzeCustomerProgress } from './utils/alpineParser';
 // Removed hardcoded June seed; start empty and let uploads populate
-import { Upload, BarChart3, ChevronDown, Trash2, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Upload, BarChart3, ChevronDown, Trash2, X, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { toTitleCase } from './lib/utils';
 import PetesReportUpload from './components/PetesReportUpload';
 import KeHeReportUpload from './components/KeHeReportUpload';
@@ -186,6 +186,58 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
     return { columns: labels, allColumns: allLabels, products: Array.from(byProduct.values()) };
   };
 
+  const handleDownloadCustomerCSV = (customerName: string) => {
+    const pivot = getCustomerPivot(customerName);
+    const monthsFiltered = pivot.columns.filter(m => !csvSearch || m.toLowerCase().includes(csvSearch.toLowerCase()));
+    const productsFiltered = pivot.products.filter(p => {
+      if (!csvSearch) return true;
+      const q = csvSearch.toLowerCase();
+      return (
+        (p.productName || '').toLowerCase().includes(q) ||
+        (p.productCode || '').toLowerCase().includes(q) ||
+        (p.itemNumber || '').toLowerCase().includes(q)
+      );
+    });
+
+    // Create CSV content
+    const headers = ['Product', 'Item #', 'Vendor Code', ...monthsFiltered];
+    const rows = productsFiltered.map(p => [
+      p.productName,
+      p.itemNumber || '',
+      p.productCode || '',
+      ...monthsFiltered.map(m => (p as any).values[m] || 0)
+    ]);
+
+    // Add totals row
+    const monthTotals = monthsFiltered.map(m =>
+      productsFiltered.reduce((sum, pr) => sum + ((pr as any).values[m] || 0), 0)
+    );
+    const totalRow = ['Total', '', '', ...monthTotals];
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(',')),
+      totalRow.map(cell => `"${cell}"`).join(',')
+    ].join('\n');
+
+    // Create download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    
+    // Create filename
+    const sanitizedCustomer = customerName.replace(/[^a-zA-Z0-9\s]/g, '');
+    const filename = `${sanitizedCustomer}_Invoices_${pivotMode === 'month' ? 'Monthly' : 'Quarterly'}.csv`;
+    link.setAttribute('download', filename);
+    
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-4">
       {/* Removed subheading per request */}
@@ -225,6 +277,14 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
                   <div className="flex items-center justify-between px-3 py-2 border-b bg-gray-50 rounded-t-lg">
                     <div className="text-sm font-medium">{toTitleCase(customer.customer)} • All Invoices</div>
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDownloadCustomerCSV(customer.fullCustomerName); }}
+                        className="h-7 px-2 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1"
+                        title="Download CSV"
+                      >
+                        <Download className="w-3 h-3" />
+                        CSV
+                      </button>
                       <input
                         type="text"
                         value={csvSearch}
@@ -635,7 +695,6 @@ const Dashboard: React.FC = () => {
   const handleNewAccountsClick = () => {
     setNewAccountsModalOpen(true);
   };
-
 
   // Determine current dataset based on distributor
   const currentData = useMemo(() => {
