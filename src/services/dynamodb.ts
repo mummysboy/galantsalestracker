@@ -10,10 +10,53 @@ const client = new DynamoDBClient({
   },
 });
 
+// Add error handling and logging
+client.middlewareStack.add(
+  (next, context) => async (args) => {
+    const input = args.input as any;
+    console.log('DynamoDB Request:', {
+      operation: context.operationName,
+      region: client.config.region(),
+      tableName: input?.TableName || 'N/A',
+    });
+    
+    try {
+      const result = await next(args);
+      console.log('DynamoDB Response:', {
+        operation: context.operationName,
+        success: true,
+      });
+      return result;
+    } catch (error) {
+      console.error('DynamoDB Error:', {
+        operation: context.operationName,
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      throw error;
+    }
+  },
+  {
+    step: 'initialize',
+    name: 'loggingMiddleware',
+  }
+);
+
 const docClient = DynamoDBDocumentClient.from(client);
 
 // Table name - using your app ID
 const TABLE_NAME = `SalesTracker-${process.env.REACT_APP_AWS_APP_ID || 'dbqznmct8mzz4'}`;
+
+// Debug function to check environment variables
+export const debugEnvironment = () => {
+  console.log('Environment Variables Debug:', {
+    region: process.env.REACT_APP_AWS_REGION,
+    accessKeyId: process.env.REACT_APP_AWS_ACCESS_KEY_ID ? '***' + process.env.REACT_APP_AWS_ACCESS_KEY_ID.slice(-4) : 'NOT_SET',
+    secretAccessKey: process.env.REACT_APP_AWS_SECRET_ACCESS_KEY ? '***' + process.env.REACT_APP_AWS_SECRET_ACCESS_KEY.slice(-4) : 'NOT_SET',
+    appId: process.env.REACT_APP_AWS_APP_ID,
+    tableName: TABLE_NAME,
+  });
+};
 
 // Data types for our sales records
 export interface SalesRecord {

@@ -635,22 +635,136 @@ const Dashboard: React.FC = () => {
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [showUploadSection, setShowUploadSection] = useState(false);
   const [uploadSectionKey, setUploadSectionKey] = useState(0);
-  const [currentAlpineData, setCurrentAlpineData] = useState<AlpineSalesRecord[]>([]);
-  const [currentPetesData, setCurrentPetesData] = useState<AlpineSalesRecord[]>([]);
-  const [currentKeHeData, setCurrentKeHeData] = useState<AlpineSalesRecord[]>([]);
-  const [currentVistarData, setCurrentVistarData] = useState<AlpineSalesRecord[]>([]);
-  const [currentTonysData, setCurrentTonysData] = useState<AlpineSalesRecord[]>([]);
-  const [currentTroiaData, setCurrentTroiaData] = useState<AlpineSalesRecord[]>([]);
-  const [currentMhdData, setCurrentMhdData] = useState<AlpineSalesRecord[]>([]);
-  const [currentCustomerProgressions, setCurrentCustomerProgressions] = useState<Map<string, any>>(new Map());
-  const [currentPetesCustomerProgressions, setCurrentPetesCustomerProgressions] = useState<Map<string, any>>(new Map());
+  
+  // Load data from localStorage on component mount
+  const [currentAlpineData, setCurrentAlpineData] = useState<AlpineSalesRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem('salesTracker_alpineData');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [currentPetesData, setCurrentPetesData] = useState<AlpineSalesRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem('salesTracker_petesData');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [currentKeHeData, setCurrentKeHeData] = useState<AlpineSalesRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem('salesTracker_keheData');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [currentVistarData, setCurrentVistarData] = useState<AlpineSalesRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem('salesTracker_vistarData');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [currentTonysData, setCurrentTonysData] = useState<AlpineSalesRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem('salesTracker_tonysData');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [currentTroiaData, setCurrentTroiaData] = useState<AlpineSalesRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem('salesTracker_troiaData');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [currentMhdData, setCurrentMhdData] = useState<AlpineSalesRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem('salesTracker_mhdData');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  
+  // Load customer progressions from localStorage
+  const [currentCustomerProgressions, setCurrentCustomerProgressions] = useState<Map<string, any>>(() => {
+    try {
+      const saved = localStorage.getItem('salesTracker_alpineProgressions');
+      return saved ? new Map(JSON.parse(saved)) : new Map();
+    } catch {
+      return new Map();
+    }
+  });
+  const [currentPetesCustomerProgressions, setCurrentPetesCustomerProgressions] = useState<Map<string, any>>(() => {
+    try {
+      const saved = localStorage.getItem('salesTracker_petesProgressions');
+      return saved ? new Map(JSON.parse(saved)) : new Map();
+    } catch {
+      return new Map();
+    }
+  });
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [currentKeHeCustomerProgressions, setCurrentKeHeCustomerProgressions] = useState<Map<string, any>>(new Map());
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [currentTonysCustomerProgressions, setCurrentTonysCustomerProgressions] = useState<Map<string, any>>(new Map());
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [currentTroiaCustomerProgressions, setCurrentTroiaCustomerProgressions] = useState<Map<string, any>>(new Map());
-  const [selectedMonth, setSelectedMonth] = useState<string>('');
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+    try {
+      return localStorage.getItem('salesTracker_selectedMonth') || '';
+    } catch {
+      return '';
+    }
+  });
+
+  // Save data to localStorage whenever it changes
+  React.useEffect(() => {
+    localStorage.setItem('salesTracker_alpineData', JSON.stringify(currentAlpineData));
+  }, [currentAlpineData]);
+
+  React.useEffect(() => {
+    localStorage.setItem('salesTracker_petesData', JSON.stringify(currentPetesData));
+  }, [currentPetesData]);
+
+  React.useEffect(() => {
+    localStorage.setItem('salesTracker_keheData', JSON.stringify(currentKeHeData));
+  }, [currentKeHeData]);
+
+  React.useEffect(() => {
+    localStorage.setItem('salesTracker_vistarData', JSON.stringify(currentVistarData));
+  }, [currentVistarData]);
+
+  React.useEffect(() => {
+    localStorage.setItem('salesTracker_tonysData', JSON.stringify(currentTonysData));
+  }, [currentTonysData]);
+
+  React.useEffect(() => {
+    localStorage.setItem('salesTracker_troiaData', JSON.stringify(currentTroiaData));
+  }, [currentTroiaData]);
+
+  React.useEffect(() => {
+    localStorage.setItem('salesTracker_mhdData', JSON.stringify(currentMhdData));
+  }, [currentMhdData]);
+
+  React.useEffect(() => {
+    localStorage.setItem('salesTracker_alpineProgressions', JSON.stringify(Array.from(currentCustomerProgressions.entries())));
+  }, [currentCustomerProgressions]);
+
+  React.useEffect(() => {
+    localStorage.setItem('salesTracker_petesProgressions', JSON.stringify(Array.from(currentPetesCustomerProgressions.entries())));
+  }, [currentPetesCustomerProgressions]);
+
+  React.useEffect(() => {
+    localStorage.setItem('salesTracker_selectedMonth', selectedMonth);
+  }, [selectedMonth]);
   const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
   // Removed CSV invoice upload; no longer tracking last uploaded invoice month
   // const [lastUploadedInvoiceMonth, setLastUploadedInvoiceMonth] = useState<string | null>(null);
@@ -662,12 +776,52 @@ const Dashboard: React.FC = () => {
   const [openNewAccountsTooltipMonth, setOpenNewAccountsTooltipMonth] = useState<string | null>(null);
   const [deltaModalOpen, setDeltaModalOpen] = useState(false);
   const [newAccountsModalOpen, setNewAccountsModalOpen] = useState(false);
-  const [selectedDistributor, setSelectedDistributor] = useState<'ALPINE' | 'PETES' | 'KEHE' | 'VISTAR' | 'TONYS' | 'TROIA' | 'MHD' | 'ALL'>('ALPINE');
+  const [selectedDistributor, setSelectedDistributor] = useState<'ALPINE' | 'PETES' | 'KEHE' | 'VISTAR' | 'TONYS' | 'TROIA' | 'MHD' | 'ALL'>(() => {
+    try {
+      const saved = localStorage.getItem('salesTracker_selectedDistributor');
+      return (saved as any) || 'ALPINE';
+    } catch {
+      return 'ALPINE';
+    }
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem('salesTracker_selectedDistributor', selectedDistributor);
+  }, [selectedDistributor]);
+
   const [isDistributorDropdownOpen, setIsDistributorDropdownOpen] = useState(false);
   const [showCustomReport, setShowCustomReport] = useState(false);
   const [displayMode, setDisplayMode] = useState<'revenue' | 'cases'>('cases');
   const [timeAggregation, setTimeAggregation] = useState<'3mo' | '6mo' | '1yr' | '5yr'>('3mo');
   
+  // Function to clear all localStorage data
+  const clearAllData = () => {
+    localStorage.removeItem('salesTracker_alpineData');
+    localStorage.removeItem('salesTracker_petesData');
+    localStorage.removeItem('salesTracker_keheData');
+    localStorage.removeItem('salesTracker_vistarData');
+    localStorage.removeItem('salesTracker_tonysData');
+    localStorage.removeItem('salesTracker_troiaData');
+    localStorage.removeItem('salesTracker_mhdData');
+    localStorage.removeItem('salesTracker_alpineProgressions');
+    localStorage.removeItem('salesTracker_petesProgressions');
+    localStorage.removeItem('salesTracker_selectedMonth');
+    localStorage.removeItem('salesTracker_selectedDistributor');
+    
+    // Reset all state
+    setCurrentAlpineData([]);
+    setCurrentPetesData([]);
+    setCurrentKeHeData([]);
+    setCurrentVistarData([]);
+    setCurrentTonysData([]);
+    setCurrentTroiaData([]);
+    setCurrentMhdData([]);
+    setCurrentCustomerProgressions(new Map());
+    setCurrentPetesCustomerProgressions(new Map());
+    setSelectedMonth('');
+    setSelectedDistributor('ALPINE');
+  };
+
   // Debug logging
   console.log('Dashboard component rendering, selectedMonth:', selectedMonth, 'selectedDistributor:', selectedDistributor);
   
@@ -2298,7 +2452,7 @@ const Dashboard: React.FC = () => {
                         const fill = isHighlighted ? '#1D4ED8' : '#3B82F6';
                         const stroke = isHighlighted ? '#1D4ED8' : '#3B82F6';
                         return (
-                          <circle cx={cx} cy={cy} r={radius} fill={fill} stroke={stroke} strokeWidth={2} />
+                          <circle key={`dot-${payload?.period || 'unknown'}`} cx={cx} cy={cy} r={radius} fill={fill} stroke={stroke} strokeWidth={2} />
                         );
                       }}
                       activeDot={{ r: 7 }}

@@ -4,6 +4,7 @@ import { AlpineSalesRecord } from './utils/alpineParser';
 import AlpineReportUpload from './components/AlpineReportUpload';
 import PetesReportUpload from './components/PetesReportUpload';
 import CustomerDetailModal from './components/CustomerDetailModal';
+import DynamoDBConnectionTest from './components/DynamoDBConnectionTest';
 
 // Import all the existing components and utilities
 // ... (keeping all existing imports and types)
@@ -329,6 +330,11 @@ const DashboardDynamoDB: React.FC = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Sales Tracker (DynamoDB)</h1>
           <p className="text-gray-600 mt-2">Total Records: {salesRecords.length}</p>
+        </div>
+
+        {/* Connection Test */}
+        <div className="mb-8">
+          <DynamoDBConnectionTest />
         </div>
 
         {/* Upload Section */}
