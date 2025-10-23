@@ -1,8 +1,8 @@
 import React from 'react';
-import DashboardDynamoDB from './DashboardDynamoDB';
+import Dashboard from './Dashboard';
 
 function App() {
-  return <DashboardDynamoDB />;
+  return <Dashboard />;
 }
 
 export default App;
