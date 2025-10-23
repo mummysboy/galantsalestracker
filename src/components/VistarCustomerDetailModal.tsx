@@ -3,7 +3,6 @@ import { X, Package, ChevronDown, ChevronRight, ChevronLeft } from 'lucide-react
 import { Button } from './ui/button';
 import { AlpineSalesRecord } from '../utils/alpineParser';
 import { toTitleCase } from '../lib/utils';
-import { getItemNumberForProduct } from '../utils/productMapping';
 
 // Function to format company names for better readability
 const formatCompanyName = (companyName: string): string => {
