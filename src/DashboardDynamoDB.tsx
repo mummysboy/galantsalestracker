@@ -1,19 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useDynamoDB } from './hooks/useDynamoDB';
-import { AlpineSalesRecord, analyzeCustomerProgress } from './utils/alpineParser';
+import { AlpineSalesRecord } from './utils/alpineParser';
 import AlpineReportUpload from './components/AlpineReportUpload';
 import PetesReportUpload from './components/PetesReportUpload';
-import KeHeReportUpload from './components/KeHeReportUpload';
-import VistarReportUpload from './components/VistarReportUpload';
-import TonysReportUpload from './components/TonysReportUpload';
-import TroiaReportUpload from './components/TroiaReportUpload';
-import MhdReportUpload from './components/MhdReportUpload';
 import CustomerDetailModal from './components/CustomerDetailModal';
-import PivotTable from './components/CustomerCsvPivotModal';
-import MonthlySummary from './components/PeriodOverview';
-import DeltaModal from './components/PeriodComparison';
-import NewAccountsModal from './components/CustomerAttritionAlert';
-import CustomReportModal from './components/CustomReportModal';
 
 // Import all the existing components and utilities
 // ... (keeping all existing imports and types)
@@ -25,23 +15,15 @@ const DashboardDynamoDB: React.FC = () => {
     loading,
     error,
     saveSalesRecords,
-    loadSalesRecordsByDistributor,
     loadAllSalesRecords,
-    customerProgressions,
     saveCustomerProgression,
     loadCustomerProgressionsByDistributor,
     appState,
     saveAppState,
-    loadAppState,
     loadAllAppStates,
     clearDistributorData,
   } = useDynamoDB();
 
-  // Customer modal handlers
-  const handleCustomerClick = (customerName: string) => {
-    setSelectedCustomerForModal(customerName);
-    setIsCustomerModalOpen(true);
-  };
 
   const handleCloseCustomerModal = () => {
     setIsCustomerModalOpen(false);
@@ -55,45 +37,9 @@ const DashboardDynamoDB: React.FC = () => {
   const [uploadSectionKey, setUploadSectionKey] = useState(0);
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
-  const [pivotCustomerName, setPivotCustomerName] = useState<string | null>(null);
-  const [isPivotOpen, setIsPivotOpen] = useState(false);
-  const [pendingDeletePeriod, setPendingDeletePeriod] = useState<string | null>(null);
-  const [showMonthlySummary, setShowMonthlySummary] = useState(false);
-  const [openNewAccountsTooltipMonth, setOpenNewAccountsTooltipMonth] = useState<string | null>(null);
-  const [deltaModalOpen, setDeltaModalOpen] = useState(false);
-  const [newAccountsModalOpen, setNewAccountsModalOpen] = useState(false);
   const [selectedDistributor, setSelectedDistributor] = useState<'ALPINE' | 'PETES' | 'KEHE' | 'VISTAR' | 'TONYS' | 'TROIA' | 'MHD' | 'ALL'>('ALPINE');
   const [isDistributorDropdownOpen, setIsDistributorDropdownOpen] = useState(false);
-  const [showCustomReport, setShowCustomReport] = useState(false);
   const [displayMode, setDisplayMode] = useState<'revenue' | 'cases'>('cases');
-  const [timeAggregation, setTimeAggregation] = useState<'3mo' | '6mo' | '1yr' | '5yr'>('3mo');
-  
-  // Chart navigation state
-  const [chartVisibleRange, setChartVisibleRange] = useState<{start: number, end: number} | null>(null);
-  const [customerPivotRange, setCustomerPivotRange] = useState<{start: number, end: number} | null>(null);
-  const [monthlySummaryRange, setMonthlySummaryRange] = useState<{start: number, end: number} | null>(null);
-  
-  const tooltipTimerRef = React.useRef<number | null>(null);
-  const cancelTooltipClose = () => {
-    if (tooltipTimerRef.current) {
-      window.clearTimeout(tooltipTimerRef.current);
-      tooltipTimerRef.current = null;
-    }
-  };
-  const scheduleTooltipClose = (which: 'new') => {
-    cancelTooltipClose();
-    tooltipTimerRef.current = window.setTimeout(() => {
-      if (which === 'new') setOpenNewAccountsTooltipMonth(null);
-    }, 200);
-  };
-
-  const handleDeltaViewClick = () => {
-    setDeltaModalOpen(true);
-  };
-
-  const handleNewAccountsClick = () => {
-    setNewAccountsModalOpen(true);
-  };
 
   // Load data on component mount
   useEffect(() => {
@@ -185,13 +131,6 @@ const DashboardDynamoDB: React.FC = () => {
     return periods;
   }, [dataForTotals]);
 
-  // Add "All" option to periods, with most recent first
-  const allPeriodOptions = useMemo(() => {
-    // IMPORTANT: reverse() mutates; use a copy to keep availablePeriods sorted ascending for charts
-    const options = ['ALL_MONTHS', ...availablePeriods.slice().reverse()];
-    console.log('allPeriodOptions generated:', options);
-    return options;
-  }, [availablePeriods]);
 
   // Filter data based on selected month
   const filteredData = useMemo(() => {
@@ -247,37 +186,6 @@ const DashboardDynamoDB: React.FC = () => {
     };
   }, [isMonthDropdownOpen, isDistributorDropdownOpen]);
 
-  // Month name mapping
-  const getMonthName = (period: string) => {
-    const monthMap: Record<string, string> = {
-      '2025-06': 'June 2025',
-      '2025-07': 'July 2025',
-      '2025-08': 'August 2025',
-      '2025-09': 'September 2025',
-      '2025-10': 'October 2025',
-      '2025-11': 'November 2025',
-      '2025-12': 'December 2025',
-      '2026-01': 'January 2026',
-      '2026-02': 'February 2026',
-      '2026-03': 'March 2026',
-      '2026-04': 'April 2026',
-      '2026-05': 'May 2026',
-      '2026-06': 'June 2026',
-      '2026-07': 'July 2026',
-      '2026-08': 'August 2026'
-    };
-    return monthMap[period] || period;
-  };
-
-  // Short month label, e.g., Jan-25
-  const getShortMonthLabel = (period: string) => {
-    if (period === 'ALL_MONTHS') return 'All Months';
-    const [yearStr, monthStr] = period.split('-');
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const yy = yearStr.slice(-2);
-    const mmIdx = Math.max(0, Math.min(11, parseInt(monthStr || '1') - 1));
-    return `${monthNames[mmIdx]}-${yy}`;
-  };
 
   // Upload handlers - now save to DynamoDB
   const handleAlpineDataParsed = async (data: { records: AlpineSalesRecord[]; customerProgressions: Map<string, any> }) => {
@@ -354,116 +262,6 @@ const DashboardDynamoDB: React.FC = () => {
     }
   };
 
-  // Similar handlers for other distributors...
-  const handleKeHeDataParsed = async (data: { records: AlpineSalesRecord[]; customerProgressions: Map<string, any> }) => {
-    try {
-      const salesRecords = data.records.map(record => ({
-        distributor: 'KEHE',
-        period: record.period,
-        customerName: record.customerName,
-        productName: record.productName,
-        productCode: record.productCode,
-        cases: record.cases,
-        revenue: record.revenue,
-        invoiceKey: `KEHE-${record.period}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        source: 'KeHe Upload',
-        timestamp: new Date().toISOString(),
-      }));
-
-      await saveSalesRecords(salesRecords);
-      await loadAllSalesRecords();
-    } catch (error) {
-      console.error('Failed to save KeHe data to DynamoDB:', error);
-    }
-  };
-
-  const handleVistarDataParsed = async (data: { records: AlpineSalesRecord[]; customerProgressions: Map<string, any> }) => {
-    try {
-      const salesRecords = data.records.map(record => ({
-        distributor: 'VISTAR',
-        period: record.period,
-        customerName: record.customerName,
-        productName: record.productName,
-        productCode: record.productCode,
-        cases: record.cases,
-        revenue: record.revenue,
-        invoiceKey: `VISTAR-${record.period}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        source: 'Vistar Upload',
-        timestamp: new Date().toISOString(),
-      }));
-
-      await saveSalesRecords(salesRecords);
-      await loadAllSalesRecords();
-    } catch (error) {
-      console.error('Failed to save Vistar data to DynamoDB:', error);
-    }
-  };
-
-  const handleTonysDataParsed = async (data: { records: AlpineSalesRecord[]; customerProgressions: Map<string, any> }) => {
-    try {
-      const salesRecords = data.records.map(record => ({
-        distributor: 'TONYS',
-        period: record.period,
-        customerName: record.customerName,
-        productName: record.productName,
-        productCode: record.productCode,
-        cases: record.cases,
-        revenue: record.revenue,
-        invoiceKey: `TONYS-${record.period}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        source: 'Tony\'s Upload',
-        timestamp: new Date().toISOString(),
-      }));
-
-      await saveSalesRecords(salesRecords);
-      await loadAllSalesRecords();
-    } catch (error) {
-      console.error('Failed to save Tony\'s data to DynamoDB:', error);
-    }
-  };
-
-  const handleTroiaDataParsed = async (data: { records: AlpineSalesRecord[]; customerProgressions: Map<string, any> }) => {
-    try {
-      const salesRecords = data.records.map(record => ({
-        distributor: 'TROIA',
-        period: record.period,
-        customerName: record.customerName,
-        productName: record.productName,
-        productCode: record.productCode,
-        cases: record.cases,
-        revenue: record.revenue,
-        invoiceKey: `TROIA-${record.period}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        source: 'Troia Upload',
-        timestamp: new Date().toISOString(),
-      }));
-
-      await saveSalesRecords(salesRecords);
-      await loadAllSalesRecords();
-    } catch (error) {
-      console.error('Failed to save Troia data to DynamoDB:', error);
-    }
-  };
-
-  const handleMhdDataParsed = async (data: { records: AlpineSalesRecord[]; customerProgressions: Map<string, any> }) => {
-    try {
-      const salesRecords = data.records.map(record => ({
-        distributor: 'MHD',
-        period: record.period,
-        customerName: record.customerName,
-        productName: record.productName,
-        productCode: record.productCode,
-        cases: record.cases,
-        revenue: record.revenue,
-        invoiceKey: `MHD-${record.period}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        source: 'MHD Upload',
-        timestamp: new Date().toISOString(),
-      }));
-
-      await saveSalesRecords(salesRecords);
-      await loadAllSalesRecords();
-    } catch (error) {
-      console.error('Failed to save MHD data to DynamoDB:', error);
-    }
-  };
 
   // Clear data handlers
   const handleClearAlpineData = async () => {

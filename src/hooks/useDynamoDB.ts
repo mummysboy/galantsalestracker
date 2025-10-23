@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { dynamoDBService, SalesRecord, CustomerProgression, AppState } from '../services/dynamodb';
+import { useState, useCallback } from 'react';
+import { dynamoDBService, SalesRecord, CustomerProgression } from '../services/dynamodb';
 
 export interface UseDynamoDBReturn {
   // Sales Records
