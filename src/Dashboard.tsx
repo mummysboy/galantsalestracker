@@ -16,7 +16,6 @@ import KeHeCustomerDetailModal from './components/KeHeCustomerDetailModal';
 import CustomerCsvPivotModal from './components/CustomerCsvPivotModal';
 import PeriodComparison from './components/PeriodComparison';
 import AlpineReportUpload from './components/AlpineReportUpload';
-import InvoiceList from './components/InvoiceList';
 import CustomReportModal from './components/CustomReportModal';
 import { AlpineSalesRecord, analyzeCustomerProgress } from './utils/alpineParser';
 // Removed hardcoded June seed; start empty and let uploads populate
@@ -2520,13 +2519,6 @@ const Dashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Invoice List */}
-        <Card className="mb-8">
-          <InvoiceList 
-            records={filteredData}
-            title={`Sales Records${selectedMonth !== 'all' ? ` for ${getMonthName(selectedMonth)}` : ''}`}
-          />
-        </Card>
 
         {/* Customer CSV Pivot Modal (hover) */}
         {pivotCustomerName && (

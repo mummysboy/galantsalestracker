@@ -63,7 +63,7 @@ export async function parseTonysXLSX(file: File): Promise<ParsedTonysData> {
   const ws = wb.Sheets[sheetName];
 
   // Parse all rows
-  const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true }) as any[][];
+  const rows: [[string], ...any[][]] = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true }) as [[string], ...any[][]];
   if (!rows || rows.length === 0) {
     return {
       records: [],
@@ -82,21 +82,39 @@ export async function parseTonysXLSX(file: File): Promise<ParsedTonysData> {
   // Header is in row 1 (index 0)
   const headers = (rows[0] || []).map(c => String(c || '').trim());
 
-  // Find column indices
-  const warehouseIdx = 0; // Column A - Warehouse
-  const shipToCustomerIdx = 1; // Column B - Ship to Customer (Customer ID)
-  const storeNameIdx = 2; // Column C - sh Long Description (Store Name)
+  // Detect file format based on headers to handle different column layouts
+  const is825Format = headers[0] === 'sh Long Description' && headers[1] === 'Warehouse';
+  
+  let warehouseIdx: number, shipToCustomerIdx: number, storeNameIdx: number;
+  
+  if (is825Format) {
+    // Tonys 8.25 format: Customer in A, Warehouse in B, Store ID in C
+    warehouseIdx = 1; // Column B - Warehouse (e.g., "TONY'S FINE FOODS - REED")
+    shipToCustomerIdx = 2; // Column C - Ship to Customer (Customer ID/Store Number)
+    storeNameIdx = 0; // Column A - sh Long Description (e.g., "RALEY'S #108")
+  } else {
+    // Standard format: Warehouse in A, Store ID in B, Customer in C
+    warehouseIdx = 0; // Column A - Warehouse (e.g., "TONY'S FINE FOODS - REED")
+    shipToCustomerIdx = 1; // Column B - Ship to Customer (Customer ID/Store Number)
+    storeNameIdx = 2; // Column C - sh Long Description (e.g., "RALEY'S #108")
+  }
+
   const itemNumberIdx = 3; // Column D - Item Number
   const brandCodeIdx = 4; // Column E - Brand Code
   const longDescriptionIdx = 5; // Column F - Long Description (Product name)
   const itemPackIdx = 7; // Column H - Item Pack
   const itemSizeIdx = 8; // Column I - Item Size
   const vendorItemIdx = 9; // Column J - Vendor Item
-  const casesIdx = 10; // Column K - Cases (Quantity shipped)
+  const currentPeriodCasesIdx = 10; // Column K - Quantity shipped (current period)
+  const previousPeriodCasesIdx = 11; // Column L - Quantity shipped (previous period)
+  const currentPeriodCostIdx = is825Format ? 12 : 14; // Column M for 8.25 format, Column O for standard format
+  const previousPeriodCostIdx = is825Format ? 13 : 15; // Column N for 8.25 format, Column P for standard format
 
-  // Parse period from column K header
-  const casesHeader = headers[casesIdx] || '';
-  const period = parsePeriodFromHeader(casesHeader);
+  // Parse periods from headers
+  const currentPeriodHeader = headers[currentPeriodCasesIdx] || '';
+  const previousPeriodHeader = headers[previousPeriodCasesIdx] || '';
+  const currentPeriod = parsePeriodFromHeader(currentPeriodHeader);
+  const previousPeriod = parsePeriodFromHeader(previousPeriodHeader);
 
   const records: AlpineSalesRecord[] = [];
 
@@ -109,10 +127,10 @@ export async function parseTonysXLSX(file: File): Promise<ParsedTonysData> {
       continue;
     }
 
-    // Extract data using the 3-level hierarchy:
-    // Level 1: Column A (index 0) - Warehouse
-    // Level 2: Column B (index 1) - Ship to Customer (Customer ID)
-    // Level 3: Column C (index 2) - sh Long Description (Store Name)
+    // Extract data using the proper hierarchy:
+    // Level 1: Column A - Warehouse/Distributor (e.g., "TONY'S FINE FOODS - REED")
+    // Level 2: Column C - Customer with Branch (e.g., "RALEY'S #108")
+    // Level 3: Column B - Store/Customer ID (e.g., "07010850")
     
     const warehouse = String(row[warehouseIdx] || '').trim();
     const shipToCustomer = String(row[shipToCustomerIdx] || '').trim();
@@ -139,28 +157,47 @@ export async function parseTonysXLSX(file: File): Promise<ParsedTonysData> {
     // Build size string
     const sizeStr = itemPack && itemSize ? `${itemPack}pk x ${itemSize}` : (itemPack || itemSize || '');
 
-    // Get cases from column K
-    const qty = toNumber(row[casesIdx]);
-    
-    // Skip if no quantity
-    if (qty === 0) {
-      continue;
+    // Extract quantities and revenue for both periods
+    const currentQty = toNumber(row[currentPeriodCasesIdx]);
+    const previousQty = toNumber(row[previousPeriodCasesIdx]);
+    const currentRevenue = toNumber(row[currentPeriodCostIdx]);
+    const previousRevenue = toNumber(row[previousPeriodCostIdx]);
+
+    // Create records for current period if there's data
+    if (currentQty > 0 || currentRevenue > 0) {
+      const record: AlpineSalesRecord = {
+        customerName: warehouse, // Level 1: Distributor (e.g., "TONY'S FINE FOODS - REED")
+        productName: mapToCanonicalProductName(productName),
+        size: sizeStr || undefined,
+        cases: Math.round(currentQty),
+        pieces: 0,
+        revenue: Math.round(currentRevenue * 100) / 100,
+        period: currentPeriod,
+        productCode: itemNumber || vendorItem || undefined,
+        customerId: storeName, // Level 2: Customer with Branch (e.g., "RALEY'S #108")
+        accountName: shipToCustomer, // Level 3: Store/Customer ID (e.g., "07010850")
+      };
+
+      records.push(record);
     }
 
-    const record: AlpineSalesRecord = {
-      customerName: warehouse, // Level 1: Warehouse as primary customer
-      productName: mapToCanonicalProductName(productName), // Product: Brand + Description - normalized
-      size: sizeStr || undefined,
-      cases: Math.round(qty),
-      pieces: 0,
-      revenue: 0, // Tony's data doesn't include revenue, set to 0
-      period,
-      productCode: itemNumber || vendorItem || undefined,
-      customerId: shipToCustomer || undefined, // Level 2: Location ID as customerId
-      accountName: storeName, // Level 3: Store Name for final drill-down
-    };
+    // Create records for previous period if there's data
+    if (previousQty > 0 || previousRevenue > 0) {
+      const record: AlpineSalesRecord = {
+        customerName: warehouse, // Level 1: Distributor (e.g., "TONY'S FINE FOODS - REED")
+        productName: mapToCanonicalProductName(productName),
+        size: sizeStr || undefined,
+        cases: Math.round(previousQty),
+        pieces: 0,
+        revenue: Math.round(previousRevenue * 100) / 100,
+        period: previousPeriod,
+        productCode: itemNumber || vendorItem || undefined,
+        customerId: storeName, // Level 2: Customer with Branch (e.g., "RALEY'S #108")
+        accountName: shipToCustomer, // Level 3: Store/Customer ID (e.g., "07010850")
+      };
 
-    records.push(record);
+      records.push(record);
+    }
   }
 
   // Calculate metadata

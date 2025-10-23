@@ -1,5 +1,21 @@
 import { mapToCanonicalProductName, getItemNumberFromAlpineCode } from './productMapping';
 
+/**
+ * Normalize customer names to handle variations of the same company
+ * @param customerName Raw customer name from Alpine report
+ * @returns Normalized customer name
+ */
+function normalizeCustomerName(customerName: string): string {
+  const normalized = customerName.trim();
+  
+  // Handle Coffee Warehouse variations
+  if (normalized === 'COFFEE WAREHOUSE INC., THE') {
+    return 'COFFEE WAREHOUSE INC.';
+  }
+  
+  return normalized;
+}
+
 export interface AlpineSalesRecord {
   customerName: string;
   productName: string;
@@ -119,7 +135,7 @@ export function parseAlpineTXT(txtContent: string, reportDate: string): ParsedAl
     const customerMatch = line.match(/^\s*(\d{4,6}-\d{3})\s+(.+)/);
     if (customerMatch) {
       const [, customerId, customerDescription] = customerMatch;
-      currentCustomer = customerDescription.trim();
+      currentCustomer = normalizeCustomerName(customerDescription);
       currentCustomerId = customerId.trim();
       currentCustomers.push(currentCustomer);
       continue;
@@ -299,7 +315,8 @@ export function analyzeCustomerProgress(
   records: AlpineSalesRecord[], 
   customerName: string
 ): CustomerProgressAnalysis {
-  const customerRecords = records.filter(r => r.customerName === customerName);
+  const normalizedCustomerName = normalizeCustomerName(customerName);
+  const customerRecords = records.filter(r => normalizeCustomerName(r.customerName) === normalizedCustomerName);
   
   // Group by period
   const periodData: Record<string, AlpineSalesRecord[]> = {};
@@ -373,7 +390,7 @@ export function analyzeCustomerProgress(
   }
 
   return {
-    customerName,
+    customerName: normalizedCustomerName,
     periods,
     trends: {
       revenueTrend,
