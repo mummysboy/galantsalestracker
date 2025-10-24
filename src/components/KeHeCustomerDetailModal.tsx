@@ -407,7 +407,10 @@ const KeHeCustomerDetailModal: React.FC<KeHeCustomerDetailModalProps> = ({
                               </div>
                             </td>
                             {periods.map((period) => (
-                              <td key={period} className="px-4 py-3 text-sm text-right text-gray-900">
+                              <td 
+                                key={period} 
+                                className="px-4 py-3 text-sm text-right text-gray-900"
+                              >
                                 {customer.periodData.get(period) || 0}
                               </td>
                             ))}
