@@ -381,6 +381,107 @@ class DynamoDBService {
 
     await Promise.all(deletePromises);
   }
+
+  // Delete records by period and distributor
+  async deleteRecordsByPeriodAndDistributor(distributor: string, period: string): Promise<void> {
+    try {
+      // Get all sales records for this distributor and period
+      const allRecords = await this.getSalesRecordsByDistributor(distributor);
+      const recordsToDelete = allRecords.filter(r => r.period === period);
+
+      console.log(`[DynamoDB] Deleting ${recordsToDelete.length} records for ${distributor} / ${period}`);
+
+      // Delete sales records
+      const deletePromises = recordsToDelete.map(record =>
+        docClient.send(new DeleteCommand({
+          TableName: TABLE_NAME,
+          Key: {
+            PK: `SALES#${distributor}`,
+            SK: `${record.period}#${record.id}`,
+          },
+        }))
+      );
+
+      await Promise.all(deletePromises);
+      console.log(`[DynamoDB] Successfully deleted ${recordsToDelete.length} records for ${distributor} / ${period}`);
+    } catch (error) {
+      console.error(`[DynamoDB] Error deleting records for ${distributor} / ${period}:`, error);
+      throw error;
+    }
+  }
+
+  // Get records by invoice key to check for duplicates
+  async getRecordsByInvoiceKeys(invoiceKeys: string[]): Promise<SalesRecord[]> {
+    if (invoiceKeys.length === 0) return [];
+
+    try {
+      const command = new ScanCommand({
+        TableName: TABLE_NAME,
+        FilterExpression: 'invoiceKey IN (' + invoiceKeys.map((_, i) => `:key${i}`).join(',') + ')',
+        ExpressionAttributeValues: invoiceKeys.reduce((acc, key, i) => {
+          acc[`:key${i}`] = key;
+          return acc;
+        }, {} as Record<string, string>),
+      });
+
+      const result = await docClient.send(command);
+      return (result.Items || []).map(item => ({
+        id: item.id,
+        distributor: item.distributor,
+        period: item.period,
+        customerName: item.customerName,
+        productName: item.productName,
+        productCode: item.productCode,
+        cases: item.cases,
+        revenue: item.revenue,
+        invoiceKey: item.invoiceKey,
+        source: item.source,
+        timestamp: item.timestamp,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+      })) as SalesRecord[];
+    } catch (error) {
+      console.error('[DynamoDB] Error fetching records by invoice keys:', error);
+      return [];
+    }
+  }
+
+  // Save sales records with deduplication - replace old records for same invoice keys
+  async saveSalesRecordsWithDedup(records: Omit<SalesRecord, 'id' | 'createdAt' | 'updatedAt'>[]): Promise<SalesRecord[]> {
+    const invoiceKeys = records.map(r => r.invoiceKey).filter(Boolean);
+    
+    // Check for existing records with same invoice keys
+    if (invoiceKeys.length > 0) {
+      console.log(`[DynamoDB Dedup] Checking for ${invoiceKeys.length} existing invoice keys...`);
+      const existingRecords = await this.getRecordsByInvoiceKeys(invoiceKeys);
+
+      if (existingRecords.length > 0) {
+        console.log(`[DynamoDB Dedup] Found ${existingRecords.length} existing records with same invoice keys. Deleting old records...`);
+        
+        // Delete existing records
+        const deletePromises = existingRecords.map(record =>
+          docClient.send(new DeleteCommand({
+            TableName: TABLE_NAME,
+            Key: {
+              PK: `SALES#${record.distributor}`,
+              SK: `${record.period}#${record.id}`,
+            },
+          }))
+        );
+
+        try {
+          await Promise.all(deletePromises);
+          console.log(`[DynamoDB Dedup] Successfully deleted ${existingRecords.length} old records`);
+        } catch (error) {
+          console.error(`[DynamoDB Dedup] Error deleting old records:`, error);
+          // Continue anyway - try to save new records
+        }
+      }
+    }
+
+    // Now save the new records
+    return this.saveSalesRecords(records);
+  }
 }
 
 export const dynamoDBService = new DynamoDBService();

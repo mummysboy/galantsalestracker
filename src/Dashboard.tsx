@@ -797,6 +797,11 @@ const Dashboard: React.FC = () => {
               cases: r.cases,
               pieces: 0, // Default value since not stored in DynamoDB
               revenue: r.revenue,
+              accountName: (r as any).accountName,
+              customerId: (r as any).customerId,
+              itemNumber: (r as any).itemNumber,
+              size: (r as any).size,
+              weightLbs: (r as any).weightLbs,
             }));
 
             if (distributor === 'ALPINE') {
@@ -1129,6 +1134,11 @@ const Dashboard: React.FC = () => {
           invoiceKey: `ALPINE-${record.period}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           source: 'Alpine Upload',
           timestamp: new Date().toISOString(),
+          accountName: record.accountName,
+          customerId: record.customerId,
+          itemNumber: record.itemNumber,
+          size: record.size,
+          weightLbs: record.weightLbs,
         }));
 
         // Save to DynamoDB
@@ -1185,6 +1195,11 @@ const Dashboard: React.FC = () => {
           invoiceKey: `PETES-${record.period}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           source: 'Pete\'s Upload',
           timestamp: new Date().toISOString(),
+          accountName: record.accountName,
+          customerId: record.customerId,
+          itemNumber: record.itemNumber,
+          size: record.size,
+          weightLbs: record.weightLbs,
         }));
 
         await saveSalesRecords(salesRecords);
@@ -1248,6 +1263,11 @@ const Dashboard: React.FC = () => {
           invoiceKey: `KEHE-${record.period}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           source: 'KeHe Upload',
           timestamp: new Date().toISOString(),
+          accountName: record.accountName,
+          customerId: record.customerId,
+          itemNumber: record.itemNumber,
+          size: record.size,
+          weightLbs: record.weightLbs,
         }));
 
         await saveSalesRecords(salesRecords);
@@ -1305,6 +1325,11 @@ const Dashboard: React.FC = () => {
           invoiceKey: `VISTAR-${record.period}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           source: 'Vistar Upload',
           timestamp: new Date().toISOString(),
+          accountName: record.accountName,
+          customerId: record.customerId,
+          itemNumber: record.itemNumber,
+          size: record.size,
+          weightLbs: record.weightLbs,
         }));
 
         await saveSalesRecords(salesRecords);
@@ -1361,6 +1386,11 @@ const Dashboard: React.FC = () => {
           invoiceKey: `TONYS-${record.period}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           source: 'Tony\'s Upload',
           timestamp: new Date().toISOString(),
+          accountName: record.accountName,
+          customerId: record.customerId,
+          itemNumber: record.itemNumber,
+          size: record.size,
+          weightLbs: record.weightLbs,
         }));
 
         await saveSalesRecords(salesRecords);
@@ -1418,6 +1448,11 @@ const Dashboard: React.FC = () => {
           invoiceKey: `TROIA-${record.period}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           source: 'Troia Upload',
           timestamp: new Date().toISOString(),
+          accountName: record.accountName,
+          customerId: record.customerId,
+          itemNumber: record.itemNumber,
+          size: record.size,
+          weightLbs: record.weightLbs,
         }));
 
         await saveSalesRecords(salesRecords);
@@ -1467,6 +1502,11 @@ const Dashboard: React.FC = () => {
           invoiceKey: `MHD-${record.period}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           source: 'Mike Hudson Upload',
           timestamp: new Date().toISOString(),
+          accountName: record.accountName,
+          customerId: record.customerId,
+          itemNumber: record.itemNumber,
+          size: record.size,
+          weightLbs: record.weightLbs,
         }));
 
         await saveSalesRecords(salesRecords);
