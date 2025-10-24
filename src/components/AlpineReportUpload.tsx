@@ -72,7 +72,7 @@ const AlpineReportUpload: React.FC<AlpineReportUploadProps> = ({
       
       let data: ParsedAlpineData;
       try {
-        data = parseMultipleAlpineReports(parsedReports);
+        data = await parseMultipleAlpineReports(parsedReports);
         console.log('Parsing completed successfully');
       } catch (parseError) {
         console.error('Parsing failed with error:', parseError);
@@ -106,10 +106,11 @@ const AlpineReportUpload: React.FC<AlpineReportUploadProps> = ({
         period: r.period, 
         revenue: r.revenue 
       })));
-      onDataParsed({
+      await onDataParsed({
         records: data.records,
         customerProgressions
       });
+      console.log('[Alpine] onDataParsed completed');
 
       // Push parsed Alpine records to Google Sheets via Apps Script
       try {
@@ -317,6 +318,26 @@ const AlpineReportUpload: React.FC<AlpineReportUploadProps> = ({
               {errors.map((error, index) => (
                 <div key={index}>{error}</div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Processing Overlay */}
+        {isProcessing && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-8 max-w-md mx-4 text-center">
+              <div className="mb-4 flex justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600"></div>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Processing Upload...</h3>
+              <p className="text-gray-600 mb-4">
+                Uploading to database. Please wait, do not refresh the page.
+              </p>
+              <div className="text-sm text-gray-500 space-y-1">
+                <p>• Parsing files...</p>
+                <p>• Saving to database...</p>
+                <p>• Analyzing customer data...</p>
+              </div>
             </div>
           </div>
         )}

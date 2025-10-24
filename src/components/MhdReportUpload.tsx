@@ -49,7 +49,7 @@ const MhdReportUpload: React.FC<MhdReportUploadProps> = ({ onDataParsed, onClear
       const customerProgressions = new Map<string, any>();
       customers.forEach(c => customerProgressions.set(c, analyzeCustomerProgress(allRecords, c)));
 
-      onDataParsed({ records: allRecords, customerProgressions });
+      await await onDataParsed({ records: allRecords, customerProgressions });
 
       try {
         const webAppUrl = (process.env.REACT_APP_GS_WEBAPP_URL || '').trim();

@@ -1,4 +1,5 @@
 import { mapToCanonicalProductName, getItemNumberFromAlpineCode } from './productMapping';
+import { loadMasterPricingData } from './masterPricingLoader';
 
 /**
  * Normalize customer names to handle variations of the same company
@@ -56,11 +57,14 @@ export interface ParsedAlpineData {
  * @param reportDate Report date to identify the period (format: YYYY-MM)
  * @returns Parsed Alpine sales data
  */
-export function parseAlpineTXT(txtContent: string, reportDate: string): ParsedAlpineData {
+export async function parseAlpineTXT(txtContent: string, reportDate: string): Promise<ParsedAlpineData> {
   const lines = txtContent.split('\n');
   const records: AlpineSalesRecord[] = [];
   const supplier = 'ALPINE';
   
+  // Load master pricing data for weight calculations
+  const masterPricingData = await loadMasterPricingData();
+
   // Detect header column positions based on the header titles line (mirrors June format)
   let headerPositions: {
     itemStart: number;
@@ -189,6 +193,32 @@ export function parseAlpineTXT(txtContent: string, reportDate: string): ParsedAl
         // Get our internal item number from the Alpine vendor code (left-side code)
         const ourItemNumber = getItemNumberFromAlpineCode(itemNumber);
         
+        // Calculate weight for this product
+        let weightPerCase = 0;
+        let productWeightSource = 'none';
+        
+        // Try to find the product in master pricing by mapped product name
+        const masterProduct = masterPricingData.productMap.get(mappedProductName.toLowerCase());
+        if (masterProduct && masterProduct.caseWeight > 0) {
+          weightPerCase = masterProduct.caseWeight;
+          productWeightSource = 'masterPricing';
+        } else if (masterProduct && masterProduct.pack && masterProduct.size) {
+          // Calculate from pack and size if case weight not available
+          const packNum = parseInt(masterProduct.pack) || 0;
+          const sizeNum = parseFloat(masterProduct.size) || 0;
+          if (packNum > 0 && sizeNum > 0) {
+            weightPerCase = (packNum * sizeNum) / 16;
+            productWeightSource = 'calculated';
+          }
+        }
+        
+        const cases = parseInt(casesStr || '0') || 0;
+        const totalWeight = weightPerCase > 0 ? cases * weightPerCase : (parseNum(netLbsStr) > 0 ? parseNum(netLbsStr) : undefined);
+        
+        if (totalWeight && totalWeight > 0) {
+          console.log('[Alpine Parser] Weight calculated:', { product: mappedProductName, source: productWeightSource, weightPerCase, cases, totalWeight });
+        }
+        
         const record: AlpineSalesRecord = {
           period,
           customerName: currentCustomer,
@@ -197,11 +227,12 @@ export function parseAlpineTXT(txtContent: string, reportDate: string): ParsedAl
           customerId: currentCustomerId,
           productCode: itemNumber, // Vendor Code: Alpine's internal code (183981, 999982, etc.)
           itemNumber: ourItemNumber || mfg, // Item Number: Our internal item number, fallback to MFG ITEM # if available
-          cases: parseInt(casesStr || '0') || 0,
+          cases: cases,
           pieces: parseNum(piecesStr),
           netLbs: parseNum(netLbsStr),
           revenue: parseNum(salesStr),
-          mfgItemNumber: mfg
+          mfgItemNumber: mfg,
+          weightLbs: totalWeight // Use master pricing weight or fallback to netLbs
         };
 
         // Debug: Verify codes are set correctly
@@ -249,16 +280,16 @@ export function parseAlpineTXT(txtContent: string, reportDate: string): ParsedAl
 /**
  * Parse multiple Alpine reports and combine them with period progression
  */
-export function parseMultipleAlpineReports(
+export async function parseMultipleAlpineReports(
   reports: Array<{ content: string; period: string }>
-): ParsedAlpineData {
+): Promise<ParsedAlpineData> {
   const allRecords: AlpineSalesRecord[] = [];
   const allCustomers = new Set<string>();
   const allProducts = new Set<string>();
   const allPeriods = new Set<string>();
 
   for (const report of reports) {
-    const parsed = parseAlpineTXT(report.content, report.period);
+    const parsed = await parseAlpineTXT(report.content, report.period);
     allRecords.push(...parsed.records);
     parsed.metadata.customers.forEach(c => allCustomers.add(c));
     parsed.metadata.products.forEach(p => allProducts.add(p));

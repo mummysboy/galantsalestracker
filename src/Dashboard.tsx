@@ -34,6 +34,13 @@ import MhdCustomerDetailModal from './components/MhdCustomerDetailModal';
 import { useDynamoDB } from './hooks/useDynamoDB';
 import { dynamoDBService } from './services/dynamodb';
 
+const generateDeterministicInvoiceKey = (d: string, p: string, c: string, pn: string, cs: number, r: number): string => {
+  const k = `${p}|${c}|${pn}|${cs}|${r.toFixed(2)}`.toUpperCase();
+  let h = 5381;
+  for (let i = 0; i < k.length; i++) { h = ((h << 5) + h) + k.charCodeAt(i); h >>>= 0; }
+  return `${d}-${p.replace(/-/g, "")}-${h.toString(36).toUpperCase()}`;
+};
+
 // Revenue by Customer Component
 interface RevenueByCustomerProps {
   revenueByCustomer: Array<{ id: string; customer: string; fullCustomerName: string; customerId: string; revenue: number; cases: number }>;
@@ -904,6 +911,9 @@ const Dashboard: React.FC = () => {
   const [customerPivotRange, setCustomerPivotRange] = useState<{start: number, end: number} | null>(null);
   const [monthlySummaryRange, setMonthlySummaryRange] = useState<{start: number, end: number} | null>(null);
   
+  // Processing states for uploads and deletions
+  const [isDeleting, setIsDeleting] = useState(false);
+  
   const tooltipTimerRef = React.useRef<number | null>(null);
   const cancelTooltipClose = () => {
     if (tooltipTimerRef.current) {
@@ -1078,7 +1088,7 @@ const Dashboard: React.FC = () => {
   };
 
   // Upload handlers
-  const handleAlpineDataParsed = (data: { records: AlpineSalesRecord[]; customerProgressions: Map<string, any> }) => {
+  const handleAlpineDataParsed = async (data: { records: AlpineSalesRecord[]; customerProgressions: Map<string, any> }) => {
     console.log('Dashboard received new data:', {
       recordCount: data.records.length,
       periods: Array.from(new Set(data.records.map(r => r.period))),
@@ -1120,40 +1130,41 @@ const Dashboard: React.FC = () => {
     setCurrentCustomerProgressions(updatedCustomerProgressions);
     
     // Save to DynamoDB
-    (async () => {
-      try {
-        // Convert to SalesRecord format for DynamoDB
-        const salesRecords = data.records.map(record => ({
-          distributor: 'ALPINE',
-          period: record.period,
-          customerName: record.customerName,
-          productName: record.productName,
-          productCode: record.productCode,
-          cases: record.cases,
-          revenue: record.revenue,
-          invoiceKey: `ALPINE-${record.period}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          source: 'Alpine Upload',
-          timestamp: new Date().toISOString(),
-          accountName: record.accountName,
-          customerId: record.customerId,
-          itemNumber: record.itemNumber,
-          size: record.size,
-          weightLbs: record.weightLbs,
-        }));
+    try {
+      // Convert to SalesRecord format for DynamoDB
+      const salesRecords = data.records.map(record => ({
+        distributor: 'ALPINE',
+        period: record.period,
+        customerName: record.customerName,
+        productName: record.productName,
+        productCode: record.productCode,
+        cases: record.cases,
+        revenue: record.revenue,
+        invoiceKey: generateDeterministicInvoiceKey('ALPINE', record.period, record.customerName, record.productName, record.cases, record.revenue),
+        source: 'Alpine Upload',
+        timestamp: new Date().toISOString(),
+        accountName: record.accountName,
+        customerId: record.customerId,
+        itemNumber: record.itemNumber,
+        size: record.size,
+        weightLbs: record.weightLbs,
+      }));
 
-        // Save to DynamoDB
-        await saveSalesRecords(salesRecords);
-        
-        // Save customer progressions
+      // Save to DynamoDB
+      const savedRecords = await saveSalesRecords(salesRecords);
+      
+      // Only save progressions if records were actually saved
+      if (savedRecords && savedRecords.length > 0) {
         for (const [customerName, progression] of Array.from(data.customerProgressions.entries())) {
           await saveCustomerProgression('ALPINE', customerName, progression);
         }
-        
-        console.log('Data successfully saved to DynamoDB');
-      } catch (error) {
-        console.error('Failed to save Alpine data to DynamoDB:', error);
+        console.log('[Alpine] Data successfully saved to DynamoDB');
+      } else {
+        console.log('[Alpine] Duplicate upload detected, skipping progressions');
       }
-    })();
+    } catch (error) {
+      console.error('[Alpine] Failed to save Alpine data to DynamoDB:', error);
+    }
     
     // If new periods were uploaded, select the most recent one to reflect upload
     const newestUploadedPeriod = Array.from(newPeriods).sort().slice(-1)[0];
@@ -1165,7 +1176,7 @@ const Dashboard: React.FC = () => {
     // setShowUploadSection(false); // Hide upload section after successful upload
   };
 
-  const handlePetesDataParsed = (data: { records: AlpineSalesRecord[]; customerProgressions: Map<string, any> }) => {
+  const handlePetesDataParsed = async (data: { records: AlpineSalesRecord[]; customerProgressions: Map<string, any> }) => {
     const newPeriods = new Set(data.records.map(r => r.period));
 
     const filteredExistingData = currentPetesData.filter(record => !newPeriods.has(record.period));
@@ -1192,7 +1203,7 @@ const Dashboard: React.FC = () => {
           productCode: record.productCode,
           cases: record.cases,
           revenue: record.revenue,
-          invoiceKey: `PETES-${record.period}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          invoiceKey: generateDeterministicInvoiceKey('PETES', record.period, record.customerName, record.productName, record.cases, record.revenue),
           source: 'Pete\'s Upload',
           timestamp: new Date().toISOString(),
           accountName: record.accountName,
@@ -1233,7 +1244,7 @@ const Dashboard: React.FC = () => {
     setCurrentPetesCustomerProgressions(new Map());
   };
 
-  const handleKeHeDataParsed = (data: { records: AlpineSalesRecord[]; customerProgressions: Map<string, any> }) => {
+  const handleKeHeDataParsed = async (data: { records: AlpineSalesRecord[]; customerProgressions: Map<string, any> }) => {
     console.log(`handleKeHeDataParsed called with ${data.records.length} records`);
     const newPeriods = new Set(data.records.map(r => r.period));
     console.log(`New periods from upload:`, Array.from(newPeriods));
@@ -1265,7 +1276,7 @@ const Dashboard: React.FC = () => {
           productCode: record.productCode,
           cases: record.cases,
           revenue: record.revenue,
-          invoiceKey: `KEHE-${record.period}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          invoiceKey: generateDeterministicInvoiceKey('KEHE', record.period, record.customerName, record.productName, record.cases, record.revenue),
           source: 'KeHe Upload',
           timestamp: new Date().toISOString(),
           accountName: record.accountName,
@@ -1327,7 +1338,7 @@ const Dashboard: React.FC = () => {
           productCode: record.productCode,
           cases: record.cases,
           revenue: record.revenue,
-          invoiceKey: `VISTAR-${record.period}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          invoiceKey: generateDeterministicInvoiceKey('VISTAR', record.period, record.customerName, record.productName, record.cases, record.revenue),
           source: 'Vistar Upload',
           timestamp: new Date().toISOString(),
           accountName: record.accountName,
@@ -1388,7 +1399,7 @@ const Dashboard: React.FC = () => {
           productCode: record.productCode,
           cases: record.cases,
           revenue: record.revenue,
-          invoiceKey: `TONYS-${record.period}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          invoiceKey: generateDeterministicInvoiceKey('TONYS', record.period, record.customerName, record.productName, record.cases, record.revenue),
           source: 'Tony\'s Upload',
           timestamp: new Date().toISOString(),
           accountName: record.accountName,
@@ -1450,7 +1461,7 @@ const Dashboard: React.FC = () => {
           productCode: record.productCode,
           cases: record.cases,
           revenue: record.revenue,
-          invoiceKey: `TROIA-${record.period}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          invoiceKey: generateDeterministicInvoiceKey('TROIA', record.period, record.customerName, record.productName, record.cases, record.revenue),
           source: 'Troia Upload',
           timestamp: new Date().toISOString(),
           accountName: record.accountName,
@@ -1504,7 +1515,7 @@ const Dashboard: React.FC = () => {
           productCode: record.productCode,
           cases: record.cases,
           revenue: record.revenue,
-          invoiceKey: `MHD-${record.period}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          invoiceKey: generateDeterministicInvoiceKey('MHD', record.period, record.customerName, record.productName, record.cases, record.revenue),
           source: 'Mike Hudson Upload',
           timestamp: new Date().toISOString(),
           accountName: record.accountName,
@@ -1542,9 +1553,36 @@ const Dashboard: React.FC = () => {
 
 
   // Delete entire period/month of data
-  const handleDeletePeriod = (periodToDelete: string) => {
+  const handleDeletePeriod = async (periodToDelete: string) => {
     // Guard: do not allow deletes in ALL view
     if (selectedDistributor === 'ALL') return;
+    
+    setIsDeleting(true);
+    try {
+      // Delete from DynamoDB first
+      const distributorMap: Record<string, string> = {
+        'ALPINE': 'ALPINE',
+        'PETES': 'PETES',
+        'KEHE': 'KEHE',
+        'VISTAR': 'VISTAR',
+        'TONYS': 'TONYS',
+        'TROIA': 'TROIA',
+        'MHD': 'MHD'
+      };
+      const distributorName = distributorMap[selectedDistributor];
+      
+      if (distributorName) {
+        await dynamoDBService.deleteCustomerProgressionsByPeriod(distributorName, periodToDelete);
+        await dynamoDBService.deleteRecordsByPeriodAndDistributor(distributorName, periodToDelete);
+        console.log(`[Dashboard] Deleted ${distributorName} / ${periodToDelete} from DynamoDB`);
+      }
+    } catch (error) {
+      console.error('[Dashboard] Error deleting from DynamoDB:', error);
+      alert(`Error deleting: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setIsDeleting(false);
+      return;
+    }
+    
     if (selectedDistributor === 'ALPINE') {
       const updatedData = currentAlpineData.filter(record => record.period !== periodToDelete);
       setCurrentAlpineData(updatedData);
@@ -1598,7 +1636,8 @@ const Dashboard: React.FC = () => {
       setSelectedMonth(remainingPeriods.length > 0 ? remainingPeriods[remainingPeriods.length - 1] : 'ALL_MONTHS');
     }
 
-    console.log('Period deleted:', periodToDelete);
+    console.log('[Dashboard] Period deleted:', periodToDelete);
+    setIsDeleting(false);
   };
 
   // Calculate KPIs based on filtered data
@@ -2148,6 +2187,25 @@ const Dashboard: React.FC = () => {
       }
     }
   }, [showMonthlySummary, monthlySummary.months, selectedMonth, monthlySummaryRange]);
+
+  // Full-screen overlay warning during deletion
+  if (isDeleting) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center z-[10005] bg-black bg-opacity-50">
+        <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md text-center">
+          <div className="flex justify-center mb-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600"></div>
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Deleting Data...</h2>
+          <p className="text-gray-600 mb-4">This may take a moment. Please do not refresh the page or close your browser.</p>
+          <div className="text-sm text-gray-500">
+            <p>• Deleting from database...</p>
+            <p>• Updating dashboard...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -2969,22 +3027,31 @@ const Dashboard: React.FC = () => {
                   })()}
                 </div>
 
+                {isDeleting && (
+                  <div className="mb-4 p-3 bg-blue-50 border border-blue-300 rounded flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    <span className="text-sm font-semibold text-blue-700">Deleting... please wait, do not refresh</span>
+                  </div>
+                )}
+
                 <div className="flex justify-end gap-2">
                   <Button
                     variant="outline"
                     onClick={() => setPendingDeletePeriod(null)}
+                    disabled={isDeleting}
                   >
                     Cancel
                   </Button>
                   <Button
                     variant="destructive"
-                    onClick={() => {
-                      handleDeletePeriod(pendingDeletePeriod);
+                    onClick={async () => {
+                      await handleDeletePeriod(pendingDeletePeriod!);
                       setPendingDeletePeriod(null);
                       setIsMonthDropdownOpen(false);
                     }}
+                    disabled={isDeleting}
                   >
-                    Delete
+                    {isDeleting ? 'Deleting...' : 'Delete'}
                   </Button>
                 </div>
               </div>

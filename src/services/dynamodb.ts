@@ -438,27 +438,87 @@ class DynamoDBService {
   // Delete records by period and distributor
   async deleteRecordsByPeriodAndDistributor(distributor: string, period: string): Promise<void> {
     try {
+      console.log(`[DynamoDB] Starting deletion for ${distributor} / ${period}`);
+      
       // Get all sales records for this distributor and period
       const allRecords = await this.getSalesRecordsByDistributor(distributor);
+      console.log(`[DynamoDB] Retrieved ${allRecords.length} total records for ${distributor}`);
+      console.log(`[DynamoDB] Sample records:`, allRecords.slice(0, 3).map(r => ({ id: r.id, period: r.period, distributor: r.distributor })));
+      
       const recordsToDelete = allRecords.filter(r => r.period === period);
-
-      console.log(`[DynamoDB] Deleting ${recordsToDelete.length} records for ${distributor} / ${period}`);
+      console.log(`[DynamoDB] Found ${recordsToDelete.length} records to delete for period ${period}`);
+      
+      if (recordsToDelete.length === 0) {
+        console.warn(`[DynamoDB] No records found for ${distributor} / ${period}. Available periods:`, Array.from(new Set(allRecords.map(r => r.period))));
+        return;
+      }
 
       // Delete sales records
-      const deletePromises = recordsToDelete.map(record =>
-        docClient.send(new DeleteCommand({
+      console.log(`[DynamoDB] Building delete commands for ${recordsToDelete.length} records`);
+      const deletePromises = recordsToDelete.map(record => {
+        const key = {
+          PK: `SALES#${distributor}`,
+          SK: `${record.period}#${record.id}`,
+        };
+        console.log(`[DynamoDB] Deleting key:`, key);
+        return docClient.send(new DeleteCommand({
           TableName: TABLE_NAME,
-          Key: {
-            PK: `SALES#${distributor}`,
-            SK: `${record.period}#${record.id}`,
-          },
-        }))
-      );
+          Key: key,
+        }));
+      });
 
+      console.log(`[DynamoDB] Sending ${deletePromises.length} delete commands`);
       await Promise.all(deletePromises);
       console.log(`[DynamoDB] Successfully deleted ${recordsToDelete.length} records for ${distributor} / ${period}`);
     } catch (error) {
       console.error(`[DynamoDB] Error deleting records for ${distributor} / ${period}:`, error);
+      throw error;
+    }
+  }
+
+  // Delete customer progressions for a given period and distributor
+  async deleteCustomerProgressionsByPeriod(distributor: string, period: string): Promise<void> {
+    try {
+      console.log(`[DynamoDB] Deleting customer progressions for ${distributor} / ${period}`);
+      
+      // Get all sales records BEFORE deletion to know which customers to update
+      const allRecordsBeforeDeletion = await this.getSalesRecordsByDistributor(distributor);
+      const recordsInDeletedPeriod = allRecordsBeforeDeletion.filter(r => r.period === period);
+      const affectedCustomers = new Set(recordsInDeletedPeriod.map(r => r.customerName));
+      
+      console.log(`[DynamoDB] Found ${affectedCustomers.size} customers affected by period deletion`);
+      
+      // Get all customer progressions for this distributor
+      const allProgressions = await this.getCustomerProgressionsByDistributor(distributor);
+      
+      // Delete progressions for ALL customers affected by this period's deletion
+      // (they may have other records in other periods, but we should still update their progressions)
+      const deletePromises: Promise<any>[] = [];
+      
+      for (const progression of allProgressions) {
+        if (affectedCustomers.has(progression.customerName)) {
+          // Delete this customer's progression - it will be regenerated if needed
+          console.log(`[DynamoDB] Deleting progression for customer: ${progression.customerName}`);
+          deletePromises.push(
+            docClient.send(new DeleteCommand({
+              TableName: TABLE_NAME,
+              Key: {
+                PK: `PROGRESSION#${distributor}`,
+                SK: `${progression.customerName}#${progression.id}`,
+              },
+            }))
+          );
+        }
+      }
+      
+      if (deletePromises.length > 0) {
+        await Promise.all(deletePromises);
+        console.log(`[DynamoDB] Successfully deleted ${deletePromises.length} customer progressions`);
+      } else {
+        console.log(`[DynamoDB] No customer progressions to delete`);
+      }
+    } catch (error) {
+      console.error(`[DynamoDB] Error deleting customer progressions for ${distributor} / ${period}:`, error);
       throw error;
     }
   }
@@ -525,30 +585,28 @@ class DynamoDBService {
       const existingRecords = await this.getRecordsByInvoiceKeys(invoiceKeys);
 
       if (existingRecords.length > 0) {
-        console.log(`[DynamoDB Dedup] Found ${existingRecords.length} existing records with same invoice keys. Deleting old records...`);
+        console.log(`[DynamoDB Dedup] Found ${existingRecords.length} existing records with same invoice keys. Skipping upload to prevent duplicates.`);
         
-        // Delete existing records
-        const deletePromises = existingRecords.map(record =>
-          docClient.send(new DeleteCommand({
-            TableName: TABLE_NAME,
-            Key: {
-              PK: `SALES#${record.distributor}`,
-              SK: `${record.period}#${record.id}`,
-            },
-          }))
-        );
-
-        try {
-          await Promise.all(deletePromises);
-          console.log(`[DynamoDB Dedup] Successfully deleted ${existingRecords.length} old records`);
-        } catch (error) {
-          console.error(`[DynamoDB Dedup] Error deleting old records:`, error);
-          // Continue anyway - try to save new records
+        // Create a set of existing invoice keys for fast lookup
+        const existingInvoiceKeys = new Set(existingRecords.map(r => r.invoiceKey));
+        
+        // Filter out records that already exist
+        const newRecords = records.filter(r => !existingInvoiceKeys.has(r.invoiceKey));
+        
+        if (newRecords.length === 0) {
+          console.log(`[DynamoDB Dedup] All records are duplicates. Not saving anything.`);
+          return [];
         }
+        
+        console.log(`[DynamoDB Dedup] Filtered out ${records.length - newRecords.length} duplicates. Saving ${newRecords.length} new records.`);
+        
+        // Save only the new records
+        return this.saveSalesRecords(newRecords);
       }
     }
 
-    // Now save the new records
+    // No duplicates found, save all records
+    console.log(`[DynamoDB Dedup] No duplicates found. Saving all ${records.length} records.`);
     return this.saveSalesRecords(records);
   }
 }

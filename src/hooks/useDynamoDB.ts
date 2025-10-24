@@ -9,7 +9,7 @@ export interface UseDynamoDBReturn {
   
   // Actions
   saveSalesRecord: (record: Omit<SalesRecord, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
-  saveSalesRecords: (records: Omit<SalesRecord, 'id' | 'createdAt' | 'updatedAt'>[]) => Promise<void>;
+  saveSalesRecords: (records: Omit<SalesRecord, 'id' | 'createdAt' | 'updatedAt'>[]) => Promise<SalesRecord[]>;
   loadSalesRecordsByDistributor: (distributor: string) => Promise<void>;
   loadSalesRecordsByPeriod: (period: string) => Promise<void>;
   loadAllSalesRecords: () => Promise<void>;
@@ -56,8 +56,9 @@ export const useDynamoDB = (): UseDynamoDBReturn => {
     try {
       setLoading(true);
       setError(null);
-      const savedRecords = await dynamoDBService.saveSalesRecords(records);
+      const savedRecords = await dynamoDBService.saveSalesRecordsWithDedup(records);
       setSalesRecords(prev => [...prev, ...savedRecords]);
+      return savedRecords;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save sales records');
       throw err;

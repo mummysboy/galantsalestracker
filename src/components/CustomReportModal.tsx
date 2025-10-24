@@ -423,12 +423,25 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
           let weight: number | undefined = undefined;
           
           // For Alpine: use netLbs field directly from the NET LBS column
-          if (dist.name === 'Alpine' && record.netLbs) {
-            weight = record.netLbs;
+          if (dist.name === 'Alpine') {
+            if (record.netLbs !== undefined && record.netLbs > 0) {
+              weight = record.netLbs;
+              console.log('[Broker Report] Alpine weight found from netLbs:', { product: record.productName, netLbs: record.netLbs, cases: record.cases, weight });
+            } else if (record.weightLbs !== undefined && record.weightLbs > 0) {
+              // Fallback: use weightLbs if netLbs is not available
+              weight = record.weightLbs;
+              console.log('[Broker Report] Alpine weight found from weightLbs:', { product: record.productName, weightLbs: record.weightLbs, cases: record.cases, weight });
+            } else if (record.pack && record.sizeOz && record.cases) {
+              // Fallback: calculate weight from pack × sizeOz × cases / 16
+              weight = (record.pack * record.sizeOz * record.cases) / 16;
+              console.log('[Broker Report] Alpine weight calculated from pack/size/cases:', { product: record.productName, pack: record.pack, sizeOz: record.sizeOz, cases: record.cases, weight });
+            } else {
+              console.log('[Broker Report] Alpine record - NO WEIGHT available:', { product: record.productName, netLbs: record.netLbs, weightLbs: record.weightLbs, pack: record.pack, sizeOz: record.sizeOz, cases: record.cases, revenue: record.revenue });
+            }
           }
           // For Pete's Coffee: use weightLbs field if available, otherwise calculate from pack × sizeOz × cases / 16
           else if (dist.name === "Pete's Coffee" && record.cases) {
-            if (record.weightLbs) {
+            if (record.weightLbs !== undefined && record.weightLbs > 0) {
               // Use the weightLbs field calculated from Master Pricing data
               weight = record.weightLbs;
             } else if (record.pack && record.sizeOz) {
@@ -438,7 +451,7 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
           }
           // For KeHe: use weightLbs field if available, otherwise calculate from pack × sizeOz × cases / 16
           else if (dist.name === 'KeHe' && record.cases) {
-            if (record.weightLbs) {
+            if (record.weightLbs !== undefined && record.weightLbs > 0) {
               // Use the weightLbs field calculated from Master Pricing data
               weight = record.weightLbs;
             } else if (record.pack && record.sizeOz) {
@@ -448,7 +461,7 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
           }
           // For Troia: use weightLbs field if available, otherwise calculate from pack × sizeOz × cases / 16
           else if (dist.name === 'Troia Foods' && record.cases) {
-            if (record.weightLbs) {
+            if (record.weightLbs !== undefined && record.weightLbs > 0) {
               // Use the weightLbs field calculated from Master Pricing data
               weight = record.weightLbs;
             } else if (record.pack && record.sizeOz) {
@@ -458,7 +471,7 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
           }
           // For Mike Hudson: use weightLbs field if available, otherwise calculate from pack × sizeOz × cases / 16
           else if (dist.name === 'Mike Hudson' && record.cases) {
-            if (record.weightLbs) {
+            if (record.weightLbs !== undefined && record.weightLbs > 0) {
               // Use the weightLbs field calculated from Master Pricing data
               weight = record.weightLbs;
             } else if (record.pack && record.sizeOz) {
