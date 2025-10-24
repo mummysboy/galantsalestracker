@@ -10,6 +10,7 @@ export interface UseDynamoDBReturn {
   // Actions
   saveSalesRecord: (record: Omit<SalesRecord, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
   saveSalesRecords: (records: Omit<SalesRecord, 'id' | 'createdAt' | 'updatedAt'>[]) => Promise<SalesRecord[]>;
+  saveSalesRecordsFast: (records: Omit<SalesRecord, 'id' | 'createdAt' | 'updatedAt'>[]) => Promise<SalesRecord[]>;
   loadSalesRecordsByDistributor: (distributor: string) => Promise<void>;
   loadSalesRecordsByPeriod: (period: string) => Promise<void>;
   loadAllSalesRecords: () => Promise<void>;
@@ -61,6 +62,21 @@ export const useDynamoDB = (): UseDynamoDBReturn => {
       return savedRecords;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save sales records');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const saveSalesRecordsFast = useCallback(async (records: Omit<SalesRecord, 'id' | 'createdAt' | 'updatedAt'>[]) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const savedRecords = await dynamoDBService.saveSalesRecordsFast(records);
+      setSalesRecords(prev => [...prev, ...savedRecords]);
+      return savedRecords;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save sales records fast');
       throw err;
     } finally {
       setLoading(false);
@@ -249,6 +265,7 @@ export const useDynamoDB = (): UseDynamoDBReturn => {
     error,
     saveSalesRecord,
     saveSalesRecords,
+    saveSalesRecordsFast,
     loadSalesRecordsByDistributor,
     loadSalesRecordsByPeriod,
     loadAllSalesRecords,

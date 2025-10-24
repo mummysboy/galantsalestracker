@@ -9,9 +9,12 @@ interface TroiaReportUploadProps {
   onDataParsed: (data: { records: AlpineSalesRecord[]; customerProgressions: Map<string, any>; }) => void;
   onClearData: () => void;
   onProcessingComplete?: () => void;
+  onUploadStart?: () => void;
+  onUploadDescription?: (description: string) => void;
+  onUploadEnd?: () => void;
 }
 
-const TroiaReportUpload: React.FC<TroiaReportUploadProps> = ({ onDataParsed, onClearData, onProcessingComplete }) => {
+const TroiaReportUpload: React.FC<TroiaReportUploadProps> = ({ onDataParsed, onClearData, onProcessingComplete, onUploadStart, onUploadDescription, onUploadEnd }) => {
   const [files, setFiles] = useState<File[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isProcessingComplete, setIsProcessingComplete] = useState(false);
@@ -37,6 +40,7 @@ const TroiaReportUpload: React.FC<TroiaReportUploadProps> = ({ onDataParsed, onC
     setIsProcessing(true);
     setIsProcessingComplete(false);
     setErrors([]);
+    onUploadStart?.();
 
     try {
       const allRecords: AlpineSalesRecord[] = [];

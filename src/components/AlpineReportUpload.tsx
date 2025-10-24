@@ -11,6 +11,9 @@ interface AlpineReportUploadProps {
   }) => void;
   onClearData: () => void;
   onProcessingComplete?: () => void;
+  onUploadStart?: () => void;
+  onUploadDescription?: (description: string) => void;
+  onUploadEnd?: () => void;
 }
 
 interface AlpineFileState {
@@ -22,7 +25,10 @@ interface AlpineFileState {
 const AlpineReportUpload: React.FC<AlpineReportUploadProps> = ({ 
   onDataParsed, 
   onClearData,
-  onProcessingComplete
+  onProcessingComplete,
+  onUploadStart,
+  onUploadDescription,
+  onUploadEnd
 }) => {
   const [reports, setReports] = useState<AlpineFileState[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -60,6 +66,7 @@ const AlpineReportUpload: React.FC<AlpineReportUploadProps> = ({
     setIsProcessing(true);
     setIsProcessingComplete(false);
     setErrors([]);
+    onUploadStart?.();
 
     try {
       // Parse all reports

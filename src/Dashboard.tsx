@@ -913,6 +913,8 @@ const Dashboard: React.FC = () => {
   
   // Processing states for uploads and deletions
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadDescription, setUploadDescription] = useState('');
   
   const tooltipTimerRef = React.useRef<number | null>(null);
   const cancelTooltipClose = () => {
@@ -1164,6 +1166,7 @@ const Dashboard: React.FC = () => {
       }
     } catch (error) {
       console.error('[Alpine] Failed to save Alpine data to DynamoDB:', error);
+        setIsUploading(false);
     }
     
     // If new periods were uploaded, select the most recent one to reflect upload
@@ -1220,8 +1223,13 @@ const Dashboard: React.FC = () => {
         }
         
         console.log('Pete\'s data successfully saved to DynamoDB');
+        // Hide overlay after all DynamoDB operations complete
+        setIsUploading(false);
+        setShowUploadSection(false);
       } catch (error) {
         console.error('Failed to save Pete\'s data to DynamoDB:', error);
+        setIsUploading(false);
+        setIsUploading(false);
       }
     })();
 
@@ -1265,7 +1273,7 @@ const Dashboard: React.FC = () => {
     });
     setCurrentKeHeCustomerProgressions(updatedCustomerProgressions);
 
-    // Save to DynamoDB
+    // Save to DynamoDB and manage overlay
     (async () => {
       try {
         const salesRecords = data.records.map(record => ({
@@ -1286,15 +1294,30 @@ const Dashboard: React.FC = () => {
           weightLbs: record.weightLbs,
         }));
 
-        await saveSalesRecords(salesRecords);
+        const savedRecords = await saveSalesRecords(salesRecords);
         
-        for (const [customerName, progression] of Array.from(data.customerProgressions.entries())) {
-          await saveCustomerProgression('KEHE', customerName, progression);
+        // Only save progressions for customers with NEW records (not deduplicated)
+        if (savedRecords && savedRecords.length > 0) {
+          const customersWithNewRecords = new Set(savedRecords.map(r => r.customerName));
+          console.log(`[KeHe Progression] Saving progressions for ${customersWithNewRecords.size} customers with new records`);
+          
+          for (const [customerName, progression] of Array.from(data.customerProgressions.entries())) {
+            if (customersWithNewRecords.has(customerName)) {
+              await saveCustomerProgression('KEHE', customerName, progression);
+            }
+          }
+        } else {
+          console.log('[KeHe Progression] No new records saved, skipping progression updates');
         }
         
         console.log('KeHe data successfully saved to DynamoDB');
+        // Hide overlay after all DynamoDB operations complete
+        setIsUploading(false);
+        setShowUploadSection(false);
       } catch (error) {
         console.error('Failed to save KeHe data to DynamoDB:', error);
+        setIsUploading(false);
+        setIsUploading(false);
       }
     })();
 
@@ -1355,8 +1378,12 @@ const Dashboard: React.FC = () => {
         }
         
         console.log('Vistar data successfully saved to DynamoDB');
+        // Hide overlay after all DynamoDB operations complete
+        setIsUploading(false);
+        setShowUploadSection(false);
       } catch (error) {
         console.error('Failed to save Vistar data to DynamoDB:', error);
+        setIsUploading(false);
       }
     })();
 
@@ -1416,8 +1443,12 @@ const Dashboard: React.FC = () => {
         }
         
         console.log('Tony\'s data successfully saved to DynamoDB');
+        // Hide overlay after all DynamoDB operations complete
+        setIsUploading(false);
+        setShowUploadSection(false);
       } catch (error) {
         console.error('Failed to save Tony\'s data to DynamoDB:', error);
+        setIsUploading(false);
       }
     })();
 
@@ -1478,8 +1509,13 @@ const Dashboard: React.FC = () => {
         }
         
         console.log('Troia data successfully saved to DynamoDB');
+        // Hide overlay after all DynamoDB operations complete
+        setIsUploading(false);
+        setShowUploadSection(false);
       } catch (error) {
         console.error('Failed to save Troia data to DynamoDB:', error);
+        setIsUploading(false);
+        setIsUploading(false);
       }
     })();
 
@@ -1532,8 +1568,12 @@ const Dashboard: React.FC = () => {
         }
         
         console.log('MHD data successfully saved to DynamoDB');
+        // Hide overlay after all DynamoDB operations complete
+        setIsUploading(false);
+        setShowUploadSection(false);
       } catch (error) {
         console.error('Failed to save MHD data to DynamoDB:', error);
+        setIsUploading(false);
       }
     })();
 
@@ -2188,19 +2228,62 @@ const Dashboard: React.FC = () => {
     }
   }, [showMonthlySummary, monthlySummary.months, selectedMonth, monthlySummaryRange]);
 
-  // Full-screen overlay warning during deletion
-  if (isDeleting) {
+  // Full-screen overlay for uploads and deletions
+  if (isDeleting || isUploading) {
+    const isDelete = isDeleting;
+    const title = isDelete ? 'Processing Deletion...' : 'Processing Upload...';
+    const mainMessage = isDelete 
+      ? 'Removing data from database' 
+      : 'Uploading file to database';
+    const subMessage = isDelete
+      ? 'This may take a moment. Please do not refresh the page or close your browser.'
+      : uploadDescription || 'Processing your upload. Please do not refresh the page or close your browser.';
+    const steps = isDelete
+      ? ['Deleting from database...', 'Updating dashboard...']
+      : ['Parsing file...', 'Deduplicating records...', 'Uploading to database...', 'Updating progressions...'];
+
     return (
-      <div className="fixed inset-0 flex items-center justify-center z-[10005] bg-black bg-opacity-50">
-        <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md text-center">
-          <div className="flex justify-center mb-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600"></div>
+      <div className="fixed inset-0 flex items-center justify-center z-[10005] bg-black bg-opacity-60">
+        <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full mx-4 text-center">
+          {/* Spinner */}
+          <div className="flex justify-center mb-6">
+            <div className="relative w-16 h-16">
+              <div className="absolute inset-0 rounded-full border-4 border-gray-200"></div>
+              <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-600 border-r-blue-600 animate-spin"></div>
+            </div>
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Deleting Data...</h2>
-          <p className="text-gray-600 mb-4">This may take a moment. Please do not refresh the page or close your browser.</p>
-          <div className="text-sm text-gray-500">
-            <p>• Deleting from database...</p>
-            <p>• Updating dashboard...</p>
+
+          {/* Main Title */}
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">{title}</h2>
+          
+          {/* Main Message */}
+          <p className="text-gray-600 mb-6 text-sm font-medium">{mainMessage}</p>
+
+          {/* Sub Message / Instructions */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <p className="text-sm text-blue-900 leading-relaxed">{subMessage}</p>
+          </div>
+
+          {/* Processing Steps */}
+          <div className="bg-gray-50 rounded-lg p-4 space-y-2 mb-6">
+            {steps.map((step, idx) => (
+              <div key={idx} className="flex items-center justify-start text-left">
+                <div className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center mr-3">
+                  <svg className="w-3 h-3 text-white animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <span className="text-sm text-gray-700">{step}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Warning Message */}
+          <div className="flex items-start justify-center gap-3 bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <svg className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <p className="text-xs text-amber-800 font-medium">Do not refresh, close, or navigate away</p>
           </div>
         </div>
       </div>
@@ -2615,6 +2698,9 @@ const Dashboard: React.FC = () => {
                 onDataParsed={handleAlpineDataParsed}
                 onClearData={handleClearAlpineData}
                 onProcessingComplete={() => setShowUploadSection(false)}
+                onUploadStart={() => setIsUploading(true)}
+                onUploadDescription={setUploadDescription}
+                onUploadEnd={() => setIsUploading(false)}
               />
             ) : selectedDistributor === 'PETES' ? (
               <PetesReportUpload
@@ -2622,6 +2708,9 @@ const Dashboard: React.FC = () => {
                 onDataParsed={handlePetesDataParsed}
                 onClearData={handleClearPetesData}
                 onProcessingComplete={() => setShowUploadSection(false)}
+                onUploadStart={() => setIsUploading(true)}
+                onUploadDescription={setUploadDescription}
+                onUploadEnd={() => setIsUploading(false)}
               />
             ) : selectedDistributor === 'KEHE' ? (
               <KeHeReportUpload
@@ -2629,6 +2718,9 @@ const Dashboard: React.FC = () => {
                 onDataParsed={handleKeHeDataParsed}
                 onClearData={handleClearKeHeData}
                 onProcessingComplete={() => setShowUploadSection(false)}
+                onUploadStart={() => setIsUploading(true)}
+                onUploadDescription={setUploadDescription}
+                onUploadEnd={() => setIsUploading(false)}
               />
             ) : selectedDistributor === 'VISTAR' ? (
               <VistarReportUpload
@@ -2636,6 +2728,9 @@ const Dashboard: React.FC = () => {
                 onDataParsed={handleVistarDataParsed}
                 onClearData={handleClearVistarData}
                 onProcessingComplete={() => setShowUploadSection(false)}
+                onUploadStart={() => setIsUploading(true)}
+                onUploadDescription={setUploadDescription}
+                onUploadEnd={() => setIsUploading(false)}
               />
             ) : selectedDistributor === 'TONYS' ? (
               <TonysReportUpload
@@ -2643,6 +2738,9 @@ const Dashboard: React.FC = () => {
                 onDataParsed={handleTonysDataParsed}
                 onClearData={handleClearTonysData}
                 onProcessingComplete={() => setShowUploadSection(false)}
+                onUploadStart={() => setIsUploading(true)}
+                onUploadDescription={setUploadDescription}
+                onUploadEnd={() => setIsUploading(false)}
               />
             ) : selectedDistributor === 'TROIA' ? (
               <TroiaReportUpload
@@ -2650,6 +2748,9 @@ const Dashboard: React.FC = () => {
                 onDataParsed={handleTroiaDataParsed}
                 onClearData={handleClearTroiaData}
                 onProcessingComplete={() => setShowUploadSection(false)}
+                onUploadStart={() => setIsUploading(true)}
+                onUploadDescription={setUploadDescription}
+                onUploadEnd={() => setIsUploading(false)}
               />
             ) : selectedDistributor === 'MHD' ? (
               <MhdReportUpload
@@ -2657,6 +2758,9 @@ const Dashboard: React.FC = () => {
                 onDataParsed={handleMhdDataParsed}
                 onClearData={handleClearMhdData}
                 onProcessingComplete={() => setShowUploadSection(false)}
+                onUploadStart={() => setIsUploading(true)}
+                onUploadDescription={setUploadDescription}
+                onUploadEnd={() => setIsUploading(false)}
               />
             ) : (
               <>

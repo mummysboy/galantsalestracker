@@ -9,9 +9,12 @@ interface MhdReportUploadProps {
   onDataParsed: (data: { records: AlpineSalesRecord[]; customerProgressions: Map<string, any>; }) => void;
   onClearData: () => void;
   onProcessingComplete?: () => void;
+  onUploadStart?: () => void;
+  onUploadDescription?: (description: string) => void;
+  onUploadEnd?: () => void;
 }
 
-const MhdReportUpload: React.FC<MhdReportUploadProps> = ({ onDataParsed, onClearData, onProcessingComplete }) => {
+const MhdReportUpload: React.FC<MhdReportUploadProps> = ({ onDataParsed, onClearData, onProcessingComplete, onUploadStart, onUploadDescription, onUploadEnd }) => {
   const [files, setFiles] = useState<File[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isProcessingComplete, setIsProcessingComplete] = useState(false);
@@ -37,6 +40,7 @@ const MhdReportUpload: React.FC<MhdReportUploadProps> = ({ onDataParsed, onClear
     setIsProcessing(true);
     setIsProcessingComplete(false);
     setErrors([]);
+    onUploadStart?.();
 
     try {
       const allRecords: AlpineSalesRecord[] = [];

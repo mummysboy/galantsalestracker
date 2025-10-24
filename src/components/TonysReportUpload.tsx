@@ -9,9 +9,12 @@ interface TonysReportUploadProps {
   onDataParsed: (data: { records: AlpineSalesRecord[]; customerProgressions: Map<string, any>; }) => void;
   onClearData: () => void;
   onProcessingComplete?: () => void;
+  onUploadStart?: () => void;
+  onUploadDescription?: (description: string) => void;
+  onUploadEnd?: () => void;
 }
 
-const TonysReportUpload: React.FC<TonysReportUploadProps> = ({ onDataParsed, onClearData, onProcessingComplete }) => {
+const TonysReportUpload: React.FC<TonysReportUploadProps> = ({ onDataParsed, onClearData, onProcessingComplete, onUploadStart, onUploadDescription, onUploadEnd }) => {
   const [files, setFiles] = useState<File[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isProcessingComplete, setIsProcessingComplete] = useState(false);
@@ -37,6 +40,7 @@ const TonysReportUpload: React.FC<TonysReportUploadProps> = ({ onDataParsed, onC
     setIsProcessing(true);
     setIsProcessingComplete(false);
     setErrors([]);
+    onUploadStart?.();
 
     try {
       const allRecords: AlpineSalesRecord[] = [];
