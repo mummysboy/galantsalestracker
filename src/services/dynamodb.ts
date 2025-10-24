@@ -73,6 +73,11 @@ export interface SalesRecord {
   timestamp: string;
   createdAt: string;
   updatedAt: string;
+  accountName?: string; // Sub-customer/account name (for KeHe)
+  customerId?: string;
+  itemNumber?: string;
+  size?: string;
+  weightLbs?: number;
 }
 
 export interface CustomerProgression {
@@ -160,6 +165,11 @@ class DynamoDBService {
       timestamp: item.timestamp,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
+      accountName: item.accountName,
+      customerId: item.customerId,
+      itemNumber: item.itemNumber,
+      size: item.size,
+      weightLbs: item.weightLbs,
     })) as SalesRecord[];
   }
 
@@ -188,6 +198,11 @@ class DynamoDBService {
       timestamp: item.timestamp,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
+      accountName: item.accountName,
+      customerId: item.customerId,
+      itemNumber: item.itemNumber,
+      size: item.size,
+      weightLbs: item.weightLbs,
     })) as SalesRecord[];
   }
 
@@ -215,6 +230,11 @@ class DynamoDBService {
       timestamp: item.timestamp,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
+      accountName: item.accountName,
+      customerId: item.customerId,
+      itemNumber: item.itemNumber,
+      size: item.size,
+      weightLbs: item.weightLbs,
     })) as SalesRecord[];
   }
 
@@ -439,6 +459,11 @@ class DynamoDBService {
         timestamp: item.timestamp,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
+        accountName: item.accountName,
+        customerId: item.customerId,
+        itemNumber: item.itemNumber,
+        size: item.size,
+        weightLbs: item.weightLbs,
       })) as SalesRecord[];
     } catch (error) {
       console.error('[DynamoDB] Error fetching records by invoice keys:', error);
