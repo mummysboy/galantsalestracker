@@ -49,7 +49,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     category: 'Breakfast Burrito',
     alpineProductCodes: ['999983'],
     petesProductCodes: ['59975'],
-    keheProductCodes: ['611665888003']
+    keheProductCodes: ['611665888003'],
+    vistarProductCodes: ['GFO88000']
   },
   {
     itemNumber: '341',
@@ -69,7 +70,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     category: 'Breakfast Burrito',
     alpineProductCodes: ['999988'],
     petesProductCodes: ['59977'],
-    keheProductCodes: ['611665888010', '611665901023']
+    keheProductCodes: ['611665888010', '611665901023'],
+    vistarProductCodes: ['GFO88017']
   },
   {
     itemNumber: '331',
@@ -86,7 +88,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     category: 'Breakfast Burrito',
     alpineProductCodes: ['999989'],
     petesProductCodes: ['59976'],
-    keheProductCodes: ['611665888027']
+    keheProductCodes: ['611665888027'],
+    vistarProductCodes: ['GFO88024']
   },
   {
     itemNumber: '361',
@@ -119,7 +122,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     ],
     category: 'Breakfast Burrito',
     alpineProductCodes: ['999987'],
-    keheProductCodes: ['611665888119']
+    keheProductCodes: ['611665888119'],
+    vistarProductCodes: ['GFO88116']
   },
   {
     itemNumber: '901',
@@ -185,7 +189,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     ],
     category: 'Wrap',
     alpineProductCodes: ['183981'],
-    keheProductCodes: ['611665888089']
+    keheProductCodes: ['611665888089'],
+    vistarProductCodes: ['GFO88811']
   },
   {
     itemNumber: '451',
@@ -306,7 +311,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'CHICKEN WRAP SPICY THAI', // MHD name
       'MH400016',
     ],
-    category: 'Wrap'
+    category: 'Wrap',
+    vistarProductCodes: ['GFO88810']
   },
   {
     itemNumber: '521',
@@ -334,7 +340,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'Beef and Cheese Piroshki', // MHD variation with "and"
     ],
     category: 'Piroshki',
-    alpineProductCodes: ['183979']
+    alpineProductCodes: ['183979'],
+    vistarProductCodes: ['GFO02208']
   },
   {
     itemNumber: '213',
@@ -433,7 +440,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     ],
     category: 'Bagel Dog',
     alpineProductCodes: ['999979', '183923'],
-    keheProductCodes: ['611665200218']
+    keheProductCodes: ['611665200218'],
+    vistarProductCodes: ['GFO12021']
   },
   {
     itemNumber: '280',
@@ -453,7 +461,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'CHICKEN POT PIE',
       'MH400025',
     ],
-    category: 'Handpie'
+    category: 'Handpie',
+    vistarProductCodes: ['GFO10110']
   },
   {
     itemNumber: '282',
@@ -484,7 +493,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'CAPRESE',
       'MH400028',
     ],
-    category: 'Sandwich'
+    category: 'Sandwich',
+    vistarProductCodes: ['GFO10608']
   },
   {
     itemNumber: '914',
@@ -530,7 +540,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       "BENNY JALAPENO BAGEL DOG",
       'MH400032',
     ],
-    category: 'Bagel Dog'
+    category: 'Bagel Dog',
+    vistarProductCodes: ['GFO12022']
   },
 
   // MHD-specific products - Calzone items with correct Master Pricing item numbers and names
@@ -573,7 +584,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'CALZONE CHICKEN FAJITA',
       'CHICKEN FAJITA CALZONE WRAP',
     ],
-    category: 'Calzone'
+    category: 'Calzone',
+    vistarProductCodes: ['GFO10602']
   },
   {
     itemNumber: '122', // Correct item number from Master Pricing
@@ -615,7 +627,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     ],
     category: 'Breakfast Sandwich',
     alpineProductCodes: ['999986'],
-    petesProductCodes: ['59986']
+    petesProductCodes: ['59986'],
+    vistarProductCodes: ['GFO20001']
   },
   {
     itemNumber: '831',
@@ -635,7 +648,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     category: 'Breakfast Sandwich',
     alpineProductCodes: ['999985'],
     petesProductCodes: ['59985'],
-    keheProductCodes: ['611665900095']
+    keheProductCodes: ['611665900095'],
+    vistarProductCodes: ['GFO20002']
   },
   {
     itemNumber: '811',
@@ -654,7 +668,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     category: 'Breakfast Sandwich',
     alpineProductCodes: ['999982'],
     petesProductCodes: ['59987'],
-    keheProductCodes: ['611665900101']
+    keheProductCodes: ['611665900101'],
+    vistarProductCodes: ['GFO90010']
   },
   {
     itemNumber: '821',
@@ -673,7 +688,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     category: 'Breakfast Sandwich',
     alpineProductCodes: ['999984'],
     petesProductCodes: ['59984'],
-    keheProductCodes: ['611665900118']
+    keheProductCodes: ['611665900118'],
+    vistarProductCodes: ['GFO00008']
   },
   {
     itemNumber: '851',

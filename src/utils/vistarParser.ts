@@ -191,7 +191,7 @@ export async function parseVistarCSV(file: File): Promise<ParsedVistarData> {
     const sizeOzNum = sizePerOz ? parseFloat(sizePerOz.replace(/[^0-9.]/g, '')) : undefined;
 
     // Get our internal item number from Vistar product code
-    const ourItemNumber = getItemNumberFromVistarCode(itemId);
+    let ourItemNumber = getItemNumberFromVistarCode(itemId);
     
     // Get the canonical product name from the Vistar product code if available
     let canonicalProductName = finalProductName;
@@ -204,6 +204,14 @@ export async function parseVistarCSV(file: File): Promise<ParsedVistarData> {
     } else {
       // Fallback to mapping by product description
       canonicalProductName = mapToCanonicalProductName(finalProductName);
+    }
+
+    // If we still don't have an item number, get it from the canonical product name
+    if (!ourItemNumber) {
+      const mapping = PRODUCT_MAPPINGS.find(m => m.canonicalName === canonicalProductName);
+      if (mapping) {
+        ourItemNumber = mapping.itemNumber;
+      }
     }
 
     const record: AlpineSalesRecord = {
