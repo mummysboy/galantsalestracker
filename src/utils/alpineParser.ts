@@ -196,7 +196,7 @@ export function parseAlpineTXT(txtContent: string, reportDate: string): ParsedAl
           size: size,
           customerId: currentCustomerId,
           productCode: itemNumber, // Vendor Code: Alpine's internal code (183981, 999982, etc.)
-          itemNumber: ourItemNumber, // Item Number: Our internal item number (321, 431, 811, etc.)
+          itemNumber: ourItemNumber || mfg, // Item Number: Our internal item number, fallback to MFG ITEM # if available
           cases: parseInt(casesStr || '0') || 0,
           pieces: parseNum(piecesStr),
           netLbs: parseNum(netLbsStr),

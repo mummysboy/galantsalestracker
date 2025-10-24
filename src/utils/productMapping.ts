@@ -333,7 +333,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'Beef & Cheese Piroshki',
       'Beef and Cheese Piroshki', // MHD variation with "and"
     ],
-    category: 'Piroshki'
+    category: 'Piroshki',
+    alpineProductCodes: ['183979']
   },
   {
     itemNumber: '213',
@@ -875,6 +876,18 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'SPINACH & CHEESE PIROSHKI',
     ],
     category: 'Piroshki'
+  },
+  {
+    itemNumber: '624',
+    canonicalName: 'Beef & Mushroom Piroshki',
+    alternateNames: [
+      'BEEF & MUSHROOM PIROSHKI',
+      'BEEF MUSHROOM PIROSHKI',
+      'PIROSHKI BEEF MUSHROOM',
+      'MH406047',
+    ],
+    category: 'Piroshki',
+    alpineProductCodes: ['184028']
   },
   
   // Additional MHD codes (unknown product names - to be mapped)
