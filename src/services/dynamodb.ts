@@ -142,100 +142,133 @@ class DynamoDBService {
   }
 
   async getSalesRecordsByDistributor(distributor: string): Promise<SalesRecord[]> {
-    const command = new QueryCommand({
-      TableName: TABLE_NAME,
-      KeyConditionExpression: 'PK = :pk',
-      ExpressionAttributeValues: {
-        ':pk': `SALES#${distributor}`,
-      },
-    });
+    const allItems: SalesRecord[] = [];
+    let lastEvaluatedKey: any = undefined;
 
-    const result = await docClient.send(command);
-    return (result.Items || []).map(item => ({
-      id: item.id,
-      distributor: item.distributor,
-      period: item.period,
-      customerName: item.customerName,
-      productName: item.productName,
-      productCode: item.productCode,
-      cases: item.cases,
-      revenue: item.revenue,
-      invoiceKey: item.invoiceKey,
-      source: item.source,
-      timestamp: item.timestamp,
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
-      accountName: item.accountName,
-      customerId: item.customerId,
-      itemNumber: item.itemNumber,
-      size: item.size,
-      weightLbs: item.weightLbs,
-    })) as SalesRecord[];
+    do {
+      const command = new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: 'PK = :pk',
+        ExpressionAttributeValues: {
+          ':pk': `SALES#${distributor}`,
+        },
+        ExclusiveStartKey: lastEvaluatedKey,
+      });
+
+      const result = await docClient.send(command);
+      const items = (result.Items || []).map(item => ({
+        id: item.id,
+        distributor: item.distributor,
+        period: item.period,
+        customerName: item.customerName,
+        productName: item.productName,
+        productCode: item.productCode,
+        cases: item.cases,
+        revenue: item.revenue,
+        invoiceKey: item.invoiceKey,
+        source: item.source,
+        timestamp: item.timestamp,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+        accountName: item.accountName,
+        customerId: item.customerId,
+        itemNumber: item.itemNumber,
+        size: item.size,
+        weightLbs: item.weightLbs,
+      })) as SalesRecord[];
+
+      allItems.push(...items);
+      lastEvaluatedKey = result.LastEvaluatedKey;
+    } while (lastEvaluatedKey);
+
+    return allItems;
   }
 
   async getSalesRecordsByPeriod(period: string): Promise<SalesRecord[]> {
-    const command = new QueryCommand({
-      TableName: TABLE_NAME,
-      IndexName: 'GSI1',
-      KeyConditionExpression: 'GSI1PK = :pk',
-      ExpressionAttributeValues: {
-        ':pk': `PERIOD#${period}`,
-      },
-    });
+    const allItems: SalesRecord[] = [];
+    let lastEvaluatedKey: any = undefined;
 
-    const result = await docClient.send(command);
-    return (result.Items || []).map(item => ({
-      id: item.id,
-      distributor: item.distributor,
-      period: item.period,
-      customerName: item.customerName,
-      productName: item.productName,
-      productCode: item.productCode,
-      cases: item.cases,
-      revenue: item.revenue,
-      invoiceKey: item.invoiceKey,
-      source: item.source,
-      timestamp: item.timestamp,
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
-      accountName: item.accountName,
-      customerId: item.customerId,
-      itemNumber: item.itemNumber,
-      size: item.size,
-      weightLbs: item.weightLbs,
-    })) as SalesRecord[];
+    do {
+      const command = new QueryCommand({
+        TableName: TABLE_NAME,
+        IndexName: 'GSI1',
+        KeyConditionExpression: 'GSI1PK = :pk',
+        ExpressionAttributeValues: {
+          ':pk': `PERIOD#${period}`,
+        },
+        ExclusiveStartKey: lastEvaluatedKey,
+      });
+
+      const result = await docClient.send(command);
+      const items = (result.Items || []).map(item => ({
+        id: item.id,
+        distributor: item.distributor,
+        period: item.period,
+        customerName: item.customerName,
+        productName: item.productName,
+        productCode: item.productCode,
+        cases: item.cases,
+        revenue: item.revenue,
+        invoiceKey: item.invoiceKey,
+        source: item.source,
+        timestamp: item.timestamp,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+        accountName: item.accountName,
+        customerId: item.customerId,
+        itemNumber: item.itemNumber,
+        size: item.size,
+        weightLbs: item.weightLbs,
+      })) as SalesRecord[];
+
+      allItems.push(...items);
+      lastEvaluatedKey = result.LastEvaluatedKey;
+    } while (lastEvaluatedKey);
+
+    return allItems;
   }
 
   async getAllSalesRecords(): Promise<SalesRecord[]> {
-    const command = new ScanCommand({
-      TableName: TABLE_NAME,
-      FilterExpression: 'begins_with(PK, :pk)',
-      ExpressionAttributeValues: {
-        ':pk': 'SALES#',
-      },
-    });
+    const allItems: SalesRecord[] = [];
+    let lastEvaluatedKey: any = undefined;
 
-    const result = await docClient.send(command);
-    return (result.Items || []).map(item => ({
-      id: item.id,
-      distributor: item.distributor,
-      period: item.period,
-      customerName: item.customerName,
-      productName: item.productName,
-      productCode: item.productCode,
-      cases: item.cases,
-      revenue: item.revenue,
-      invoiceKey: item.invoiceKey,
-      source: item.source,
-      timestamp: item.timestamp,
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
-      accountName: item.accountName,
-      customerId: item.customerId,
-      itemNumber: item.itemNumber,
-      size: item.size,
-      weightLbs: item.weightLbs,
-    })) as SalesRecord[];
+    do {
+      const command = new ScanCommand({
+        TableName: TABLE_NAME,
+        FilterExpression: 'begins_with(PK, :pk)',
+        ExpressionAttributeValues: {
+          ':pk': 'SALES#',
+        },
+        ExclusiveStartKey: lastEvaluatedKey,
+      });
+
+      const result = await docClient.send(command);
+      const items = (result.Items || []).map(item => ({
+        id: item.id,
+        distributor: item.distributor,
+        period: item.period,
+        customerName: item.customerName,
+        productName: item.productName,
+        productCode: item.productCode,
+        cases: item.cases,
+        revenue: item.revenue,
+        invoiceKey: item.invoiceKey,
+        source: item.source,
+        timestamp: item.timestamp,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+        accountName: item.accountName,
+        customerId: item.customerId,
+        itemNumber: item.itemNumber,
+        size: item.size,
+        weightLbs: item.weightLbs,
+      })) as SalesRecord[];
+
+      allItems.push(...items);
+      lastEvaluatedKey = result.LastEvaluatedKey;
+    } while (lastEvaluatedKey);
+
+    return allItems;
   }
 
   // Customer Progression Operations
@@ -435,36 +468,47 @@ class DynamoDBService {
     if (invoiceKeys.length === 0) return [];
 
     try {
-      const command = new ScanCommand({
-        TableName: TABLE_NAME,
-        FilterExpression: 'invoiceKey IN (' + invoiceKeys.map((_, i) => `:key${i}`).join(',') + ')',
-        ExpressionAttributeValues: invoiceKeys.reduce((acc, key, i) => {
-          acc[`:key${i}`] = key;
-          return acc;
-        }, {} as Record<string, string>),
-      });
+      const allItems: SalesRecord[] = [];
+      let lastEvaluatedKey: any = undefined;
 
-      const result = await docClient.send(command);
-      return (result.Items || []).map(item => ({
-        id: item.id,
-        distributor: item.distributor,
-        period: item.period,
-        customerName: item.customerName,
-        productName: item.productName,
-        productCode: item.productCode,
-        cases: item.cases,
-        revenue: item.revenue,
-        invoiceKey: item.invoiceKey,
-        source: item.source,
-        timestamp: item.timestamp,
-        createdAt: item.createdAt,
-        updatedAt: item.updatedAt,
-        accountName: item.accountName,
-        customerId: item.customerId,
-        itemNumber: item.itemNumber,
-        size: item.size,
-        weightLbs: item.weightLbs,
-      })) as SalesRecord[];
+      do {
+        const command = new ScanCommand({
+          TableName: TABLE_NAME,
+          FilterExpression: 'invoiceKey IN (' + invoiceKeys.map((_, i) => `:key${i}`).join(',') + ')',
+          ExpressionAttributeValues: invoiceKeys.reduce((acc, key, i) => {
+            acc[`:key${i}`] = key;
+            return acc;
+          }, {} as Record<string, string>),
+          ExclusiveStartKey: lastEvaluatedKey,
+        });
+
+        const result = await docClient.send(command);
+        const items = (result.Items || []).map(item => ({
+          id: item.id,
+          distributor: item.distributor,
+          period: item.period,
+          customerName: item.customerName,
+          productName: item.productName,
+          productCode: item.productCode,
+          cases: item.cases,
+          revenue: item.revenue,
+          invoiceKey: item.invoiceKey,
+          source: item.source,
+          timestamp: item.timestamp,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          accountName: item.accountName,
+          customerId: item.customerId,
+          itemNumber: item.itemNumber,
+          size: item.size,
+          weightLbs: item.weightLbs,
+        })) as SalesRecord[];
+
+        allItems.push(...items);
+        lastEvaluatedKey = result.LastEvaluatedKey;
+      } while (lastEvaluatedKey);
+
+      return allItems;
     } catch (error) {
       console.error('[DynamoDB] Error fetching records by invoice keys:', error);
       return [];
