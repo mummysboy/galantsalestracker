@@ -42,6 +42,10 @@ const KeHeReportUpload: React.FC<KeHeReportUploadProps> = ({ onDataParsed, onCle
       const allRecords: AlpineSalesRecord[] = [];
       for (const f of files) {
         const parsed = await parseKeHeCSV(f);
+        console.log(`KeHe Upload: Parsed ${parsed.records.length} records from ${f.name}`, {
+          records: parsed.records.slice(0, 2), // Show first 2 records
+          metadata: parsed.metadata
+        });
         allRecords.push(...parsed.records);
       }
 
@@ -49,6 +53,7 @@ const KeHeReportUpload: React.FC<KeHeReportUploadProps> = ({ onDataParsed, onCle
       const customerProgressions = new Map<string, any>();
       customers.forEach(c => customerProgressions.set(c, analyzeCustomerProgress(allRecords, c)));
 
+      console.log(`KeHe Upload: Total ${allRecords.length} records, ${customers.length} customers`);
       onDataParsed({ records: allRecords, customerProgressions });
 
       try {

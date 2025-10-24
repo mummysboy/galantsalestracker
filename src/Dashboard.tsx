@@ -1234,11 +1234,16 @@ const Dashboard: React.FC = () => {
   };
 
   const handleKeHeDataParsed = (data: { records: AlpineSalesRecord[]; customerProgressions: Map<string, any> }) => {
+    console.log(`handleKeHeDataParsed called with ${data.records.length} records`);
     const newPeriods = new Set(data.records.map(r => r.period));
+    console.log(`New periods from upload:`, Array.from(newPeriods));
 
     const filteredExistingData = currentKeHeData.filter(record => !newPeriods.has(record.period));
+    console.log(`Existing KeHe data: ${currentKeHeData.length} records, keeping ${filteredExistingData.length} (removing ${currentKeHeData.length - filteredExistingData.length})`);
+    
     const mergedData = [...filteredExistingData, ...data.records];
-
+    console.log(`Merged KeHe data: ${mergedData.length} records`);
+    
     setCurrentKeHeData(mergedData);
 
     const allCustomers = Array.from(new Set(mergedData.map(r => r.customerName)));
