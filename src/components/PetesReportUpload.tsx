@@ -89,7 +89,7 @@ const PetesReportUpload: React.FC<PetesReportUploadProps> = ({ onDataParsed, onC
     } finally {
       setIsProcessing(false);
     }
-  }, [files, onDataParsed, onProcessingComplete]);
+  }, [files, onDataParsed, onProcessingComplete, onUploadStart]);
 
   return (
     <Card className="bg-white shadow-lg">

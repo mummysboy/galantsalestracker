@@ -97,7 +97,7 @@ const VistarReportUpload: React.FC<VistarReportUploadProps> = ({ onDataParsed, o
     } finally {
       setIsProcessing(false);
     }
-  }, [files, onDataParsed, onProcessingComplete]);
+  }, [files, onDataParsed, onProcessingComplete, onUploadStart]);
 
   return (
     <Card className="bg-white shadow-lg">

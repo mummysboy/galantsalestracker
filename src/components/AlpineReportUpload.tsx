@@ -175,7 +175,7 @@ const AlpineReportUpload: React.FC<AlpineReportUploadProps> = ({
     } finally {
       setIsProcessing(false);
     }
-  }, [reports, onDataParsed, onProcessingComplete]);
+  }, [reports, onDataParsed, onProcessingComplete, onUploadStart]);
 
   const removeReport = (index: number) => {
     setReports(prev => prev.filter((_, i) => i !== index));

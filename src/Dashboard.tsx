@@ -848,7 +848,6 @@ const Dashboard: React.FC = () => {
   // Removed Period Management toggle button; keep feature accessible via dropdown trash icons
   const [pendingDeletePeriod, setPendingDeletePeriod] = useState<string | null>(null);
   const [showMonthlySummary, setShowMonthlySummary] = useState(false);
-  const [openNewAccountsTooltipMonth, setOpenNewAccountsTooltipMonth] = useState<string | null>(null);
   const [deltaModalOpen, setDeltaModalOpen] = useState(false);
   const [newAccountsModalOpen, setNewAccountsModalOpen] = useState(false);
   const [selectedDistributor, setSelectedDistributor] = useState<'ALPINE' | 'PETES' | 'KEHE' | 'VISTAR' | 'TONYS' | 'TROIA' | 'MHD' | 'ALL'>(() => {
@@ -923,10 +922,13 @@ const Dashboard: React.FC = () => {
       tooltipTimerRef.current = null;
     }
   };
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const scheduleTooltipClose = (which: 'new') => {
     cancelTooltipClose();
     tooltipTimerRef.current = window.setTimeout(() => {
-      if (which === 'new') setOpenNewAccountsTooltipMonth(null);
+      if (which === 'new') {
+        // setOpenNewAccountsTooltipMonth(null);
+      }
     }, 200);
   };
 
