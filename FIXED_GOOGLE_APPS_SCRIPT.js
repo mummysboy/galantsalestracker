@@ -13,7 +13,9 @@ const CUSTOMER_SHEETS_PREFIX = "Customer_";
 
 // Main entry points
 function doGet() {
-  return ContentService.createTextOutput("Sales Tracker Google Apps Script - UP");
+  return ContentService.createTextOutput(
+    "Sales Tracker Google Apps Script - UP"
+  );
 }
 
 function doPost(e) {
@@ -22,7 +24,7 @@ function doPost(e) {
     if (!body || body.token !== TOKEN) {
       return ContentService.createTextOutput("Unauthorized");
     }
-    
+
     const rows = Array.isArray(body.rows) ? body.rows : [];
     if (rows.length === 0) {
       return ContentService.createTextOutput("No rows");
@@ -30,47 +32,61 @@ function doPost(e) {
 
     const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
     const logs = getOrCreateSheet(ss, LOGS_SHEET_NAME);
-    
+
     // Ensure logs header
     ensureHeader(logs, [
-      "Timestamp", "TotalRows", "AlpineRows", "PetesRows", "KeHeRows", 
-      "VistarRows", "TonysRows", "TroiaRows", "MhdRows", "AddedAlpine", 
-      "AddedPetes", "AddedKeHe", "AddedVistar", "AddedTonys", "AddedTroia", 
-      "AddedMhd", "CustomerSheets", "Note"
+      "Timestamp",
+      "TotalRows",
+      "AlpineRows",
+      "PetesRows",
+      "KeHeRows",
+      "VistarRows",
+      "TonysRows",
+      "TroiaRows",
+      "MhdRows",
+      "AddedAlpine",
+      "AddedPetes",
+      "AddedKeHe",
+      "AddedVistar",
+      "AddedTonys",
+      "AddedTroia",
+      "AddedMhd",
+      "CustomerSheets",
+      "Note",
     ]);
 
     const normalized = rows.map(normalizeRow);
-    
+
     // Detect vendor based on source field (handles both old and new data structures)
     const vendorRows = {
-      alpine: normalized.filter(r => {
+      alpine: normalized.filter((r) => {
         const source = String(r[7] || "").toLowerCase();
         return source.includes("alpine");
       }),
-      petes: normalized.filter(r => {
+      petes: normalized.filter((r) => {
         const source = String(r[7] || "").toLowerCase();
         return source.includes("pete");
       }),
-      kehe: normalized.filter(r => {
+      kehe: normalized.filter((r) => {
         const source = String(r[7] || "").toLowerCase();
         return source.includes("kehe");
       }),
-      vistar: normalized.filter(r => {
+      vistar: normalized.filter((r) => {
         const source = String(r[7] || "").toLowerCase();
         return source.includes("vistar");
       }),
-      tonys: normalized.filter(r => {
+      tonys: normalized.filter((r) => {
         const source = String(r[7] || "").toLowerCase();
         return source.includes("tony");
       }),
-      troia: normalized.filter(r => {
+      troia: normalized.filter((r) => {
         const source = String(r[7] || "").toLowerCase();
         return source.includes("troia");
       }),
-      mhd: normalized.filter(r => {
+      mhd: normalized.filter((r) => {
         const source = String(r[7] || "").toLowerCase();
         return source.includes("mhd") || source.includes("mike hudson");
-      })
+      }),
     };
 
     // Process each vendor
@@ -82,7 +98,7 @@ function doPost(e) {
       vistar: VISTAR_SHEET_NAME,
       tonys: TONYS_SHEET_NAME,
       troia: TROIA_SHEET_NAME,
-      mhd: MHD_SHEET_NAME
+      mhd: MHD_SHEET_NAME,
     };
 
     for (const [vendor, rows] of Object.entries(vendorRows)) {
@@ -114,33 +130,67 @@ function doPost(e) {
       results.tonys || 0,
       results.troia || 0,
       results.mhd || 0,
-      "Customer breakdowns added to vendor sheets"
+      "Customer breakdowns added to vendor sheets",
     ]);
 
-    const totalAdded = Object.values(results).reduce((sum, count) => sum + count, 0);
+    const totalAdded = Object.values(results).reduce(
+      (sum, count) => sum + count,
+      0
+    );
     const skipped = normalized.length - totalAdded;
 
     return ContentService.createTextOutput(
-      `OK: Alpine +${results.alpine || 0}, Pete's Coffee +${results.petes || 0}, ` +
-      `KeHe +${results.kehe || 0}, Vistar +${results.vistar || 0}, ` +
-      `Tony's +${results.tonys || 0}, Troia +${results.troia || 0}, ` +
-      `MHD +${results.mhd || 0}, ` +
-      `skipped ${skipped}`
+      `OK: Alpine +${results.alpine || 0}, Pete's Coffee +${
+        results.petes || 0
+      }, ` +
+        `KeHe +${results.kehe || 0}, Vistar +${results.vistar || 0}, ` +
+        `Tony's +${results.tonys || 0}, Troia +${results.troia || 0}, ` +
+        `MHD +${results.mhd || 0}, ` +
+        `skipped ${skipped}`
     );
-
   } catch (err) {
     try {
       const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
       const logs = getOrCreateSheet(ss, LOGS_SHEET_NAME);
       ensureHeader(logs, [
-        "Timestamp", "TotalRows", "AlpineRows", "PetesRows", "KeHeRows", 
-        "VistarRows", "TonysRows", "TroiaRows", "MhdRows", "AddedAlpine", 
-        "AddedPetes", "AddedKeHe", "AddedVistar", "AddedTonys", "AddedTroia", 
-        "AddedMhd", "CustomerSheets", "Note"
+        "Timestamp",
+        "TotalRows",
+        "AlpineRows",
+        "PetesRows",
+        "KeHeRows",
+        "VistarRows",
+        "TonysRows",
+        "TroiaRows",
+        "MhdRows",
+        "AddedAlpine",
+        "AddedPetes",
+        "AddedKeHe",
+        "AddedVistar",
+        "AddedTonys",
+        "AddedTroia",
+        "AddedMhd",
+        "CustomerSheets",
+        "Note",
       ]);
       logs.appendRow([
-        new Date().toISOString(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        "Error: " + err.toString()
+        new Date().toISOString(),
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        "Error: " + err.toString(),
       ]);
     } catch (_ignore) {}
     return ContentService.createTextOutput("Error: " + err.toString());
@@ -155,49 +205,55 @@ function processVendorUpload(sheet, newRows) {
 
   // Detect which months are in the new upload
   const monthsInUpload = new Set();
-  newRows.forEach(row => {
+  newRows.forEach((row) => {
     const dateStr = row[0]; // date is in first column
     if (dateStr) {
       const date = new Date(dateStr);
       if (!isNaN(date)) {
         const year = date.getFullYear();
         const month = date.getMonth() + 1;
-        monthsInUpload.add(`${year}-${month.toString().padStart(2, '0')}`);
+        monthsInUpload.add(`${year}-${month.toString().padStart(2, "0")}`);
       }
     }
   });
 
-  console.log(`Detected months in upload: ${Array.from(monthsInUpload).join(', ')}`);
+  console.log(
+    `Detected months in upload: ${Array.from(monthsInUpload).join(", ")}`
+  );
 
   // Get existing data
   const existingData = getRawData(sheet);
-  
+
   // Remove existing data for the months being uploaded
-  const filteredExistingData = existingData.filter(row => {
+  const filteredExistingData = existingData.filter((row) => {
     const dateStr = row[0];
     if (!dateStr) return true;
-    
+
     const date = new Date(dateStr);
     if (isNaN(date)) return true;
-    
+
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
-    const monthKey = `${year}-${month.toString().padStart(2, '0')}`;
-    
+    const monthKey = `${year}-${month.toString().padStart(2, "0")}`;
+
     return !monthsInUpload.has(monthKey);
   });
 
-  console.log(`Removed ${existingData.length - filteredExistingData.length} existing rows for months: ${Array.from(monthsInUpload).join(', ')}`);
+  console.log(
+    `Removed ${
+      existingData.length - filteredExistingData.length
+    } existing rows for months: ${Array.from(monthsInUpload).join(", ")}`
+  );
 
   // Combine filtered existing data with new data
   const mergedData = [...filteredExistingData, ...newRows];
-  
+
   // Store the merged data
   storeRawData(sheet, mergedData);
-  
+
   // Rebuild the monthly view
   rebuildMonthlyViewFor(sheet, mergedData);
-  
+
   return newRows.length;
 }
 
@@ -206,7 +262,7 @@ function processVendorUpload(sheet, newRows) {
 // Data storage functions
 function getRawData(sheet) {
   const props = PropertiesService.getScriptProperties();
-  const key = 'raw_' + sheet.getName();
+  const key = "raw_" + sheet.getName();
   const stored = props.getProperty(key);
   if (!stored) return [];
   try {
@@ -219,8 +275,8 @@ function getRawData(sheet) {
 
 function storeRawData(sheet, data) {
   const props = PropertiesService.getScriptProperties();
-  const key = 'raw_' + sheet.getName();
-  
+  const key = "raw_" + sheet.getName();
+
   try {
     // Store all data without time limits
     props.setProperty(key, JSON.stringify(data));
@@ -230,19 +286,25 @@ function storeRawData(sheet, data) {
     // If still too large, try storing only recent data (last 3 years)
     const threeYearsAgo = new Date();
     threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
-    
-    const recentData = data.filter(row => {
+
+    const recentData = data.filter((row) => {
       const dateStr = row[0];
       if (!dateStr) return true;
       const date = new Date(dateStr);
       return !isNaN(date) && date >= threeYearsAgo;
     });
-    
+
     try {
       props.setProperty(key, JSON.stringify(recentData));
-      console.log(`Stored ${recentData.length} recent rows for ${sheet.getName()} (3-year limit applied)`);
+      console.log(
+        `Stored ${
+          recentData.length
+        } recent rows for ${sheet.getName()} (3-year limit applied)`
+      );
     } catch (e2) {
-      console.log(`Failed to store even recent data for ${sheet.getName()}: ${e2}`);
+      console.log(
+        `Failed to store even recent data for ${sheet.getName()}: ${e2}`
+      );
     }
   }
 }
@@ -255,29 +317,29 @@ function clearMonthData(vendor, year, month) {
     console.log(`Unknown vendor: ${vendor}`);
     return;
   }
-  
+
   const sheet = getOrCreateSheet(ss, sheetName);
   const existingData = getRawData(sheet);
-  
-  const monthKey = `${year}-${month.toString().padStart(2, '0')}`;
-  const filteredData = existingData.filter(row => {
+
+  const monthKey = `${year}-${month.toString().padStart(2, "0")}`;
+  const filteredData = existingData.filter((row) => {
     const dateStr = row[0];
     if (!dateStr) return true;
-    
+
     const date = new Date(dateStr);
     if (isNaN(date)) return true;
-    
+
     const rowYear = date.getFullYear();
     const rowMonth = date.getMonth() + 1;
-    const rowMonthKey = `${rowYear}-${rowMonth.toString().padStart(2, '0')}`;
-    
+    const rowMonthKey = `${rowYear}-${rowMonth.toString().padStart(2, "0")}`;
+
     return rowMonthKey !== monthKey;
   });
-  
+
   const removedCount = existingData.length - filteredData.length;
   storeRawData(sheet, filteredData);
   rebuildMonthlyViewFor(sheet, filteredData);
-  
+
   console.log(`Cleared ${removedCount} rows for ${vendor} ${monthKey}`);
   return removedCount;
 }
@@ -289,33 +351,42 @@ function clearVendorData(vendor) {
     console.log(`Unknown vendor: ${vendor}`);
     return;
   }
-  
+
   const sheet = getOrCreateSheet(ss, sheetName);
   const existingData = getRawData(sheet);
-  
+
   storeRawData(sheet, []);
   rebuildMonthlyViewFor(sheet, []);
-  
+
   console.log(`Cleared all ${existingData.length} rows for ${vendor}`);
   return existingData.length;
 }
 
 function clearAllData() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const vendors = [ALPINE_SHEET_NAME, PETES_SHEET_NAME, KEHE_SHEET_NAME, 
-                   VISTAR_SHEET_NAME, TONYS_SHEET_NAME, TROIA_SHEET_NAME, MHD_SHEET_NAME];
-  
+  const vendors = [
+    ALPINE_SHEET_NAME,
+    PETES_SHEET_NAME,
+    KEHE_SHEET_NAME,
+    VISTAR_SHEET_NAME,
+    TONYS_SHEET_NAME,
+    TROIA_SHEET_NAME,
+    MHD_SHEET_NAME,
+  ];
+
   let totalCleared = 0;
-  vendors.forEach(vendorName => {
+  vendors.forEach((vendorName) => {
     const sheet = getOrCreateSheet(ss, vendorName);
     const existingData = getRawData(sheet);
     totalCleared += existingData.length;
-    
+
     storeRawData(sheet, []);
     rebuildMonthlyViewFor(sheet, []);
   });
-  
-  console.log(`Cleared all data: ${totalCleared} total rows across all vendors`);
+
+  console.log(
+    `Cleared all data: ${totalCleared} total rows across all vendors`
+  );
   return totalCleared;
 }
 
@@ -328,60 +399,62 @@ function viewUploadedData() {
     { name: "Vistar", sheet: VISTAR_SHEET_NAME },
     { name: "Tony's Fine Foods", sheet: TONYS_SHEET_NAME },
     { name: "Troia Foods", sheet: TROIA_SHEET_NAME },
-    { name: "Mike Hudson", sheet: MHD_SHEET_NAME }
+    { name: "Mike Hudson", sheet: MHD_SHEET_NAME },
   ];
-  
+
   console.log("=== UPLOADED DATA SUMMARY ===");
-  
-  vendors.forEach(vendor => {
+
+  vendors.forEach((vendor) => {
     const sheet = getOrCreateSheet(ss, vendor.sheet);
     const data = getRawData(sheet);
-    
+
     if (data.length === 0) {
       console.log(`${vendor.name}: No data uploaded`);
       return;
     }
-    
+
     // Group by month
     const months = {};
-    data.forEach(row => {
+    data.forEach((row) => {
       const dateStr = row[0];
       if (!dateStr) return;
-      
+
       const date = new Date(dateStr);
       if (isNaN(date)) return;
-      
+
       const year = date.getFullYear();
       const month = date.getMonth() + 1;
-      const monthKey = `${year}-${month.toString().padStart(2, '0')}`;
-      
+      const monthKey = `${year}-${month.toString().padStart(2, "0")}`;
+
       if (!months[monthKey]) {
         months[monthKey] = 0;
       }
       months[monthKey]++;
     });
-    
+
     console.log(`${vendor.name}: ${data.length} total rows`);
-    Object.keys(months).sort().forEach(month => {
-      console.log(`  ${month}: ${months[month]} rows`);
-    });
+    Object.keys(months)
+      .sort()
+      .forEach((month) => {
+        console.log(`  ${month}: ${months[month]} rows`);
+      });
   });
-  
+
   return "Check logs for detailed summary";
 }
 
 // Helper functions
 function getSheetNameForVendor(vendor) {
   const vendorMap = {
-    "alpine": ALPINE_SHEET_NAME,
+    alpine: ALPINE_SHEET_NAME,
     "pete's coffee": PETES_SHEET_NAME,
-    "kehe": KEHE_SHEET_NAME,
-    "vistar": VISTAR_SHEET_NAME,
+    kehe: KEHE_SHEET_NAME,
+    vistar: VISTAR_SHEET_NAME,
     "tony's fine foods": TONYS_SHEET_NAME,
     "troia foods": TROIA_SHEET_NAME,
-    "mike hudson": MHD_SHEET_NAME
+    "mike hudson": MHD_SHEET_NAME,
   };
-  
+
   const normalizedVendor = vendor.toLowerCase().trim();
   return vendorMap[normalizedVendor] || null;
 }
@@ -411,7 +484,7 @@ function normalizeRow(r) {
   const invoiceId = String(r[6] || "").trim();
   const source = String(r[7] || "").trim();
   const uploadedAt = String(r[8] || new Date().toISOString());
-  
+
   // Handle both old and new data structures
   // Old: [date, customer, product, productCode, quantity, revenue, invoiceId, source, uploadedAt]
   // New: [date, customer, product, productCode, ourItemCode, quantity, invoiceId, source, uploadedAt]
@@ -424,16 +497,30 @@ function normalizeRow(r) {
     const adjustedInvoiceId = String(r[7] || "").trim();
     const adjustedSource = String(r[8] || "").trim();
     const adjustedUploadedAt = String(r[9] || new Date().toISOString());
-    
+
     return [
-      date, customer, product, productCode, ourItemCode, adjustedQuantity, 
-      adjustedInvoiceId, adjustedSource, adjustedUploadedAt
+      date,
+      customer,
+      product,
+      productCode,
+      ourItemCode,
+      adjustedQuantity,
+      adjustedInvoiceId,
+      adjustedSource,
+      adjustedUploadedAt,
     ];
   } else {
     // Old structure without ourItemCode
     return [
-      date, customer, product, productCode, ourItemCode, quantity, 
-      invoiceId, source, uploadedAt
+      date,
+      customer,
+      product,
+      productCode,
+      ourItemCode,
+      quantity,
+      invoiceId,
+      source,
+      uploadedAt,
     ];
   }
 }
@@ -487,8 +574,18 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
 
   const values = dataRows;
   const monthNames = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
   ];
 
   // Build monthly summary data
@@ -501,7 +598,8 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
   const customerData = {}; // key = year|customer
 
   for (let i = 0; i < values.length; i++) {
-    const [dateStr, customer, product, productCode, ourItemCode, quantity] = values[i];
+    const [dateStr, customer, product, productCode, ourItemCode, quantity] =
+      values[i];
     if (!dateStr || !customer || !product) continue;
     const d = new Date(dateStr);
     if (isNaN(d)) continue;
@@ -528,7 +626,7 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
     if (!totalsByKey[key]) {
       totalsByKey[key] = {
         quantities: Array(12).fill(0),
-        productCode: productCode || '',
+        productCode: productCode || "",
       };
     }
     totalsByKey[key].quantities[month - 1] += toNumber(quantity);
@@ -575,7 +673,10 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
     const hasSubsequentData = (() => {
       for (let fm = m + 1; fm <= 12; fm++) {
         const futureKey = latestYear + "-" + ("0" + fm).slice(-2);
-        if (customersByMonth[futureKey] && customersByMonth[futureKey].size > 0) {
+        if (
+          customersByMonth[futureKey] &&
+          customersByMonth[futureKey].size > 0
+        ) {
           return true;
         }
       }
@@ -676,7 +777,6 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
   sheet.getRange(currentRow, 2, 1, 13).setBackground("#f8f9fa");
   currentRow++;
 
-
   // New customers row
   const newCustRow = ["New Customers", ...newCustomers];
   const totalNew = newCustomers.reduce((a, b) => a + b, 0);
@@ -684,11 +784,12 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
   sheet.getRange(currentRow, 1, 1, 14).setValues([newCustRow]);
   sheet.getRange(currentRow, 1).setBackground("#e8f0fe").setFontWeight("bold");
   sheet.getRange(currentRow, 2, 1, 13).setBackground("#d4edda"); // light green
-  
+
   // Add notes/comments to cells with new customer names
   for (let m = 0; m < 12; m++) {
     if (newCustomerNames[m] && newCustomerNames[m].length > 0) {
-      const noteText = "New Customers:\n" + newCustomerNames[m].sort().join("\n");
+      const noteText =
+        "New Customers:\n" + newCustomerNames[m].sort().join("\n");
       sheet.getRange(currentRow, m + 2).setNote(noteText);
     }
   }
@@ -701,7 +802,9 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
       }
     }
     const uniqueNew = [...new Set(allNewCustomers)].sort();
-    sheet.getRange(currentRow, 14).setNote("All New Customers:\n" + uniqueNew.join("\n"));
+    sheet
+      .getRange(currentRow, 14)
+      .setNote("All New Customers:\n" + uniqueNew.join("\n"));
   }
   currentRow++;
 
@@ -712,11 +815,12 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
   sheet.getRange(currentRow, 1, 1, 14).setValues([lostCustRow]);
   sheet.getRange(currentRow, 1).setBackground("#e8f0fe").setFontWeight("bold");
   sheet.getRange(currentRow, 2, 1, 13).setBackground("#f8d7da"); // light red
-  
+
   // Add notes/comments to cells with lost customer names
   for (let m = 0; m < 12; m++) {
     if (lostCustomerNames[m] && lostCustomerNames[m].length > 0) {
-      const noteText = "Lost Customers:\n" + lostCustomerNames[m].sort().join("\n");
+      const noteText =
+        "Lost Customers:\n" + lostCustomerNames[m].sort().join("\n");
       sheet.getRange(currentRow, m + 2).setNote(noteText);
     }
   }
@@ -729,122 +833,11 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
       }
     }
     const uniqueLost = [...new Set(allLostCustomers)].sort();
-    sheet.getRange(currentRow, 14).setNote("All Lost Customers:\n" + uniqueLost.join("\n"));
-  }
-  currentRow++;
-
-  currentRow += 2; // spacing
-
-  // BUILD NEW/LOST CUSTOMERS DETAIL SECTION (COLLAPSIBLE)
-  
-  sheet
-    .getRange(currentRow, 1)
-    .setValue("▼ NEW & LOST CUSTOMERS DETAIL - " + latestYear + " (Click to expand/collapse)");
-  sheet.getRange(currentRow, 1, 1, 14).mergeAcross();
-  sheet
-    .getRange(currentRow, 1)
-    .setFontWeight("bold")
-    .setFontSize(14)
-    .setBackground("#9c27b0")
-    .setFontColor("#ffffff")
-    .setHorizontalAlignment("center");
-  currentRow++;
-  
-  const detailContentStart = currentRow;
-
-  // New customers detail
-  sheet.getRange(currentRow, 1).setValue("NEW CUSTOMERS:");
-  sheet
-    .getRange(currentRow, 1)
-    .setFontWeight("bold")
-    .setFontSize(11)
-    .setBackground("#c8e6c9")
-    .setFontColor("#1b5e20");
-  currentRow++;
-
-  let hasNewCustomers = false;
-  for (let m = 0; m < 12; m++) {
-    if (newCustomerNames[m] && newCustomerNames[m].length > 0) {
-      hasNewCustomers = true;
-      const customerList = newCustomerNames[m].sort().join(", ");
-      sheet.getRange(currentRow, 1).setValue(monthNames[m] + ":");
-      sheet
-        .getRange(currentRow, 1)
-        .setFontWeight("bold")
-        .setBackground("#e8f5e9");
-      sheet.getRange(currentRow, 2, 1, 13).setValue(customerList);
-      sheet
-        .getRange(currentRow, 2, 1, 13)
-        .mergeAcross()
-        .setWrap(true)
-        .setBackground("#f1f8e9");
-      currentRow++;
-    }
-  }
-
-  if (!hasNewCustomers) {
-    sheet.getRange(currentRow, 1, 1, 14).setValue("No new customers this year");
     sheet
-      .getRange(currentRow, 1, 1, 14)
-      .mergeAcross()
-      .setFontStyle("italic")
-      .setFontColor("#757575");
-    currentRow++;
+      .getRange(currentRow, 14)
+      .setNote("All Lost Customers:\n" + uniqueLost.join("\n"));
   }
-
-  currentRow++; // spacing
-
-  // Lost customers detail
-  sheet.getRange(currentRow, 1).setValue("LOST CUSTOMERS:");
-  sheet
-    .getRange(currentRow, 1)
-    .setFontWeight("bold")
-    .setFontSize(11)
-    .setBackground("#ffcdd2")
-    .setFontColor("#b71c1c");
   currentRow++;
-
-  let hasLostCustomers = false;
-  for (let m = 0; m < 12; m++) {
-    if (lostCustomerNames[m] && lostCustomerNames[m].length > 0) {
-      hasLostCustomers = true;
-      const customerList = lostCustomerNames[m].sort().join(", ");
-      sheet.getRange(currentRow, 1).setValue(monthNames[m] + ":");
-      sheet
-        .getRange(currentRow, 1)
-        .setFontWeight("bold")
-        .setBackground("#ffebee");
-      sheet.getRange(currentRow, 2, 1, 13).setValue(customerList);
-      sheet
-        .getRange(currentRow, 2, 1, 13)
-        .mergeAcross()
-        .setWrap(true)
-        .setBackground("#fff5f5");
-      currentRow++;
-    }
-  }
-
-  if (!hasLostCustomers) {
-    sheet
-      .getRange(currentRow, 1, 1, 14)
-      .setValue("No lost customers this year - Great job!");
-    sheet
-      .getRange(currentRow, 1, 1, 14)
-      .mergeAcross()
-      .setFontStyle("italic")
-      .setFontColor("#2e7d32");
-    currentRow++;
-  }
-
-  // Add dropdown functionality for new/lost customers section
-  if (currentRow > detailContentStart) {
-    try {
-      sheet.getRowGroup(detailContentStart, currentRow - detailContentStart).collapse();
-    } catch (e) {
-      // Row grouping not supported, continue without it
-      console.log("Row grouping not available:", e.toString());
-    }
-  }
 
   currentRow += 2; // spacing
 
@@ -900,7 +893,7 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
       const parts = k.split("|");
       const fullCustomerName = parts[1];
       const product = parts[2];
-      const productCode = parts[3] || '';  // Extract product code
+      const productCode = parts[3] || ""; // Extract product code
 
       // Detect if this is a sub-vendor (contains " - " or ": ")
       let mainCustomer = fullCustomerName;
@@ -922,7 +915,7 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
           hasSubVendors: false,
           subVendors: {},
           directProducts: [],
-        totalQuantity: Array(12).fill(0),
+          totalQuantity: Array(12).fill(0),
         };
       }
 
@@ -932,33 +925,36 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
         if (!customerHierarchy[mainCustomer].subVendors[subVendor]) {
           customerHierarchy[mainCustomer].subVendors[subVendor] = {
             products: [],
-        totalQuantity: Array(12).fill(0),
+            totalQuantity: Array(12).fill(0),
           };
         }
         customerHierarchy[mainCustomer].subVendors[subVendor].products.push({
           fullName: fullCustomerName,
           product: product,
-          productCode: productCode,  // Include product code
+          productCode: productCode, // Include product code
           quantities: totalsByKey[k].quantities,
         });
-        
+
         // Add to sub-vendor totals
         for (let m = 0; m < 12; m++) {
-        customerHierarchy[mainCustomer].subVendors[subVendor].totalQuantity[m] += totalsByKey[k].quantities[m];
+          customerHierarchy[mainCustomer].subVendors[subVendor].totalQuantity[
+            m
+          ] += totalsByKey[k].quantities[m];
         }
       } else {
         // Direct product under main customer
         customerHierarchy[mainCustomer].directProducts.push({
           fullName: fullCustomerName,
           product: product,
-          productCode: productCode,  // Include product code
+          productCode: productCode, // Include product code
           quantities: totalsByKey[k].quantities,
         });
       }
-      
+
       // Add to main customer totals
       for (let m = 0; m < 12; m++) {
-        customerHierarchy[mainCustomer].totalQuantity[m] += totalsByKey[k].quantities[m];
+        customerHierarchy[mainCustomer].totalQuantity[m] +=
+          totalsByKey[k].quantities[m];
       }
     });
 
@@ -984,7 +980,12 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
     const mainTotal = hierarchy.totalQuantity.reduce((a, b) => a + b, 0);
 
     // Main customer header row (collapsible) - Cases
-    const mainRow = ["▶ " + mainCustomer + " (Cases)", "", ...hierarchy.totalQuantity, mainTotal];
+    const mainRow = [
+      "▶ " + mainCustomer + " (Cases)",
+      "",
+      ...hierarchy.totalQuantity,
+      mainTotal,
+    ];
     sheet.getRange(currentRow, 1, 1, 15).setValues([mainRow]);
     sheet
       .getRange(currentRow, 1, 1, 15)
@@ -992,10 +993,39 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
       .setFontWeight("bold")
       .setFontSize(12);
     sheet.getRange(currentRow, 1).setFontColor("#000000");
+    
+    // Track the start of this customer's products for grouping
+    const customerDetailStart = currentRow + 1;
     currentRow++;
 
-
-    // const customerDetailStart = currentRow; // Removed - no longer needed
+    // Add header row above products for each customer
+    const customerProductHeaders = [
+      "Customer / Product",
+      "Code",
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+      "Total",
+    ];
+    sheet
+      .getRange(currentRow, 1, 1, customerProductHeaders.length)
+      .setValues([customerProductHeaders]);
+    sheet
+      .getRange(currentRow, 1, 1, customerProductHeaders.length)
+      .setFontWeight("bold")
+      .setBackground("#ffe0b2")
+      .setHorizontalAlignment("center")
+      .setFontSize(10);
+    currentRow++;
 
     if (hierarchy.hasSubVendors) {
       // This customer has sub-vendors - show them with collapsible sections
@@ -1019,10 +1049,10 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
           .setFontWeight("bold")
           .setFontSize(10);
         sheet.getRange(currentRow, 1).setFontColor("#1565c0");
+        
+        // Track the start of this sub-vendor's products for grouping
+        const subVendorDetailStart = currentRow + 1;
         currentRow++;
-
-
-        // const subVendorDetailStart = currentRow; // Removed - no longer needed
 
         // Products under this sub-vendor (indented twice)
         const products = subVendorData.products.sort((a, b) =>
@@ -1033,7 +1063,7 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
           const prodTotal = prod.quantities.reduce((a, b) => a + b, 0);
           const prodRow = [
             "      • " + prod.product + " (Cases)",
-            prod.productCode || '', // Add product code column
+            prod.productCode || "", // Add product code column
             ...prod.quantities,
             prodTotal,
           ];
@@ -1051,10 +1081,19 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
             }
           }
           currentRow++;
-
         });
 
-        // Note: Row grouping removed due to API compatibility issues
+        // Add row grouping for this sub-vendor's products
+        if (currentRow > subVendorDetailStart) {
+          try {
+            sheet
+              .getRowGroup(subVendorDetailStart, currentRow - 1)
+              .collapse();
+          } catch (e) {
+            // Row grouping not supported in some cases, continue without it
+            console.log("Row grouping not available for sub-vendor:", e.toString());
+          }
+        }
       });
     } else {
       // No sub-vendors, show direct products
@@ -1066,7 +1105,7 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
         const prodTotal = prod.quantities.reduce((a, b) => a + b, 0);
         const prodRow = [
           "  • " + prod.product + " (Cases)",
-          prod.productCode || '', // Add product code column
+          prod.productCode || "", // Add product code column
           ...prod.quantities,
           prodTotal,
         ];
@@ -1084,21 +1123,26 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
           }
         }
         currentRow++;
-
-
       });
     }
 
-    // Note: Row grouping removed due to API compatibility issues
+    // Add row grouping for this customer's entire product section
+    if (currentRow > customerDetailStart) {
+      try {
+        sheet
+          .getRowGroup(customerDetailStart, currentRow - 1)
+          .collapse();
+      } catch (e) {
+        // Row grouping not supported in some cases, continue without it
+        console.log("Row grouping not available for customer:", e.toString());
+      }
+    }
 
     // Blank row between main customers
     currentRow++;
   });
 
   // Note: The detailed product breakdown is now handled in the "PRODUCT BREAKDOWN BY CUSTOMER" section above
-
-  // Add customer breakdown section
-  addCustomerBreakdownSection(sheet, dataRows, latestYear, currentRow);
 
   // Auto-resize columns
   for (let col = 1; col <= 15; col++) {
@@ -1107,233 +1151,46 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
 
   // Set column widths for better appearance
   sheet.setColumnWidth(1, 250); // Customer/Product column wider
-  sheet.setColumnWidth(2, 80);  // Product code column
-}
-
-// Add customer breakdown section to vendor sheets
-function addCustomerBreakdownSection(sheet, dataRows, year, startRow) {
-  if (!dataRows || dataRows.length === 0) return;
-
-  let currentRow = startRow;
-  currentRow += 2; // spacing
-
-  // BUILD CUSTOMER BREAKDOWN SECTION (matching product breakdown format)
-  sheet
-    .getRange(currentRow, 1)
-    .setValue("CUSTOMER BREAKDOWN BY CASE - " + year);
-  sheet.getRange(currentRow, 1, 1, 15).mergeAcross();
-  sheet
-    .getRange(currentRow, 1)
-    .setFontWeight("bold")
-    .setFontSize(14)
-    .setBackground("#ff9800")
-    .setFontColor("#ffffff")
-    .setHorizontalAlignment("center");
-  currentRow++;
-  currentRow++; // spacing
-
-  // Column headers (matching product breakdown format)
-  const customerHeaders = [
-    "Customer / Product",
-    "Vendor Code",
-    "Our Item#",
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-    "Total",
-  ];
-  sheet
-    .getRange(currentRow, 1, 1, customerHeaders.length)
-    .setValues([customerHeaders]);
-  sheet
-    .getRange(currentRow, 1, 1, customerHeaders.length)
-    .setFontWeight("bold")
-    .setBackground("#ffc107")
-    .setHorizontalAlignment("center");
-  currentRow++;
-
-  // Build customer-level data with product details
-  const customerTotals = {}; // key = customer
-  const years = new Set();
-
-  for (let i = 0; i < dataRows.length; i++) {
-    const row = dataRows[i];
-    // Handle normalized data structure: [date, customer, product, productCode, ourItemCode, quantity, invoiceId, source, uploadedAt]
-    const dateStr = row[0];
-    const customer = row[1];
-    const product = row[2];
-    const productCode = row[3];
-    const ourItemCode = row[4] || '';
-    const quantity = row[5]; // This is now the correct quantity position
-    
-    if (!dateStr || !customer) continue;
-    const d = new Date(dateStr);
-    if (isNaN(d)) continue;
-    const rowYear = d.getFullYear();
-    const month = d.getMonth() + 1; // 1..12
-    years.add(rowYear);
-
-    if (!customerTotals[customer]) {
-      customerTotals[customer] = {
-        quantities: Array(12).fill(0),
-        products: new Map(), // product -> {vendorCode, ourItemCode}
-      };
-    }
-    customerTotals[customer].quantities[month - 1] += toNumber(quantity);
-    customerTotals[customer].products.set(product, {
-      vendorCode: productCode || '',
-      ourItemCode: ourItemCode || ''
-    });
-  }
-
-  // Sort customers alphabetically
-  const sortedCustomers = Object.keys(customerTotals).sort();
-
-  // Alternate row colors for better readability
-  const customerColors = [
-    "#fff3e0",
-    "#e3f2fd",
-    "#f3e5f5",
-    "#e8f5e9",
-    "#fce4ec",
-  ];
-  let colorIndex = 0;
-
-  // Build customer rows (matching product breakdown format)
-  sortedCustomers.forEach(customerName => {
-    const customer = customerTotals[customerName];
-    const customerColor = customerColors[colorIndex % customerColors.length];
-    colorIndex++;
-
-    const mainTotal = customer.quantities.reduce((a, b) => a + b, 0);
-
-    // Main customer header row (Cases) - with dropdown functionality
-    const mainRow = ["▶ " + customerName + " (Cases)", "", "", ...customer.quantities, mainTotal];
-    sheet.getRange(currentRow, 1, 1, 16).setValues([mainRow]);
-    sheet
-      .getRange(currentRow, 1, 1, 16)
-      .setBackground(customerColor)
-      .setFontWeight("bold")
-      .setFontSize(12);
-    sheet.getRange(currentRow, 1).setFontColor("#000000");
-    
-    // Add dropdown functionality
-    const customerDetailStart = currentRow + 1;
-    currentRow++;
-
-    // Main customer revenue row removed - only showing case counts
-
-    // Products under this customer (indented)
-    const products = Array.from(customer.products.keys()).sort();
-    products.forEach(product => {
-      // Get product data for this customer/product combination
-      const productQuantities = Array(12).fill(0);
-      
-      // Sum up quantities for this specific product
-      for (let i = 0; i < dataRows.length; i++) {
-        const row = dataRows[i];
-        const rowCustomer = row[1];
-        const rowProduct = row[2];
-        const quantity = row[5]; // Correct position for normalized data
-        
-        if (rowCustomer === customerName && rowProduct === product) {
-          const d = new Date(row[0]);
-          if (!isNaN(d)) {
-            const month = d.getMonth();
-            productQuantities[month] += toNumber(quantity);
-          }
-        }
-      }
-
-      // Quantity row
-      const prodTotal = productQuantities.reduce((a, b) => a + b, 0);
-      const productCodes = customer.products.get(product);
-      const prodRow = [
-        "  • " + product + " (Cases)",
-        productCodes.vendorCode || '', // Vendor code
-        productCodes.ourItemCode || '', // Our item#
-        ...productQuantities,
-        prodTotal,
-      ];
-      sheet.getRange(currentRow, 1, 1, 16).setValues([prodRow]);
-      sheet.getRange(currentRow, 1, 1, 16).setBackground("#ffffff");
-      sheet
-        .getRange(currentRow, 1)
-        .setFontColor("#424242")
-        .setFontStyle("italic");
-
-      // Highlight cells with values > 0
-      for (let col = 4; col <= 15; col++) {
-        if (productQuantities[col - 4] > 0) {
-          sheet.getRange(currentRow, col).setBackground("#e8f5e9"); // light green
-        }
-      }
-      currentRow++;
-
-      // Revenue row removed - only showing case counts
-    });
-
-    // Add dropdown functionality for this customer's products
-    if (currentRow > customerDetailStart) {
-      try {
-        sheet.getRowGroup(customerDetailStart, currentRow - customerDetailStart).collapse();
-      } catch (e) {
-        // Row grouping not supported, continue without it
-        console.log("Row grouping not available:", e.toString());
-      }
-    }
-
-    // Blank row between main customers
-    currentRow++;
-  });
+  sheet.setColumnWidth(2, 80); // Product code column
 }
 
 // Debug function to check vendor detection
 function debugVendorDetection() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const alpineSheet = ss.getSheetByName(ALPINE_SHEET_NAME);
-  
+
   if (!alpineSheet) {
     return "Alpine sheet not found";
   }
-  
+
   const data = getRawData(alpineSheet);
   console.log(`Found ${data.length} rows in Alpine sheet`);
-  
+
   if (data.length > 0) {
     console.log("Sample row:", data[0]);
     console.log("Row length:", data[0].length);
     console.log("Source field (index 7):", data[0][7]);
     console.log("Source field (index 8):", data[0][8]);
   }
-  
+
   // Test vendor detection with sample data
   const testData = data.slice(0, 5);
   const normalized = testData.map(normalizeRow);
-  
+
   console.log("Normalized sample:", normalized[0]);
   console.log("Normalized length:", normalized[0].length);
-  
+
   // Test vendor detection
   const vendorRows = {
-    alpine: normalized.filter(r => {
+    alpine: normalized.filter((r) => {
       const source = String(r[8] || r[7] || "").toLowerCase();
       console.log("Checking source:", source);
       return source.includes("alpine");
-    })
+    }),
   };
-  
+
   console.log(`Alpine rows found: ${vendorRows.alpine.length}`);
-  
+
   return `Debug complete. Found ${data.length} rows, ${vendorRows.alpine.length} Alpine rows`;
 }
 
@@ -1341,70 +1198,66 @@ function debugVendorDetection() {
 function debugDataProcessing() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const logs = getOrCreateSheet(ss, LOGS_SHEET_NAME);
-  
+
   // Test with sample data
   const testData = [
-    ["2025-01-01", "Test Customer", "Test Product", "TEST123", "OUR123", 10, "INV001", "alpine", "2025-01-01T00:00:00Z"],
-    ["2025-01-01", "Test Customer 2", "Test Product 2", "TEST456", 5, "INV002", "kehe", "2025-01-01T00:00:00Z"]
+    [
+      "2025-01-01",
+      "Test Customer",
+      "Test Product",
+      "TEST123",
+      "OUR123",
+      10,
+      "INV001",
+      "alpine",
+      "2025-01-01T00:00:00Z",
+    ],
+    [
+      "2025-01-01",
+      "Test Customer 2",
+      "Test Product 2",
+      "TEST456",
+      5,
+      "INV002",
+      "kehe",
+      "2025-01-01T00:00:00Z",
+    ],
   ];
-  
+
   logs.appendRow([
     new Date().toISOString(),
     "DEBUG TEST",
     "Testing data processing with sample data",
     testData.length + " rows",
-    "Debug test completed"
+    "Debug test completed",
   ]);
-  
-  return "Debug test completed - check logs sheet";
-}
 
-// Test function to manually add customer breakdown to existing sheets
-function testCustomerBreakdown() {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const alpineSheet = ss.getSheetByName(ALPINE_SHEET_NAME);
-  
-  if (!alpineSheet) {
-    return "Alpine sheet not found";
-  }
-  
-  const data = getRawData(alpineSheet);
-  console.log(`Found ${data.length} rows in Alpine sheet`);
-  
-  if (data.length > 0) {
-    console.log("Sample row:", data[0]);
-    console.log("Row length:", data[0].length);
-  }
-  
-  // Manually add customer breakdown
-  addCustomerBreakdownSection(alpineSheet, data, 2025, 1000); // Start at row 1000
-  
-  return `Added customer breakdown to Alpine sheet with ${data.length} rows`;
+  return "Debug test completed - check logs sheet";
 }
 
 // Debug function to check data structure and month assignment
 function debugDataStructure() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const alpineSheet = ss.getSheetByName(ALPINE_SHEET_NAME);
-  
+
   if (!alpineSheet) {
     return "Alpine sheet not found";
   }
-  
+
   const data = getRawData(alpineSheet);
   console.log(`Found ${data.length} rows in Alpine sheet`);
-  
+
   if (data.length > 0) {
     console.log("Sample raw row:", data[0]);
     console.log("Raw row length:", data[0].length);
-    
+
     const normalized = data.map(normalizeRow);
     console.log("Sample normalized row:", normalized[0]);
     console.log("Normalized row length:", normalized[0].length);
-    
+
     // Check month distribution
     const monthCounts = {};
-    normalized.forEach(row => {
+    normalized.forEach((row) => {
       const dateStr = row[0];
       if (dateStr) {
         const d = new Date(dateStr);
@@ -1414,15 +1267,15 @@ function debugDataStructure() {
         }
       }
     });
-    
+
     console.log("Month distribution:", monthCounts);
-    
+
     // Check quantity values
-    const quantities = normalized.map(row => row[5]).filter(q => q > 0);
+    const quantities = normalized.map((row) => row[5]).filter((q) => q > 0);
     console.log("Sample quantities:", quantities.slice(0, 10));
     console.log("Total non-zero quantities:", quantities.length);
   }
-  
+
   return "Debug complete - check console logs";
 }
 
