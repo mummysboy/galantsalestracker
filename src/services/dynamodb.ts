@@ -369,6 +369,42 @@ class DynamoDBService {
     return customerProgression;
   }
 
+  // Save customer progression with deduplication - replaces existing progression for same customer
+  async saveCustomerProgressionWithDedup(distributor: string, customerName: string, progression: any): Promise<CustomerProgression> {
+    try {
+      console.log(`[DynamoDB Progression Dedup] ${distributor}/${customerName}: Checking for existing progression`);
+      
+      // Get existing progressions for this distributor
+      const existingProgressions = await this.getCustomerProgressionsByDistributor(distributor);
+      
+      // Find if this customer already has a progression
+      const existingProgression = existingProgressions.find(p => p.customerName === customerName);
+      
+      if (existingProgression) {
+        console.log(`[DynamoDB Progression Dedup] ${distributor}/${customerName}: Found existing progression with ID ${existingProgression.id}. Updating instead of creating duplicate.`);
+        
+        // Delete the old progression record
+        await docClient.send(new DeleteCommand({
+          TableName: TABLE_NAME,
+          Key: {
+            PK: `PROGRESSION#${distributor}`,
+            SK: `${customerName}#${existingProgression.id}`,
+          },
+        }));
+      } else {
+        console.log(`[DynamoDB Progression Dedup] ${distributor}/${customerName}: No existing progression found. Creating new one.`);
+      }
+      
+      // Save the new progression (this will replace the old one)
+      return this.saveCustomerProgression(distributor, customerName, progression);
+    } catch (error) {
+      console.error(`[DynamoDB Progression Dedup] ${distributor}/${customerName}: Error during dedup check:`, error);
+      console.error(`[DynamoDB Progression Dedup] ${distributor}/${customerName}: FALLING BACK to regular save!`);
+      // Fallback: just save normally
+      return this.saveCustomerProgression(distributor, customerName, progression);
+    }
+  }
+
   async getCustomerProgressionsByDistributor(distributor: string): Promise<CustomerProgression[]> {
     const command = new QueryCommand({
       TableName: TABLE_NAME,

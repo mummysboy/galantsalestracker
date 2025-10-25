@@ -631,7 +631,7 @@ const Dashboard: React.FC = () => {
   // DynamoDB hook for persisting data
   const {
     saveSalesRecords,
-    saveCustomerProgression,
+    saveCustomerProgressionWithDedup,
   } = useDynamoDB();
 
   // Customer modal handlers
@@ -1158,9 +1158,9 @@ const Dashboard: React.FC = () => {
       // Only save progressions if records were actually saved
       if (savedRecords && savedRecords.length > 0) {
         for (const [customerName, progression] of Array.from(data.customerProgressions.entries())) {
-          await saveCustomerProgression('ALPINE', customerName, progression);
+          await saveCustomerProgressionWithDedup('ALPINE', customerName, progression);
         }
-        console.log('[Alpine] Data successfully saved to DynamoDB');
+        console.log('Alpine data successfully saved to DynamoDB');
       } else {
         console.log('[Alpine] Duplicate upload detected, skipping progressions');
       }
@@ -1179,7 +1179,7 @@ const Dashboard: React.FC = () => {
     // setShowUploadSection(false); // Hide upload section after successful upload
   };
 
-  const handlePetesDataParsed = async (data: { records: AlpineSalesRecord[]; customerProgressions: Map<string, any> }) => {
+  const handlePetesDataParsed = (data: { records: AlpineSalesRecord[]; customerProgressions: Map<string, any> }) => {
     const newPeriods = new Set(data.records.map(r => r.period));
 
     const filteredExistingData = currentPetesData.filter(record => !newPeriods.has(record.period));
@@ -1219,7 +1219,7 @@ const Dashboard: React.FC = () => {
         await saveSalesRecords(salesRecords);
         
         for (const [customerName, progression] of Array.from(data.customerProgressions.entries())) {
-          await saveCustomerProgression('PETES', customerName, progression);
+          await saveCustomerProgressionWithDedup('PETES', customerName, progression);
         }
         
         console.log('Pete\'s data successfully saved to DynamoDB');
@@ -1303,7 +1303,7 @@ const Dashboard: React.FC = () => {
           
           for (const [customerName, progression] of Array.from(data.customerProgressions.entries())) {
             if (customersWithNewRecords.has(customerName)) {
-              await saveCustomerProgression('KEHE', customerName, progression);
+              await saveCustomerProgressionWithDedup('KEHE', customerName, progression);
             }
           }
         } else {
@@ -1374,7 +1374,7 @@ const Dashboard: React.FC = () => {
         await saveSalesRecords(salesRecords);
         
         for (const [customerName, progression] of Array.from(data.customerProgressions.entries())) {
-          await saveCustomerProgression('VISTAR', customerName, progression);
+          await saveCustomerProgressionWithDedup('VISTAR', customerName, progression);
         }
         
         console.log('Vistar data successfully saved to DynamoDB');
@@ -1439,7 +1439,7 @@ const Dashboard: React.FC = () => {
         await saveSalesRecords(salesRecords);
         
         for (const [customerName, progression] of Array.from(data.customerProgressions.entries())) {
-          await saveCustomerProgression('TONYS', customerName, progression);
+          await saveCustomerProgressionWithDedup('TONYS', customerName, progression);
         }
         
         console.log('Tony\'s data successfully saved to DynamoDB');
@@ -1505,7 +1505,7 @@ const Dashboard: React.FC = () => {
         await saveSalesRecords(salesRecords);
         
         for (const [customerName, progression] of Array.from(data.customerProgressions.entries())) {
-          await saveCustomerProgression('TROIA', customerName, progression);
+          await saveCustomerProgressionWithDedup('TROIA', customerName, progression);
         }
         
         console.log('Troia data successfully saved to DynamoDB');
@@ -1564,7 +1564,7 @@ const Dashboard: React.FC = () => {
         await saveSalesRecords(salesRecords);
         
         for (const [customerName, progression] of Array.from(data.customerProgressions.entries())) {
-          await saveCustomerProgression('MHD', customerName, progression);
+          await saveCustomerProgressionWithDedup('MHD', customerName, progression);
         }
         
         console.log('MHD data successfully saved to DynamoDB');

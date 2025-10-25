@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import { AlpineSalesRecord } from './alpineParser';
 import { mapToCanonicalProductName } from './productMapping';
+import { loadPricingData, getProductWeight } from './pricingLoader';
 
 export interface ParsedTonysData {
   records: AlpineSalesRecord[];
@@ -78,6 +79,9 @@ export async function parseTonysXLSX(file: File): Promise<ParsedTonysData> {
       }
     };
   }
+
+  // Load pricing data for weight calculations
+  const pricingDb = await loadPricingData();
 
   // Header is in row 1 (index 0)
   const headers = (rows[0] || []).map(c => String(c || '').trim());
@@ -163,11 +167,18 @@ export async function parseTonysXLSX(file: File): Promise<ParsedTonysData> {
     const currentRevenue = toNumber(row[currentPeriodCostIdx]);
     const previousRevenue = toNumber(row[previousPeriodCostIdx]);
 
+    // Calculate mapped product name once for weight lookup
+    const mappedProductName = mapToCanonicalProductName(productName);
+    
     // Create records for current period if there's data
     if (currentQty > 0 || currentRevenue > 0) {
+      // Calculate weight for this product
+      const weightPerCase = getProductWeight(pricingDb, undefined, mappedProductName);
+      const totalWeight = Math.round(currentQty) * weightPerCase;
+
       const record: AlpineSalesRecord = {
         customerName: warehouse, // Level 1: Distributor (e.g., "TONY'S FINE FOODS - REED")
-        productName: mapToCanonicalProductName(productName),
+        productName: mappedProductName,
         size: sizeStr || undefined,
         cases: Math.round(currentQty),
         pieces: 0,
@@ -176,6 +187,7 @@ export async function parseTonysXLSX(file: File): Promise<ParsedTonysData> {
         productCode: itemNumber || vendorItem || undefined,
         customerId: storeName, // Level 2: Customer with Branch (e.g., "RALEY'S #108")
         accountName: shipToCustomer, // Level 3: Store/Customer ID (e.g., "07010850")
+        weightLbs: totalWeight, // Total weight in pounds
       };
 
       records.push(record);
@@ -183,9 +195,13 @@ export async function parseTonysXLSX(file: File): Promise<ParsedTonysData> {
 
     // Create records for previous period if there's data
     if (previousQty > 0 || previousRevenue > 0) {
+      // Calculate weight for this product
+      const weightPerCase = getProductWeight(pricingDb, undefined, mappedProductName);
+      const totalWeight = Math.round(previousQty) * weightPerCase;
+
       const record: AlpineSalesRecord = {
         customerName: warehouse, // Level 1: Distributor (e.g., "TONY'S FINE FOODS - REED")
-        productName: mapToCanonicalProductName(productName),
+        productName: mappedProductName,
         size: sizeStr || undefined,
         cases: Math.round(previousQty),
         pieces: 0,
@@ -194,6 +210,7 @@ export async function parseTonysXLSX(file: File): Promise<ParsedTonysData> {
         productCode: itemNumber || vendorItem || undefined,
         customerId: storeName, // Level 2: Customer with Branch (e.g., "RALEY'S #108")
         accountName: shipToCustomer, // Level 3: Store/Customer ID (e.g., "07010850")
+        weightLbs: totalWeight, // Total weight in pounds
       };
 
       records.push(record);

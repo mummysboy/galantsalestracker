@@ -18,6 +18,7 @@ export interface UseDynamoDBReturn {
   // Customer Progressions
   customerProgressions: Map<string, CustomerProgression>;
   saveCustomerProgression: (distributor: string, customerName: string, progression: any) => Promise<void>;
+  saveCustomerProgressionWithDedup: (distributor: string, customerName: string, progression: any) => Promise<void>;
   loadCustomerProgressionsByDistributor: (distributor: string) => Promise<void>;
   
   // App State
@@ -135,6 +136,24 @@ export const useDynamoDB = (): UseDynamoDBReturn => {
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save customer progression');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const saveCustomerProgressionWithDedup = useCallback(async (distributor: string, customerName: string, progression: any) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const savedProgression = await dynamoDBService.saveCustomerProgressionWithDedup(distributor, customerName, progression);
+      setCustomerProgressions(prev => {
+        const newMap = new Map(prev);
+        newMap.set(`${distributor}-${customerName}`, savedProgression);
+        return newMap;
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save customer progression with dedup');
       throw err;
     } finally {
       setLoading(false);
@@ -271,6 +290,7 @@ export const useDynamoDB = (): UseDynamoDBReturn => {
     loadAllSalesRecords,
     customerProgressions,
     saveCustomerProgression,
+    saveCustomerProgressionWithDedup,
     loadCustomerProgressionsByDistributor,
     appState,
     saveAppState,
