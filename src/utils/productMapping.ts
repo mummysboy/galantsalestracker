@@ -29,8 +29,10 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'WW SPINACH FETA FOLD',
       'WHOLE WHEAT SPINACH FETA FOLD',
       'MH400012',
+      'CLARAS KITCHEN INDIVIDUALLY PACKAGED EGG WHITE SPINACH FETA WRAP 1 - 12 PC',
     ],
-    category: 'Breakfast Fold'
+    category: 'Breakfast Fold',
+    dotProductCodes: ['765034'] // DOT code from SHOP data
   },
   
   // Breakfast Burritos
@@ -46,12 +48,14 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'BURRITO BRKFST BCN EGG CHS',
       'BurritoUncured Bacon Breakfast',
       'MH400002',
+      'CLARAS KITCHEN INDIVIDUALLY PACKAGED UNCURED BACON BREAKFAST BURRITO 12 - 1 PC',
     ],
     category: 'Breakfast Burrito',
     alpineProductCodes: ['999983'],
     petesProductCodes: ['59975'],
     keheProductCodes: ['611665888003'],
-    vistarProductCodes: ['GFO88000']
+    vistarProductCodes: ['GFO88000'],
+    dotProductCodes: ['763494'] // DOT code from SHOP data
   },
   {
     itemNumber: '341',
@@ -67,12 +71,14 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'BURRITO CHILE VERDE BRKFT',
       'Burrito Chile Verde Breakfast',
       'MH400003',
+      'CLARAS KITCHEN INDIVIDUALLY PACKAGED CHILE VERDE BREAKFAST BURRITO 12 - 12 PC',
     ],
     category: 'Breakfast Burrito',
     alpineProductCodes: ['999988'],
     petesProductCodes: ['59977'],
     keheProductCodes: ['611665888010', '611665901023'],
-    vistarProductCodes: ['GFO88017']
+    vistarProductCodes: ['GFO88017'],
+    dotProductCodes: ['763496'] // DOT code from SHOP data
   },
   {
     itemNumber: '331',
@@ -85,12 +91,14 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       "CLARA'S Sausage Breakfast Burrito",
       'WRAP BRKFST SAUSGE EGG CH',
       'MH400001',
+      'CLARAS KITCHEN INDIVIDUALLY PACKAGED SAUSAGE BREAKFAST BURRITO 1 - 12 PC',
     ],
     category: 'Breakfast Burrito',
     alpineProductCodes: ['999989'],
     petesProductCodes: ['59976'],
     keheProductCodes: ['611665888027'],
-    vistarProductCodes: ['GFO88024']
+    vistarProductCodes: ['GFO88024'],
+    dotProductCodes: ['764785'] // DOT code from SHOP data
   },
   {
     itemNumber: '361',
@@ -104,9 +112,11 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'BURRITO BREAKFAST',
       'BURRITO BEAN CHEESE',
       'MH400011',
+      'CLARAS KITCHEN INDIVIDUALLY PACKAGED BLACK BEAN BREAKFAST BURRITO 1 - 12 PC',
     ],
     category: 'Breakfast Burrito',
-    keheProductCodes: ['611665888126', '611665901047']
+    keheProductCodes: ['611665888126', '611665901047'],
+    dotProductCodes: ['765033'] // DOT code from SHOP data
   },
   {
     itemNumber: '311',
@@ -120,11 +130,13 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'BURRITO BRKFST CHORIZO',
       'Burrito Chorizo Breakfast',
       'MH400006',
+      'CLARAS KITCHEN INDIVIDUALLY PACKAGED CHORIZO BREAKFAST BURRITO 1 - 12 PC',
     ],
     category: 'Breakfast Burrito',
     alpineProductCodes: ['999987'],
     keheProductCodes: ['611665888119'],
-    vistarProductCodes: ['GFO88116']
+    vistarProductCodes: ['GFO88116'],
+    dotProductCodes: ['765648'] // DOT code from SHOP data
   },
   {
     itemNumber: '901',
@@ -135,9 +147,11 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'VEGAN BREAKFAST BURRITO',
       'BURRITO BEAN CHSE PLNTBSD',
       'MH400008',
+      'CLARAS KITCHEN INDIVIDUALLY PACKAGED VEGAN BREAKFAST BURRITO 1 - 12 EA',
     ],
     category: 'Breakfast Burrito',
-    keheProductCodes: ['611665888140']
+    keheProductCodes: ['611665888140'],
+    dotProductCodes: ['765044'] // DOT code from SHOP data
   },
   {
     itemNumber: '902',
@@ -149,8 +163,10 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'VEGAN SSAGE BURRITO',
       'BFAST BURRITO VEGAN SAUSAGE', // MHD name
       'MH400123',
+      'CLARAS KITCHEN INDIVIDUALLY PACKAGED VEGAN SAUSAGE BREAKFAST BURRITO 1 - 12 EA',
     ],
-    category: 'Breakfast Burrito'
+    category: 'Breakfast Burrito',
+    dotProductCodes: ['765045'] // DOT code from SHOP data
   },
   
   // Wraps
@@ -187,11 +203,13 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'CHKN BACON RANCH WRAP',
       'WRAP CHICKEN BACON RANCH',
       'MH400014',
+      'CLARAS KITCHEN INDIVIDUALLY WRAPPED CHICKEN BACON & RANCH WRAP 12 - 8 OZ',
     ],
     category: 'Wrap',
     alpineProductCodes: ['183981'],
     keheProductCodes: ['611665888089'],
-    vistarProductCodes: ['GFO88811']
+    vistarProductCodes: ['GFO88811'],
+    dotProductCodes: ['764437'] // DOT code from SHOP data
   },
   {
     itemNumber: '451',
@@ -217,8 +235,10 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'THAI STYLE CHICKEN WRAP',
       'SPICY THAI WRAP',
       'MH402007',
+      'CLARAS KITCHEN INDIVIDUALLY WRAPPED SPICY THAI STYLE CHICKEN WRAP 12 - 12 PC',
     ],
-    category: 'Wrap'
+    category: 'Wrap',
+    dotProductCodes: ['765038'] // DOT code from SHOP data
   },
   
   // Burritos (Non-Breakfast)
@@ -229,8 +249,10 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'PLANT BASED BEAN BURRITO',
       'VEGAN BEAN BURRITO',
       'MH400009',
+      'CLARAS KITCHEN INDIVIDUALLY PACKAGED VEGAN BEAN & CHEESE BURRITO 1 - 12 EA',
     ],
-    category: 'Burrito'
+    category: 'Burrito',
+    dotProductCodes: ['765046'] // DOT code from SHOP data
   },
   {
     itemNumber: '511',
@@ -339,10 +361,12 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'PIROSHKI BEEF WRAPPED', // MHD name
       'Beef & Cheese Piroshki',
       'Beef and Cheese Piroshki', // MHD variation with "and"
+      'PARAMOUNT PIROSHKI INDIVIDUALLY PACKAGED BEEF & CHEESE PIROSHKI 1 - 12 EA', // SHOP/DOT description
     ],
     category: 'Piroshki',
     alpineProductCodes: ['183979'],
-    vistarProductCodes: ['GFO02208']
+    vistarProductCodes: ['GFO02208'],
+    dotProductCodes: ['765043'] // DOT code from SHOP data
   },
   {
     itemNumber: '213',
@@ -418,11 +442,13 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'Bagel Dog Bf Frnk W/ Ppy Sd', // Vistar abbreviation
       'MH400022',
       'MH404001',
+      'CLARAS KITCHEN INDIVIDUALLY PACKAGED BEEF FRANK BAGEL DOG 1 - 12 PC',
     ],
     category: 'Bagel Dog',
     alpineProductCodes: ['999978', '183922'],
     keheProductCodes: ['611665100013', '611665200010'],
-    vistarProductCodes: ['GFO10001']
+    vistarProductCodes: ['GFO10001'],
+    dotProductCodes: ['765031'] // DOT code from SHOP data
   },
   {
     itemNumber: '612',
@@ -517,9 +543,11 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       "BENNY'S BEEF BAGEL DOGS",
       "BENNY BEEF BAGEL DOG",
       'MH400030',
+      "BENNY'S INDIVIDUALLY PACKAGED BEEF FRANK BAGEL DOGS 12 - 5 OZ", // SHOP/DOT description
     ],
     category: 'Bagel Dog',
-    vistarProductCodes: ['GFO12001']
+    vistarProductCodes: ['GFO12001'],
+    dotProductCodes: ['765647'] // DOT code from SHOP data
   },
   {
     itemNumber: '622',
@@ -529,8 +557,10 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       "BENNY'S POLISH BAGEL DOGS",
       "BENNY POLISH BAGEL DOG",
       'MH400031',
+      "BENNY'S INDIVIDUALLY PACKAGED POLISH SAUSAGE BAGEL DOGS 12 - 5 OZ", // SHOP/DOT description
     ],
-    category: 'Bagel Dog'
+    category: 'Bagel Dog',
+    dotProductCodes: ['763492'] // DOT code from SHOP data
   },
   {
     itemNumber: '623',
@@ -540,9 +570,11 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       "BENNY'S JALAPENO CHEDDAR BAGEL DOGS",
       "BENNY JALAPENO BAGEL DOG",
       'MH400032',
+      "BENNY'S INDIVIDUALLY PACKAGED JALAPENO CHEDDAR BAGEL DOG 1 - 12 EA", // SHOP/DOT description
     ],
     category: 'Bagel Dog',
-    vistarProductCodes: ['GFO12022']
+    vistarProductCodes: ['GFO12022'],
+    dotProductCodes: ['764783'] // DOT code from SHOP data
   },
 
   // MHD-specific products - Calzone items with correct Master Pricing item numbers and names
@@ -625,11 +657,13 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       "CLARA'S Breakfast Sandwich-Turkey",
       'Sandwich Breakfast Turkey',
       'MH400106',
+      'CLARAS KITCHEN INDIVIDUALLY PACKAGED TURKEY SAUSAGE BREAKFAST SANDWICH 12 - 5 OZ',
     ],
     category: 'Breakfast Sandwich',
     alpineProductCodes: ['999986'],
     petesProductCodes: ['59986'],
-    vistarProductCodes: ['GFO20001']
+    vistarProductCodes: ['GFO20001'],
+    dotProductCodes: ['763493'] // DOT code from SHOP data
   },
   {
     itemNumber: '831',
@@ -645,12 +679,14 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'SANDWICH BRKFST PEST PROV',
       'Sandwhich Brkfst Pesto Provol',
       'MH400107',
+      'CLARAS KITCHEN INDIVIDUALLY PACKAGED PESTO PROVOLONE BREAKFAST SANDWICH 1 - 12 PC',
     ],
     category: 'Breakfast Sandwich',
     alpineProductCodes: ['999985'],
     petesProductCodes: ['59985'],
     keheProductCodes: ['611665900095'],
-    vistarProductCodes: ['GFO20002']
+    vistarProductCodes: ['GFO20002'],
+    dotProductCodes: ['764784'] // DOT code from SHOP data
   },
   {
     itemNumber: '811',
@@ -665,12 +701,14 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'SANDWICH BREAKFAST BACON',
       'Sandwich Breakfast Bacon',
       'MH400102',
+      'CLARAS KITCHEN INDIVIDUALLY PACKAGED BACON BREAKFAST SANDWICH 12 - 12 PC',
     ],
     category: 'Breakfast Sandwich',
     alpineProductCodes: ['999982'],
     petesProductCodes: ['59987'],
     keheProductCodes: ['611665900101'],
-    vistarProductCodes: ['GFO90010']
+    vistarProductCodes: ['GFO90010'],
+    dotProductCodes: ['763495'] // DOT code from SHOP data
   },
   {
     itemNumber: '821',
@@ -685,12 +723,14 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'SANDWICH BREAKFST CHORIZO',
       'Sandwhich Chorizo Breakfast',
       'MH400105',
+      'CLARAS KITCHEN INDIVIDUALLY PACKAGED CHORIZO BREAKFAST SANDWICH 12 - 12 PC',
     ],
     category: 'Breakfast Sandwich',
     alpineProductCodes: ['999984'],
     petesProductCodes: ['59984'],
     keheProductCodes: ['611665900118'],
-    vistarProductCodes: ['GFO00008']
+    vistarProductCodes: ['GFO00008'],
+    dotProductCodes: ['763497'] // DOT code from SHOP data
   },
   {
     itemNumber: '851',
@@ -712,6 +752,7 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'BEEF & CHEESE PIROSHKIES',
       'BEEF CHEESE PIROSHKIES',
       'PIROSHKIES BEEF CHEESE',
+      'PARAMOUNT PIROSHKI INDIVIDUALLY PACKAGED BEEF & CHEESE PIROSHKI 1 - 12 EA',
     ],
     category: 'Piroshkies'
   },
@@ -734,8 +775,10 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'CHICKEN EMPANADA',
       'CHKN EMPANADA',
       'MH405002',
+      'CLARAS KITCHEN INDIVIDUALLY PACKAGED CHICKEN EMPANADA 1 - 16 PC',
     ],
-    category: 'Empanada'
+    category: 'Empanada',
+    dotProductCodes: ['765051'] // DOT code from SHOP data
   },
   {
     itemNumber: '731',
@@ -821,6 +864,7 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       "BENNYS BEEF FRANK BAGEL DOGS",
       "BENNY'S BEEF BAGEL DOGS",
       'MH404011',
+      "BENNY'S INDIVIDUALLY PACKAGED BEEF FRANK BAGEL DOGS 12 - 5 OZ",
     ],
     category: 'Bagel Dog'
   },
@@ -832,6 +876,7 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       "BENNYS POLISH SAUSAGE BAGEL DOGS",
       "BENNY'S POLISH BAGEL DOGS",
       'MH404013',
+      "BENNY'S INDIVIDUALLY PACKAGED POLISH SAUSAGE BAGEL DOGS 12 - 5 OZ",
     ],
     category: 'Bagel Dog'
   },
@@ -847,6 +892,7 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       "BENNY'S JALAPENO & CHEDDAR BAGEL DOGS",
       'DOGS BAGEL JALEPENO CHDDR',
       'MH404004',
+      "BENNY'S INDIVIDUALLY PACKAGED JALAPENO CHEDDAR BAGEL DOG 1 - 12 EA",
     ],
     category: 'Bagel Dog',
     alpineProductCodes: ['183924'],
