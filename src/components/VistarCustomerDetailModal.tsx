@@ -36,7 +36,17 @@ function calculateOpcoCustomerDataAllPeriods(vistarData: AlpineSalesRecord[], op
 
   opcoRecords.forEach(record => {
     // Use accountName directly as customer name (Customer Desc)
-    const customerName = record.accountName || 'Unknown Customer';
+    // Ensure accountName exists - if not, skip this record as it won't display properly
+    if (!record.accountName) {
+      console.warn('[VistarModal] Record missing accountName:', { 
+        customerName: record.customerName, 
+        productName: record.productName,
+        period: record.period 
+      });
+      return; // Skip records without accountName to prevent "Unknown Customer" entries
+    }
+    
+    const customerName = record.accountName;
     const recordPeriod = viewMode === 'quarter' ? periodToQuarter(record.period) : record.period;
     
     if (!customersMap.has(customerName)) {
@@ -183,6 +193,19 @@ const VistarCustomerDetailModal: React.FC<VistarCustomerDetailModalProps> = ({
     return periods;
   }, [vistarData, opcoName, viewMode]);
 
+  // Force re-calculation when data changes - this ensures account updates are visible
+  React.useEffect(() => {
+    // Debug: Log when data changes to help troubleshoot Netlify issues
+    const opcoRecords = vistarData.filter(record => record.customerName === opcoName);
+    const recordsWithAccount = opcoRecords.filter(r => r.accountName);
+    console.log('[VistarModal] Data update detected:', {
+      opcoName,
+      totalRecords: opcoRecords.length,
+      recordsWithAccountName: recordsWithAccount.length,
+      sampleAccountNames: Array.from(new Set(recordsWithAccount.map(r => r.accountName))).slice(0, 5)
+    });
+  }, [vistarData, opcoName]);
+
   // Set default period when data changes and initialize period range
   React.useEffect(() => {
     if (availablePeriods.length > 0 && !selectedPeriod) {
@@ -269,19 +292,28 @@ const VistarCustomerDetailModal: React.FC<VistarCustomerDetailModalProps> = ({
   // Filter periods to only show visible ones
   const periods = visiblePeriods;
   
-  // Debug: Log what we found
-  console.log('Vistar Modal Debug:', {
-    opcoName,
-    totalRecords: vistarData.length,
-    opcoRecords: vistarData.filter(r => r.customerName === opcoName).length,
-    customersFound: customers.length,
-    periods,
-    viewMode,
-    sampleCustomers: customers.slice(0, 3).map(c => ({
-      customerName: c.customerName,
-      periodData: Object.fromEntries(c.periodData)
-    }))
-  });
+  // Debug: Log what we found - enhanced for Netlify troubleshooting
+  React.useEffect(() => {
+    if (isOpen) {
+      const opcoRecords = vistarData.filter(r => r.customerName === opcoName);
+      const recordsWithAccount = opcoRecords.filter(r => r.accountName);
+      console.log('[VistarModal] Modal opened with data:', {
+        opcoName,
+        totalRecords: vistarData.length,
+        opcoRecords: opcoRecords.length,
+        recordsWithAccountName: recordsWithAccount.length,
+        recordsWithoutAccountName: opcoRecords.length - recordsWithAccount.length,
+        customersFound: customers.length,
+        periods: periods.length,
+        viewMode,
+        sampleCustomers: customers.slice(0, 3).map(c => ({
+          customerName: c.customerName,
+          periodData: Object.fromEntries(c.periodData)
+        })),
+        sampleAccountNames: Array.from(new Set(recordsWithAccount.map(r => r.accountName))).slice(0, 5)
+      });
+    }
+  }, [isOpen, vistarData, opcoName, customers, periods, viewMode]);
   
 
     return (

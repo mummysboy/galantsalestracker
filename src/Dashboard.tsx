@@ -2078,18 +2078,32 @@ const Dashboard: React.FC = () => {
       return { newCustomers: [] as string[], lostCustomers: [] as string[] };
     }
     
+    // For Vistar, use accountName (customer-level) instead of customerName (company-level)
+    // This shows individual customers within OPCOs (e.g., "Vistar Kentucky - Customer Name")
+    const isVistar = selectedDistributor === 'VISTAR';
+    
+    // Helper function to get the identifier to use for account tracking
+    const getAccountIdentifier = (r: AlpineSalesRecord): string => {
+      if (isVistar && r.accountName && r.accountName !== r.customerName) {
+        // For Vistar: show "Company - Account" format to show which OPCO the account belongs to
+        return `${r.customerName} - ${r.accountName}`;
+      }
+      // For other distributors, use customerName as before
+      return r.customerName;
+    };
+    
     // Get all customers who appeared in current period
     const curSet = new Set(
       dataForTotals
         .filter(r => r.period === currentComparisonPeriod)
-        .map(r => r.customerName)
+        .map(r => getAccountIdentifier(r))
     );
     
     // Get all customers who appeared in previous period
     const prevSet = new Set(
       dataForTotals
         .filter(r => r.period === previousComparisonPeriod)
-        .map(r => r.customerName)
+        .map(r => getAccountIdentifier(r))
     );
     
     // Get all customers who appeared in any period before the current period
@@ -2097,7 +2111,7 @@ const Dashboard: React.FC = () => {
     const allPreviousCustomers = new Set(
       dataForTotals
         .filter(r => allPreviousPeriods.includes(r.period))
-        .map(r => r.customerName)
+        .map(r => getAccountIdentifier(r))
     );
     
     // A customer is "new" only if they appear in current period but have NEVER appeared in any previous period
@@ -2107,7 +2121,7 @@ const Dashboard: React.FC = () => {
     const lostList = Array.from(prevSet).filter(c => !curSet.has(c)).sort((a, b) => a.localeCompare(b));
     
     return { newCustomers: newList, lostCustomers: lostList };
-  }, [dataForTotals, currentComparisonPeriod, previousComparisonPeriod, availablePeriods]);
+  }, [dataForTotals, currentComparisonPeriod, previousComparisonPeriod, availablePeriods, selectedDistributor]);
 
   // Previously displayed revenue summaries removed from UI; keep code lean
 
@@ -2116,31 +2130,53 @@ const Dashboard: React.FC = () => {
     const cur = dataForTotals.filter(r => r.period === currentComparisonPeriod);
     const revenueByCustomer: Record<string, number> = {};
     const casesByCustomer: Record<string, number> = {};
-    cur.forEach(r => { 
-      revenueByCustomer[r.customerName] = (revenueByCustomer[r.customerName] || 0) + (r.revenue || 0);
-      casesByCustomer[r.customerName] = (casesByCustomer[r.customerName] || 0) + (r.cases || 0);
+    
+    // For Vistar, use accountName-based identifier matching what we used in newCustomers calculation
+    const isVistar = selectedDistributor === 'VISTAR';
+    const getAccountIdentifier = (r: AlpineSalesRecord): string => {
+      if (isVistar && r.accountName && r.accountName !== r.customerName) {
+        return `${r.customerName} - ${r.accountName}`;
+      }
+      return r.customerName;
+    };
+    
+    cur.forEach(r => {
+      const identifier = getAccountIdentifier(r);
+      revenueByCustomer[identifier] = (revenueByCustomer[identifier] || 0) + (r.revenue || 0);
+      casesByCustomer[identifier] = (casesByCustomer[identifier] || 0) + (r.cases || 0);
     });
     return newCustomers.map(name => ({ 
       name, 
       revenue: revenueByCustomer[name] || 0,
       cases: casesByCustomer[name] || 0
     }));
-  }, [dataForTotals, currentComparisonPeriod, newCustomers]);
+  }, [dataForTotals, currentComparisonPeriod, newCustomers, selectedDistributor]);
 
   const lostCustomersDetailed = useMemo(() => {
     const prev = dataForTotals.filter(r => r.period === previousComparisonPeriod);
     const revenueByCustomer: Record<string, number> = {};
     const casesByCustomer: Record<string, number> = {};
-    prev.forEach(r => { 
-      revenueByCustomer[r.customerName] = (revenueByCustomer[r.customerName] || 0) + (r.revenue || 0);
-      casesByCustomer[r.customerName] = (casesByCustomer[r.customerName] || 0) + (r.cases || 0);
+    
+    // For Vistar, use accountName-based identifier matching what we used in lostCustomers calculation
+    const isVistar = selectedDistributor === 'VISTAR';
+    const getAccountIdentifier = (r: AlpineSalesRecord): string => {
+      if (isVistar && r.accountName && r.accountName !== r.customerName) {
+        return `${r.customerName} - ${r.accountName}`;
+      }
+      return r.customerName;
+    };
+    
+    prev.forEach(r => {
+      const identifier = getAccountIdentifier(r);
+      revenueByCustomer[identifier] = (revenueByCustomer[identifier] || 0) + (r.revenue || 0);
+      casesByCustomer[identifier] = (casesByCustomer[identifier] || 0) + (r.cases || 0);
     });
     return lostCustomers.map(name => ({ 
       name, 
       revenue: revenueByCustomer[name] || 0,
       cases: casesByCustomer[name] || 0
     }));
-  }, [dataForTotals, previousComparisonPeriod, lostCustomers]);
+  }, [dataForTotals, previousComparisonPeriod, lostCustomers, selectedDistributor]);
 
   const [movementFilter, setMovementFilter] = useState('');
 
@@ -3201,6 +3237,7 @@ const Dashboard: React.FC = () => {
         {/* Vistar Customer Detail Modal */}
         {selectedCustomerForModal && selectedDistributor === 'VISTAR' && (
           <VistarCustomerDetailModal
+            key={`vistar-${selectedCustomerForModal}-${currentVistarData.length}`}
             opcoName={selectedCustomerForModal}
             vistarData={currentVistarData}
             isOpen={isCustomerModalOpen}
