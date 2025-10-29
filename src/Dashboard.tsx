@@ -31,6 +31,8 @@ import TroiaReportUpload from './components/TroiaReportUpload';
 import TroiaCustomerDetailModal from './components/TroiaCustomerDetailModal';
 import MhdReportUpload from './components/MhdReportUpload';
 import MhdCustomerDetailModal from './components/MhdCustomerDetailModal';
+import DotReportUpload from './components/DotReportUpload';
+import DotCustomerDetailModal from './components/DotCustomerDetailModal';
 import { useDynamoDB } from './hooks/useDynamoDB';
 import { dynamoDBService } from './services/dynamodb';
 
@@ -52,6 +54,7 @@ interface RevenueByCustomerProps {
   isTonysMode?: boolean;
   isTroiaMode?: boolean;
   isMhdMode?: boolean;
+  isDotMode?: boolean;
   customerPivotRange?: { start: number; end: number } | null;
   setCustomerPivotRange?: (range: { start: number; end: number } | null) => void;
   navigateCustomerPivot?: (direction: 'left' | 'right', totalPeriods: number) => void;
@@ -70,6 +73,7 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
   isTonysMode = false,
   isTroiaMode = false,
   isMhdMode = false,
+  isDotMode = false,
   customerPivotRange,
   setCustomerPivotRange,
   navigateCustomerPivot,
@@ -113,8 +117,8 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
       setCustomerPivotRange(null);
     }
     
-    // For KeHe, Vistar, Tony's, Troia, or MHD mode, always use the custom modal (bypass comparison mode)
-    if (isKeHeMode || isVistarMode || isTonysMode || isTroiaMode || isMhdMode) {
+    // For KeHe, Vistar, Tony's, Troia, MHD, or DOT mode, always use the custom modal (bypass comparison mode)
+    if (isKeHeMode || isVistarMode || isTonysMode || isTroiaMode || isMhdMode || isDotMode) {
       if (onCustomerClick) onCustomerClick(fullCustomerName);
       return;
     }
@@ -256,10 +260,10 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
           <div 
             key={customer.id}
             className={`relative flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors ${
-              (isComparisonMode || isKeHeMode || isVistarMode || isTonysMode || isTroiaMode || isMhdMode) ? 'cursor-pointer' : ''
+              (isComparisonMode || isKeHeMode || isVistarMode || isTonysMode || isTroiaMode || isMhdMode || isDotMode) ? 'cursor-pointer' : ''
             }`}
             onClick={() => handleCustomerClick(customer.fullCustomerName)}
-            title={isKeHeMode || isVistarMode || isTonysMode || isTroiaMode || isMhdMode ? "Click to view customer summary" : isComparisonMode ? "Click to view CSV breakdown" : "Customer revenue"}
+            title={isKeHeMode || isVistarMode || isTonysMode || isTroiaMode || isMhdMode || isDotMode ? "Click to view customer summary" : isComparisonMode ? "Click to view CSV breakdown" : "Customer revenue"}
           >
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-gray-900 break-words">
@@ -417,10 +421,10 @@ const RevenueByCustomerComponent: React.FC<RevenueByCustomerProps> = ({
                 <div 
                   key={customer.id}
                   className={`relative flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors ${
-                    (isComparisonMode || isKeHeMode || isVistarMode) ? 'cursor-pointer' : ''
+                    (isComparisonMode || isKeHeMode || isVistarMode || isTonysMode || isTroiaMode || isMhdMode || isDotMode) ? 'cursor-pointer' : ''
                   }`}
                   onClick={() => handleCustomerClick(customer.fullCustomerName)}
-                  title={isKeHeMode || isVistarMode ? "Click to view customer summary" : isComparisonMode ? "Click to view CSV breakdown" : "Customer revenue"}
+                  title={isKeHeMode || isVistarMode || isTonysMode || isTroiaMode || isMhdMode || isDotMode ? "Click to view customer summary" : isComparisonMode ? "Click to view CSV breakdown" : "Customer revenue"}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-gray-900 break-words">
@@ -628,10 +632,14 @@ const RevenueByProductComponent: React.FC<RevenueByProductProps> = ({ revenueByP
 };
 
 const Dashboard: React.FC = () => {
-  // DynamoDB hook for persisting data
+  // DynamoDB hook for persisting and loading data
   const {
     saveSalesRecords,
     saveCustomerProgressionWithDedup,
+    loadSalesRecordsByDistributor,
+    loadCustomerProgressionsByDistributor,
+    saveAppState,
+    loadAppState,
   } = useDynamoDB();
 
   // Customer modal handlers
@@ -651,184 +659,144 @@ const Dashboard: React.FC = () => {
   const [showUploadSection, setShowUploadSection] = useState(false);
   const [uploadSectionKey, setUploadSectionKey] = useState(0);
   
-  // Load data from localStorage on component mount
-  const [currentAlpineData, setCurrentAlpineData] = useState<AlpineSalesRecord[]>(() => {
-    try {
-      const saved = localStorage.getItem('salesTracker_alpineData');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-  const [currentPetesData, setCurrentPetesData] = useState<AlpineSalesRecord[]>(() => {
-    try {
-      const saved = localStorage.getItem('salesTracker_petesData');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-  const [currentKeHeData, setCurrentKeHeData] = useState<AlpineSalesRecord[]>(() => {
-    try {
-      const saved = localStorage.getItem('salesTracker_keheData');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-  const [currentVistarData, setCurrentVistarData] = useState<AlpineSalesRecord[]>(() => {
-    try {
-      const saved = localStorage.getItem('salesTracker_vistarData');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-  const [currentTonysData, setCurrentTonysData] = useState<AlpineSalesRecord[]>(() => {
-    try {
-      const saved = localStorage.getItem('salesTracker_tonysData');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-  const [currentTroiaData, setCurrentTroiaData] = useState<AlpineSalesRecord[]>(() => {
-    try {
-      const saved = localStorage.getItem('salesTracker_troiaData');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-  const [currentMhdData, setCurrentMhdData] = useState<AlpineSalesRecord[]>(() => {
-    try {
-      const saved = localStorage.getItem('salesTracker_mhdData');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  // Initialize all data as empty arrays - will load from DynamoDB
+  const [currentAlpineData, setCurrentAlpineData] = useState<AlpineSalesRecord[]>([]);
+  const [currentPetesData, setCurrentPetesData] = useState<AlpineSalesRecord[]>([]);
+  const [currentKeHeData, setCurrentKeHeData] = useState<AlpineSalesRecord[]>([]);
+  const [currentVistarData, setCurrentVistarData] = useState<AlpineSalesRecord[]>([]);
+  const [currentTonysData, setCurrentTonysData] = useState<AlpineSalesRecord[]>([]);
+  const [currentTroiaData, setCurrentTroiaData] = useState<AlpineSalesRecord[]>([]);
+  const [currentMhdData, setCurrentMhdData] = useState<AlpineSalesRecord[]>([]);
+  const [currentDotData, setCurrentDotData] = useState<AlpineSalesRecord[]>([]);
   
-  // Load customer progressions from localStorage
-  const [currentCustomerProgressions, setCurrentCustomerProgressions] = useState<Map<string, any>>(() => {
-    try {
-      const saved = localStorage.getItem('salesTracker_alpineProgressions');
-      return saved ? new Map(JSON.parse(saved)) : new Map();
-    } catch {
-      return new Map();
-    }
-  });
-  const [currentPetesCustomerProgressions, setCurrentPetesCustomerProgressions] = useState<Map<string, any>>(() => {
-    try {
-      const saved = localStorage.getItem('salesTracker_petesProgressions');
-      return saved ? new Map(JSON.parse(saved)) : new Map();
-    } catch {
-      return new Map();
-    }
-  });
+  // Initialize customer progressions as empty maps - will load from DynamoDB
+  const [currentCustomerProgressions, setCurrentCustomerProgressions] = useState<Map<string, any>>(new Map());
+  const [currentPetesCustomerProgressions, setCurrentPetesCustomerProgressions] = useState<Map<string, any>>(new Map());
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [currentKeHeCustomerProgressions, setCurrentKeHeCustomerProgressions] = useState<Map<string, any>>(new Map());
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [currentTonysCustomerProgressions, setCurrentTonysCustomerProgressions] = useState<Map<string, any>>(new Map());
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [currentTroiaCustomerProgressions, setCurrentTroiaCustomerProgressions] = useState<Map<string, any>>(new Map());
-  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
-    try {
-      return localStorage.getItem('salesTracker_selectedMonth') || '';
-    } catch {
-      return '';
-    }
+  
+  // Initialize UI state - will load from DynamoDB app state
+  const [selectedMonth, setSelectedMonth] = useState<string>('');
+
+  // Helper function to convert DynamoDB SalesRecord to AlpineSalesRecord
+  const convertSalesRecordToAlpineRecord = (r: any): AlpineSalesRecord & { invoiceKey?: string } => ({
+    period: r.period,
+    customerName: r.customerName,
+    productName: r.productName,
+    productCode: r.productCode || '',
+    cases: r.cases,
+    pieces: 0, // Default value since not stored in DynamoDB
+    revenue: r.revenue,
+    accountName: r.accountName,
+    customerId: r.customerId,
+    itemNumber: r.itemNumber,
+    size: r.size,
+    weightLbs: r.weightLbs,
+    excludeFromTotals: r.distributor === 'PETES' || r.distributor === 'DOT',
+    invoiceKey: r.invoiceKey, // Preserve invoiceKey for deduplication
   });
 
-  // Save data to localStorage whenever it changes
+  // Save UI preferences to DynamoDB app state
   React.useEffect(() => {
-    localStorage.setItem('salesTracker_alpineData', JSON.stringify(currentAlpineData));
-  }, [currentAlpineData]);
+    if (selectedMonth) {
+      saveAppState('selectedMonth', selectedMonth).catch(console.error);
+    }
+  }, [selectedMonth, saveAppState]);
 
-  React.useEffect(() => {
-    localStorage.setItem('salesTracker_petesData', JSON.stringify(currentPetesData));
-  }, [currentPetesData]);
-
-  React.useEffect(() => {
-    localStorage.setItem('salesTracker_keheData', JSON.stringify(currentKeHeData));
-  }, [currentKeHeData]);
-
-  React.useEffect(() => {
-    localStorage.setItem('salesTracker_vistarData', JSON.stringify(currentVistarData));
-  }, [currentVistarData]);
-
-  React.useEffect(() => {
-    localStorage.setItem('salesTracker_tonysData', JSON.stringify(currentTonysData));
-  }, [currentTonysData]);
-
-  React.useEffect(() => {
-    localStorage.setItem('salesTracker_troiaData', JSON.stringify(currentTroiaData));
-  }, [currentTroiaData]);
-
-  React.useEffect(() => {
-    localStorage.setItem('salesTracker_mhdData', JSON.stringify(currentMhdData));
-  }, [currentMhdData]);
-
-  React.useEffect(() => {
-    localStorage.setItem('salesTracker_alpineProgressions', JSON.stringify(Array.from(currentCustomerProgressions.entries())));
-  }, [currentCustomerProgressions]);
-
-  React.useEffect(() => {
-    localStorage.setItem('salesTracker_petesProgressions', JSON.stringify(Array.from(currentPetesCustomerProgressions.entries())));
-  }, [currentPetesCustomerProgressions]);
-
-  React.useEffect(() => {
-    localStorage.setItem('salesTracker_selectedMonth', selectedMonth);
-  }, [selectedMonth]);
-
-  // Load data from DynamoDB on component mount (for incognito/fresh sessions)
+  // Load data from DynamoDB on component mount
   React.useEffect(() => {
     const loadFromDynamoDB = async () => {
       try {
-        console.log('Loading data from DynamoDB...');
+        console.log('Loading all data from DynamoDB...');
         
         // Load data for each distributor
-        const distributors = ['ALPINE', 'PETES', 'KEHE', 'VISTAR', 'TONYS', 'TROIA', 'MHD'] as const;
+        const distributors = ['ALPINE', 'PETES', 'KEHE', 'VISTAR', 'TONYS', 'TROIA', 'MHD', 'DOT'] as const;
         
         for (const distributor of distributors) {
           try {
+            await loadSalesRecordsByDistributor(distributor);
+            // The hook sets salesRecords, but we need to convert and set our state
+            // Let's use the service directly to get records
             const records = await dynamoDBService.getSalesRecordsByDistributor(distributor);
             console.log(`Loaded ${records.length} records for ${distributor} from DynamoDB`);
             
-            // Convert SalesRecord back to AlpineSalesRecord format and update appropriate state
-            const convertedRecords: AlpineSalesRecord[] = records.map(r => ({
-              period: r.period,
-              customerName: r.customerName,
-              productName: r.productName,
-              productCode: r.productCode || '',
-              cases: r.cases,
-              pieces: 0, // Default value since not stored in DynamoDB
-              revenue: r.revenue,
-              accountName: (r as any).accountName,
-              customerId: (r as any).customerId,
-              itemNumber: (r as any).itemNumber,
-              size: (r as any).size,
-              weightLbs: (r as any).weightLbs,
-            }));
+            // Convert SalesRecord back to AlpineSalesRecord format
+            const convertedRecords: AlpineSalesRecord[] = records.map(convertSalesRecordToAlpineRecord);
+            
+            // Deduplicate records based on invoiceKey to prevent counting duplicates
+            const deduplicatedRecords = Array.from(
+              new Map(convertedRecords.map(r => {
+                // Create a unique key from invoice-relevant fields if invoiceKey doesn't exist
+                const key = (r as any).invoiceKey || 
+                  `${distributor}-${r.period}-${r.customerName}-${r.productName}-${r.cases}-${r.revenue}`;
+                return [key, r];
+              })).values()
+            );
 
             if (distributor === 'ALPINE') {
-              setCurrentAlpineData(convertedRecords);
+              setCurrentAlpineData(deduplicatedRecords);
             } else if (distributor === 'PETES') {
-              setCurrentPetesData(convertedRecords);
+              setCurrentPetesData(deduplicatedRecords);
             } else if (distributor === 'KEHE') {
-              setCurrentKeHeData(convertedRecords);
+              setCurrentKeHeData(deduplicatedRecords);
             } else if (distributor === 'VISTAR') {
-              setCurrentVistarData(convertedRecords);
+              setCurrentVistarData(deduplicatedRecords);
             } else if (distributor === 'TONYS') {
-              setCurrentTonysData(convertedRecords);
+              setCurrentTonysData(deduplicatedRecords);
             } else if (distributor === 'TROIA') {
-              setCurrentTroiaData(convertedRecords);
+              setCurrentTroiaData(deduplicatedRecords);
             } else if (distributor === 'MHD') {
-              setCurrentMhdData(convertedRecords);
+              setCurrentMhdData(deduplicatedRecords);
+            } else if (distributor === 'DOT') {
+              setCurrentDotData(deduplicatedRecords);
             }
           } catch (error) {
             console.log(`Note: Could not load ${distributor} from DynamoDB (may not have data yet):`, error instanceof Error ? error.message : error);
           }
+        }
+        
+        // Load customer progressions for distributors that use them
+        try {
+          await loadCustomerProgressionsByDistributor('ALPINE');
+          const alpineProgressions = await dynamoDBService.getCustomerProgressionsByDistributor('ALPINE');
+          const alpineMap = new Map<string, any>();
+          alpineProgressions.forEach(p => alpineMap.set(p.customerName, p.progression));
+          setCurrentCustomerProgressions(alpineMap);
+        } catch (error) {
+          console.log('Note: Could not load Alpine progressions from DynamoDB:', error);
+        }
+        
+        try {
+          await loadCustomerProgressionsByDistributor('PETES');
+          const petesProgressions = await dynamoDBService.getCustomerProgressionsByDistributor('PETES');
+          const petesMap = new Map<string, any>();
+          petesProgressions.forEach(p => petesMap.set(p.customerName, p.progression));
+          setCurrentPetesCustomerProgressions(petesMap);
+        } catch (error) {
+          console.log('Note: Could not load Petes progressions from DynamoDB:', error);
+        }
+        
+        // Load UI preferences from DynamoDB app state
+        try {
+          const savedMonth = await loadAppState('selectedMonth');
+          if (savedMonth) {
+            setSelectedMonth(savedMonth);
+          }
+        } catch (error) {
+          console.log('Note: Could not load selectedMonth from DynamoDB:', error);
+        }
+        
+        try {
+          const savedDistributor = await loadAppState('selectedDistributor');
+          if (savedDistributor) {
+            setSelectedDistributor(savedDistributor);
+          }
+        } catch (error) {
+          console.log('Note: Could not load selectedDistributor from DynamoDB:', error);
         }
         
         console.log('DynamoDB data load complete');
@@ -838,7 +806,7 @@ const Dashboard: React.FC = () => {
     };
 
     loadFromDynamoDB();
-  }, []);
+  }, [loadSalesRecordsByDistributor, loadCustomerProgressionsByDistributor, loadAppState]);
 
   const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
   // Removed CSV invoice upload; no longer tracking last uploaded invoice month
@@ -850,51 +818,39 @@ const Dashboard: React.FC = () => {
   const [showMonthlySummary, setShowMonthlySummary] = useState(false);
   const [deltaModalOpen, setDeltaModalOpen] = useState(false);
   const [newAccountsModalOpen, setNewAccountsModalOpen] = useState(false);
-  const [selectedDistributor, setSelectedDistributor] = useState<'ALPINE' | 'PETES' | 'KEHE' | 'VISTAR' | 'TONYS' | 'TROIA' | 'MHD' | 'ALL'>(() => {
-    try {
-      const saved = localStorage.getItem('salesTracker_selectedDistributor');
-      return (saved as any) || 'ALPINE';
-    } catch {
-      return 'ALPINE';
-    }
-  });
+  const [selectedDistributor, setSelectedDistributor] = useState<'ALPINE' | 'PETES' | 'KEHE' | 'VISTAR' | 'TONYS' | 'TROIA' | 'MHD' | 'DOT' | 'ALL'>('ALPINE');
 
+  // Save selectedDistributor to DynamoDB app state
   React.useEffect(() => {
-    localStorage.setItem('salesTracker_selectedDistributor', selectedDistributor);
-  }, [selectedDistributor]);
+    saveAppState('selectedDistributor', selectedDistributor).catch(console.error);
+  }, [selectedDistributor, saveAppState]);
 
   const [isDistributorDropdownOpen, setIsDistributorDropdownOpen] = useState(false);
   const [showCustomReport, setShowCustomReport] = useState(false);
   const [displayMode, setDisplayMode] = useState<'revenue' | 'cases'>('cases');
   const [timeAggregation, setTimeAggregation] = useState<'3mo' | '6mo' | '1yr' | '5yr'>('3mo');
   
-  // Function to clear all localStorage data (available for future use)
+  // Function to clear all DynamoDB data (available for future use)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const clearAllData = () => {
-    localStorage.removeItem('salesTracker_alpineData');
-    localStorage.removeItem('salesTracker_petesData');
-    localStorage.removeItem('salesTracker_keheData');
-    localStorage.removeItem('salesTracker_vistarData');
-    localStorage.removeItem('salesTracker_tonysData');
-    localStorage.removeItem('salesTracker_troiaData');
-    localStorage.removeItem('salesTracker_mhdData');
-    localStorage.removeItem('salesTracker_alpineProgressions');
-    localStorage.removeItem('salesTracker_petesProgressions');
-    localStorage.removeItem('salesTracker_selectedMonth');
-    localStorage.removeItem('salesTracker_selectedDistributor');
-    
-    // Reset all state
-    setCurrentAlpineData([]);
-    setCurrentPetesData([]);
-    setCurrentKeHeData([]);
-    setCurrentVistarData([]);
-    setCurrentTonysData([]);
-    setCurrentTroiaData([]);
-    setCurrentMhdData([]);
-    setCurrentCustomerProgressions(new Map());
-    setCurrentPetesCustomerProgressions(new Map());
-    setSelectedMonth('');
-    setSelectedDistributor('ALPINE');
+  const clearAllData = async () => {
+    try {
+      // Clear from DynamoDB - this would require adding clearAllData to the hook
+      // For now, just reset local state
+      setCurrentAlpineData([]);
+      setCurrentPetesData([]);
+      setCurrentKeHeData([]);
+      setCurrentVistarData([]);
+      setCurrentTonysData([]);
+      setCurrentTroiaData([]);
+      setCurrentMhdData([]);
+      setCurrentDotData([]);
+      setCurrentCustomerProgressions(new Map());
+      setCurrentPetesCustomerProgressions(new Map());
+      setSelectedMonth('');
+      setSelectedDistributor('ALPINE');
+    } catch (error) {
+      console.error('Error clearing data:', error);
+    }
   };
 
   // Debug logging
@@ -949,9 +905,10 @@ const Dashboard: React.FC = () => {
     if (selectedDistributor === 'TONYS') return currentTonysData;
     if (selectedDistributor === 'TROIA') return currentTroiaData;
     if (selectedDistributor === 'MHD') return currentMhdData;
-    // For 'ALL': combine all data but exclude sub-distributors from totals
+    if (selectedDistributor === 'DOT') return currentDotData;
+    // For 'ALL': combine all data but exclude sub-distributors and DOT from totals
     return [...currentAlpineData, ...currentPetesData, ...currentKeHeData, ...currentVistarData, ...currentTonysData, ...currentTroiaData, ...currentMhdData];
-  }, [selectedDistributor, currentAlpineData, currentPetesData, currentKeHeData, currentVistarData, currentTonysData, currentTroiaData, currentMhdData]);
+  }, [selectedDistributor, currentAlpineData, currentPetesData, currentKeHeData, currentVistarData, currentTonysData, currentTroiaData, currentMhdData, currentDotData]);
 
   // Data for calculations - excludes sub-distributors when viewing "All Businesses"
   const dataForTotals = useMemo(() => {
@@ -1591,6 +1548,103 @@ const Dashboard: React.FC = () => {
     setCurrentMhdData([]);
   };
 
+  const handleDotDataParsed = async (data: { records: AlpineSalesRecord[]; customerProgressions: Map<string, any> }) => {
+    console.log('Dashboard received new DOT data:', {
+      recordCount: data.records.length,
+      periods: Array.from(new Set(data.records.map(r => r.period))),
+      totalRevenue: data.records.reduce((sum, r) => sum + r.revenue, 0),
+    });
+
+    // Merge new data with existing data with proper deduplication
+    const newPeriods = new Set(data.records.map(r => r.period));
+    
+    // Create invoiceKeys for new records to check for duplicates
+    const newInvoiceKeys = new Set(
+      data.records
+        .map(r => generateDeterministicInvoiceKey('DOT', r.period, r.customerName, r.productName, r.cases, r.revenue))
+    );
+    
+    // Filter out existing records that:
+    // 1. Are in the same periods being uploaded, OR
+    // 2. Have invoiceKeys that match the new records (prevents duplicates across periods)
+    const filteredExistingData = currentDotData.filter(record => {
+      // Remove records for the same periods
+      if (newPeriods.has(record.period)) {
+        return false;
+      }
+      
+      // Also remove if invoiceKey matches (prevents duplicates if same data uploaded again)
+      const key = (record as any).invoiceKey;
+      if (key && newInvoiceKeys.has(key)) {
+        return false;
+      }
+      
+      return true;
+    });
+    
+    // Combine filtered existing data with new data
+    const combinedData = [...filteredExistingData, ...data.records];
+    
+    // Final deduplication pass to ensure no duplicates based on invoiceKey
+    const mergedData = Array.from(
+      new Map(combinedData.map(r => {
+        const key = (r as any).invoiceKey || 
+          generateDeterministicInvoiceKey('DOT', r.period, r.customerName, r.productName, r.cases, r.revenue);
+        return [key, r];
+      })).values()
+    );
+    
+    console.log(`[DOT] Deduplication: ${combinedData.length} records -> ${mergedData.length} unique records`);
+    setCurrentDotData(mergedData);
+    
+    // Save to DynamoDB
+    try {
+      // Convert to SalesRecord format for DynamoDB
+      const salesRecords = data.records.map(record => ({
+        distributor: 'DOT',
+        period: record.period,
+        customerName: record.customerName,
+        productName: record.productName,
+        productCode: record.productCode,
+        cases: record.cases,
+        revenue: record.revenue,
+        invoiceKey: generateDeterministicInvoiceKey('DOT', record.period, record.customerName, record.productName, record.cases, record.revenue),
+        source: 'DOT CSV',
+        timestamp: new Date().toISOString(),
+        accountName: record.accountName,
+        customerId: record.customerId,
+        itemNumber: record.itemNumber,
+        size: record.size,
+        weightLbs: record.weightLbs,
+      }));
+
+      // Save to DynamoDB
+      const savedRecords = await saveSalesRecords(salesRecords);
+      
+      if (savedRecords && savedRecords.length > 0) {
+        console.log('DOT data successfully saved to DynamoDB');
+      } else {
+        console.log('[DOT] Duplicate upload detected, skipping save');
+      }
+    } catch (error) {
+      console.error('[DOT] Failed to save DOT data to DynamoDB:', error);
+      setIsUploading(false);
+    }
+    
+    // If new periods were uploaded, select the most recent one to reflect upload
+    const newestUploadedPeriod = Array.from(newPeriods).sort().slice(-1)[0];
+    if (newestUploadedPeriod) {
+      setSelectedMonth(newestUploadedPeriod);
+      setSelectedDistributor('DOT');
+    }
+  };
+
+  const handleClearDotData = () => {
+    console.log('Clearing DOT data');
+    setCurrentDotData([]);
+  };
+
+
   // Removed CSV invoice upload handlers
 
 
@@ -1609,7 +1663,8 @@ const Dashboard: React.FC = () => {
         'VISTAR': 'VISTAR',
         'TONYS': 'TONYS',
         'TROIA': 'TROIA',
-        'MHD': 'MHD'
+        'MHD': 'MHD',
+        'DOT': 'DOT'
       };
       const distributorName = distributorMap[selectedDistributor];
       
@@ -1671,11 +1726,36 @@ const Dashboard: React.FC = () => {
     } else if (selectedDistributor === 'MHD') {
       const updatedData = currentMhdData.filter(record => record.period !== periodToDelete);
       setCurrentMhdData(updatedData);
+    } else if (selectedDistributor === 'DOT') {
+      const updatedData = currentDotData.filter(record => record.period !== periodToDelete);
+      setCurrentDotData(updatedData);
     }
 
     if (selectedMonth === periodToDelete) {
       const remainingPeriods = Array.from(new Set(dataForTotals.filter(r => r.period !== periodToDelete).map(r => r.period))).sort();
       setSelectedMonth(remainingPeriods.length > 0 ? remainingPeriods[remainingPeriods.length - 1] : 'ALL_MONTHS');
+    }
+
+    // Send deletion request to Google Sheets
+    try {
+      const webAppUrl = (process.env.REACT_APP_GS_WEBAPP_URL || '').trim();
+      const token = (process.env.REACT_APP_GS_TOKEN || '').trim();
+      if (webAppUrl && token) {
+        await fetch(webAppUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          body: JSON.stringify({
+            token,
+            action: 'delete',
+            distributor: selectedDistributor,
+            period: periodToDelete
+          })
+        });
+        console.log(`[Dashboard] Deletion request sent to Google Sheets for ${selectedDistributor} / ${periodToDelete}`);
+      }
+    } catch (error) {
+      console.warn('[Dashboard] Warning: Could not send deletion to Google Sheets:', error);
+      // Don't fail the operation if Google Sheets update fails - local delete already succeeded
     }
 
     console.log('[Dashboard] Period deleted:', periodToDelete);
@@ -1684,8 +1764,10 @@ const Dashboard: React.FC = () => {
 
   // Calculate KPIs based on filtered data
   const kpis = useMemo(() => {
-    const totalRevenue = filteredData.reduce((sum, record) => sum + record.revenue, 0);
-    const totalCases = filteredData.reduce((sum, record) => sum + record.cases, 0);
+    // Filter out adjustment records from totals
+    const validData = filteredData.filter(r => !r.isAdjustment);
+    const totalRevenue = validData.reduce((sum, record) => sum + record.revenue, 0);
+    const totalCases = validData.reduce((sum, record) => sum + record.cases, 0);
     
     console.log('KPI Calculation:', {
       selectedMonth,
@@ -2076,8 +2158,8 @@ const Dashboard: React.FC = () => {
     return map;
   }, [currentAlpineData, currentPetesData, currentKeHeData, currentVistarData, currentTonysData]);
 
-  const getDistributorLabel = (d: 'ALPINE' | 'PETES' | 'KEHE' | 'VISTAR' | 'TONYS' | 'TROIA' | 'MHD' | 'ALL' = selectedDistributor) => (
-    d === 'ALPINE' ? 'Alpine' : d === 'PETES' ? "Pete's Coffee" : d === 'KEHE' ? 'KeHe' : d === 'VISTAR' ? 'Vistar' : d === 'TONYS' ? "Tony's Fine Foods" : d === 'TROIA' ? 'Troia Foods' : d === 'MHD' ? 'Mike Hudson' : 'All Businesses'
+  const getDistributorLabel = (d: 'ALPINE' | 'PETES' | 'KEHE' | 'VISTAR' | 'TONYS' | 'TROIA' | 'MHD' | 'DOT' | 'ALL' = selectedDistributor) => (
+    d === 'ALPINE' ? 'Alpine' : d === 'PETES' ? "Pete's Coffee" : d === 'KEHE' ? 'KeHe' : d === 'VISTAR' ? 'Vistar' : d === 'TONYS' ? "Tony's Fine Foods" : d === 'TROIA' ? 'Troia Foods' : d === 'MHD' ? 'Mike Hudson' : d === 'DOT' ? 'DOT' : 'All Businesses'
   );
 
   // Monthly accounts/cases summary pivot
@@ -2315,7 +2397,7 @@ const Dashboard: React.FC = () => {
                   {isDistributorDropdownOpen && (
                     <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
                       <div className="py-1">
-                        {(['ALPINE','PETES','KEHE','VISTAR','TONYS','TROIA','MHD','ALL'] as const).map((d) => (
+                        {(['ALPINE','PETES','KEHE','VISTAR','TONYS','TROIA','MHD','DOT','ALL'] as const).map((d) => (
                           <button
                             key={d}
                             onClick={(e) => {
@@ -2597,6 +2679,7 @@ const Dashboard: React.FC = () => {
           tonysData={currentTonysData}
           troiaData={currentTroiaData}
           mhdData={currentMhdData}
+          dotData={currentDotData}
         />
       )}
 
@@ -2673,6 +2756,16 @@ const Dashboard: React.FC = () => {
                 onUploadDescription={setUploadDescription}
                 onUploadEnd={() => setIsUploading(false)}
               />
+            ) : selectedDistributor === 'DOT' ? (
+              <DotReportUpload
+                key={`dot-${uploadSectionKey}`}
+                onDataParsed={handleDotDataParsed}
+                onClearData={handleClearDotData}
+                onProcessingComplete={() => setShowUploadSection(false)}
+                onUploadStart={() => setIsUploading(true)}
+                onUploadDescription={setUploadDescription}
+                onUploadEnd={() => setIsUploading(false)}
+              />
             ) : (
               <>
                 <AlpineReportUpload
@@ -2715,6 +2808,12 @@ const Dashboard: React.FC = () => {
                   key={`mhd-${uploadSectionKey}`}
                   onDataParsed={handleMhdDataParsed}
                   onClearData={handleClearMhdData}
+                  onProcessingComplete={() => setShowUploadSection(false)}
+                />
+                <DotReportUpload
+                  key={`dot-${uploadSectionKey}`}
+                  onDataParsed={handleDotDataParsed}
+                  onClearData={handleClearDotData}
                   onProcessingComplete={() => setShowUploadSection(false)}
                 />
               </>
@@ -2961,12 +3060,13 @@ const Dashboard: React.FC = () => {
                 revenueByCustomer={revenueByCustomer}
                 alpineData={currentData}
                 onCustomerClick={handleCustomerClick}
-                isComparisonMode={selectedDistributor !== 'KEHE' && selectedDistributor !== 'VISTAR' && selectedDistributor !== 'TONYS' && selectedDistributor !== 'TROIA' && selectedDistributor !== 'MHD'}
+                isComparisonMode={selectedDistributor !== 'KEHE' && selectedDistributor !== 'VISTAR' && selectedDistributor !== 'TONYS' && selectedDistributor !== 'TROIA' && selectedDistributor !== 'MHD' && selectedDistributor !== 'DOT'}
                 isKeHeMode={selectedDistributor === 'KEHE'}
                 isVistarMode={selectedDistributor === 'VISTAR'}
                 isTonysMode={selectedDistributor === 'TONYS'}
                 isTroiaMode={selectedDistributor === 'TROIA'}
                 isMhdMode={selectedDistributor === 'MHD'}
+                isDotMode={selectedDistributor === 'DOT'}
                 customerPivotRange={customerPivotRange}
                 setCustomerPivotRange={setCustomerPivotRange}
                 navigateCustomerPivot={navigateCustomerPivot}
@@ -3141,8 +3241,19 @@ const Dashboard: React.FC = () => {
           />
         )}
 
+        {/* DOT Customer Detail Modal */}
+        {selectedCustomerForModal && selectedDistributor === 'DOT' && (
+          <DotCustomerDetailModal
+            customerName={selectedCustomerForModal}
+            dotData={currentDotData}
+            isOpen={isCustomerModalOpen}
+            onClose={handleCloseCustomerModal}
+            selectedMonth={selectedMonth}
+          />
+        )}
+
         {/* Customer Detail Modal for Alpine and Pete's */}
-        {selectedCustomerForModal && selectedDistributor !== 'KEHE' && selectedDistributor !== 'VISTAR' && selectedDistributor !== 'TONYS' && selectedDistributor !== 'TROIA' && selectedDistributor !== 'MHD' && (
+        {selectedCustomerForModal && selectedDistributor !== 'KEHE' && selectedDistributor !== 'VISTAR' && selectedDistributor !== 'TONYS' && selectedDistributor !== 'TROIA' && selectedDistributor !== 'MHD' && selectedDistributor !== 'DOT' && (
           <CustomerDetailModal
             customerName={selectedCustomerForModal}
             currentInvoices={[]}
