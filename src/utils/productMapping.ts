@@ -12,6 +12,7 @@ export interface ProductMapping {
   petesProductCodes?: string[]; // Pete's Coffee product codes (CLARA'S brand)
   keheProductCodes?: string[]; // KeHE UPC codes (CLARA'S KITCHEN & BENNY'S brands)
   vistarProductCodes?: string[]; // Vistar GFO product codes
+  dotProductCodes?: string[]; // DOT product codes (Dot # field)
 }
 
 /**
@@ -1001,6 +1002,13 @@ const createReverseLookup = (): Map<string, string> => {
         lookup.set(vistarCode, mapping.canonicalName);
       }
     }
+
+    // Map DOT product codes to the canonical name
+    if (mapping.dotProductCodes) {
+      for (const dotCode of mapping.dotProductCodes) {
+        lookup.set(dotCode, mapping.canonicalName);
+      }
+    }
   }
   
   return lookup;
@@ -1098,6 +1106,19 @@ export function getItemNumberFromVistarCode(vistarProductCode: string): string |
   // Find the mapping that contains this Vistar product code
   const mapping = PRODUCT_MAPPINGS.find(m => 
     m.vistarProductCodes && m.vistarProductCodes.includes(vistarProductCode)
+  );
+  return mapping ? mapping.itemNumber : undefined;
+}
+
+/**
+ * Get item number from DOT product code
+ */
+export function getItemNumberFromDotCode(dotProductCode: string): string | undefined {
+  if (!dotProductCode) return undefined;
+  
+  // Find the mapping that contains this DOT product code
+  const mapping = PRODUCT_MAPPINGS.find(m => 
+    m.dotProductCodes && m.dotProductCodes.includes(dotProductCode)
   );
   return mapping ? mapping.itemNumber : undefined;
 }
