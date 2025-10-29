@@ -73,8 +73,33 @@ const CustomerCsvPivotModal: React.FC<CustomerCsvPivotModalProps> = ({ customerN
   }, [isOpen, closeOnScroll, onClose]);
 
   const buildCustomerRows = (name: string) => {
+    // Handle composite identifiers (e.g., "Vistar Illinois - Customer Name")
+    // For Vistar and other distributors with accountName, the Account Updates section
+    // uses composite identifiers like "OPCO - Account"
+    const isComposite = name.includes(' - ');
+    let filterFn: (r: AlpineSalesRecord) => boolean;
+    
+    if (isComposite) {
+      // Split into OPCO and Account parts
+      const parts = name.split(' - ');
+      const opcoName = parts[0]?.trim();
+      const accountName = parts[1]?.trim();
+      
+      filterFn = (r: AlpineSalesRecord) => {
+        // Match records where customerName matches OPCO and accountName matches Account
+        if (r.accountName && r.accountName !== r.customerName) {
+          return r.customerName === opcoName && r.accountName === accountName;
+        }
+        // Fallback: if accountName is not set or equals customerName, just match customerName
+        return r.customerName === name;
+      };
+    } else {
+      // Standard matching for non-composite identifiers (Alpine, Petes, etc.)
+      filterFn = (r: AlpineSalesRecord) => r.customerName === name;
+    }
+    
     return alpineData
-      .filter(r => r.customerName === name)
+      .filter(filterFn)
       .sort((a, b) => {
         if (a.period !== b.period) return a.period.localeCompare(b.period);
         if ((a.productName || '') !== (b.productName || '')) return (a.productName || '').localeCompare(b.productName || '');
