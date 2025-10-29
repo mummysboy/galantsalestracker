@@ -15,6 +15,7 @@ interface CustomReportModalProps {
   tonysData?: AlpineSalesRecord[];
   troiaData?: AlpineSalesRecord[];
   mhdData?: AlpineSalesRecord[];
+  dotData?: AlpineSalesRecord[];
 }
 
 type GroupMode = 'customer' | 'product';
@@ -61,7 +62,8 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
   vistarData = [],
   tonysData = [],
   troiaData = [],
-  mhdData = []
+  mhdData = [],
+  dotData = []
 }) => {
   const [reportMode, setReportMode] = React.useState<ReportMode>('comparison');
   const [rangeAStart, setRangeAStart] = React.useState<string>('');
@@ -121,14 +123,22 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
       setSelectedPeriods([last]);
     }
     
-    // Initialize with customers from current dashboard data only
+    // Initialize with customers from all available data sources
     const allCustomers = new Set<string>();
     data.forEach(record => allCustomers.add(record.customerName));
+    alpineData.forEach(record => allCustomers.add(record.customerName));
+    petesData.forEach(record => allCustomers.add(record.customerName));
+    keheData.forEach(record => allCustomers.add(record.customerName));
+    vistarData.forEach(record => allCustomers.add(record.customerName));
+    tonysData.forEach(record => allCustomers.add(record.customerName));
+    troiaData.forEach(record => allCustomers.add(record.customerName));
+    mhdData.forEach(record => allCustomers.add(record.customerName));
+    dotData.forEach(record => allCustomers.add(record.customerName));
     setSelectedCustomers(Array.from(allCustomers).sort());
     
     // Initialize sub-customers
     setSelectedSubCustomers([]);
-  }, [isOpen, availablePeriods, data, alpineData, petesData, keheData, vistarData, tonysData, troiaData, mhdData]);
+  }, [isOpen, availablePeriods, data, alpineData, petesData, keheData, vistarData, tonysData, troiaData, mhdData, dotData]);
 
   const isPeriodInRange = (p: string, start: string, end: string) => {
     const a = start <= end ? start : end;
@@ -399,6 +409,7 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
       { name: "Tony's", data: tonysData, isSubDistributor: false },
       { name: 'Troia Foods', data: troiaData, isSubDistributor: false },
       { name: 'Mike Hudson', data: mhdData, isSubDistributor: false },
+      { name: 'DOT', data: dotData, isSubDistributor: false },
     ];
 
     const rows: BrokerReportRow[] = [];
@@ -482,6 +493,16 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
           // For Vistar: calculate from pack × sizeOz × cases / 16 to convert oz to lbs
           else if (dist.name === 'Vistar' && record.pack && record.sizeOz && record.cases) {
             weight = (record.pack * record.sizeOz * record.cases) / 16;
+          }
+          // For DOT: use weightLbs field if available, otherwise calculate from pack × sizeOz × cases / 16
+          else if (dist.name === 'DOT' && record.cases) {
+            if (record.weightLbs !== undefined && record.weightLbs > 0) {
+              // Use the weightLbs field calculated from Master Pricing data
+              weight = record.weightLbs;
+            } else if (record.pack && record.sizeOz) {
+              // Fallback: calculate weight from pack × sizeOz × cases / 16
+              weight = (record.pack * record.sizeOz * record.cases) / 16;
+            }
           }
 
           rows.push({
