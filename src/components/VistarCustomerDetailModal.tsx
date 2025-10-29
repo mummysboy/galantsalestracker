@@ -284,36 +284,38 @@ const VistarCustomerDetailModal: React.FC<VistarCustomerDetailModalProps> = ({
     };
   }, [isPeriodDropdownOpen]);
 
-  if (!isOpen) return null;
-
   // Show customers (Customer Desc) summary for OPCO with visible periods only
   const { customers } = calculateOpcoCustomerDataAllPeriods(vistarData, opcoName, viewMode);
   
   // Filter periods to only show visible ones
   const periods = visiblePeriods;
-  
+
   // Debug: Log what we found - enhanced for Netlify troubleshooting
+  // NOTE: Must be before early return to follow React Hooks rules
   React.useEffect(() => {
-    if (isOpen) {
-      const opcoRecords = vistarData.filter(r => r.customerName === opcoName);
-      const recordsWithAccount = opcoRecords.filter(r => r.accountName);
-      console.log('[VistarModal] Modal opened with data:', {
-        opcoName,
-        totalRecords: vistarData.length,
-        opcoRecords: opcoRecords.length,
-        recordsWithAccountName: recordsWithAccount.length,
-        recordsWithoutAccountName: opcoRecords.length - recordsWithAccount.length,
-        customersFound: customers.length,
-        periods: periods.length,
-        viewMode,
-        sampleCustomers: customers.slice(0, 3).map(c => ({
-          customerName: c.customerName,
-          periodData: Object.fromEntries(c.periodData)
-        })),
-        sampleAccountNames: Array.from(new Set(recordsWithAccount.map(r => r.accountName))).slice(0, 5)
-      });
-    }
+    // Only log when modal is open to avoid unnecessary logging
+    if (!isOpen) return;
+    
+    const opcoRecords = vistarData.filter(r => r.customerName === opcoName);
+    const recordsWithAccount = opcoRecords.filter(r => r.accountName);
+    console.log('[VistarModal] Modal opened with data:', {
+      opcoName,
+      totalRecords: vistarData.length,
+      opcoRecords: opcoRecords.length,
+      recordsWithAccountName: recordsWithAccount.length,
+      recordsWithoutAccountName: opcoRecords.length - recordsWithAccount.length,
+      customersFound: customers.length,
+      periods: periods.length,
+      viewMode,
+      sampleCustomers: customers.slice(0, 3).map(c => ({
+        customerName: c.customerName,
+        periodData: Object.fromEntries(c.periodData)
+      })),
+      sampleAccountNames: Array.from(new Set(recordsWithAccount.map(r => r.accountName))).slice(0, 5)
+    });
   }, [isOpen, vistarData, opcoName, customers, periods, viewMode]);
+
+  if (!isOpen) return null;
   
 
     return (
