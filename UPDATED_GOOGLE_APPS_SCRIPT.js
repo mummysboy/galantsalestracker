@@ -19,6 +19,13 @@ function doPost(e) {
     const body = JSON.parse((e.postData && e.postData.contents) || "{}");
     if (!body || body.token !== TOKEN)
       return ContentService.createTextOutput("Unauthorized");
+    
+    // Handle DELETE action
+    if (body.action === "delete") {
+      return handleDeleteRequest(body);
+    }
+    
+    // Handle normal ADD/MERGE action (existing logic)
     const rows = Array.isArray(body.rows) ? body.rows : [];
     if (rows.length === 0) return ContentService.createTextOutput("No rows");
 
@@ -176,6 +183,101 @@ function doPost(e) {
         0,
         0,
         "Error: " + err,
+      ]);
+    } catch (_ignore) {}
+    return ContentService.createTextOutput("Error: " + err);
+  }
+}
+
+function handleDeleteRequest(body) {
+  try {
+    const distributor = String(body.distributor || "").toUpperCase();
+    const period = String(body.period || "").trim();
+    
+    if (!distributor || !period) {
+      return ContentService.createTextOutput("Invalid: distributor and period required");
+    }
+    
+    // Map distributor to sheet name
+    const distributorToSheet = {
+      'ALPINE': ALPINE_SHEET_NAME,
+      'PETES': PETES_SHEET_NAME,
+      'KEHE': KEHE_SHEET_NAME,
+      'VISTAR': VISTAR_SHEET_NAME,
+      'TONYS': TONYS_SHEET_NAME,
+      'TROIA': TROIA_SHEET_NAME,
+      'MHD': MHD_SHEET_NAME
+    };
+    
+    const sheetName = distributorToSheet[distributor];
+    if (!sheetName) {
+      return ContentService.createTextOutput("Error: Invalid distributor");
+    }
+    
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = getOrCreateSheet(ss, sheetName);
+    const logs = getOrCreateSheet(ss, LOGS_SHEET_NAME);
+    
+    // Get existing raw data
+    const existingData = getRawData(sheet);
+    
+    // Filter out records for the specified period
+    const deletedCount = existingData.filter(row => {
+      const dateStr = row[0]; // date is first column
+      return dateStr.startsWith(period);
+    }).length;
+    
+    const filteredData = existingData.filter(row => {
+      const dateStr = row[0];
+      return !dateStr.startsWith(period);
+    });
+    
+    // Store updated raw data
+    storeRawData(sheet, filteredData);
+    
+    // Rebuild the view with remaining data
+    rebuildMonthlyViewFor(sheet, filteredData);
+    
+    // Log the deletion
+    ensureHeader(logs, [
+      "Timestamp",
+      "TotalRows",
+      "AlpineRows",
+      "PetesRows",
+      "KeHeRows",
+      "VistarRows",
+      "TonysRows",
+      "TroiaRows",
+      "MhdRows",
+      "AddedAlpine",
+      "AddedPetes",
+      "AddedKeHe",
+      "AddedVistar",
+      "AddedTonys",
+      "AddedTroia",
+      "AddedMhd",
+      "Note",
+    ]);
+    logs.appendRow([
+      new Date().toISOString(),
+      filteredData.length,
+      0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0,
+      `DELETE: ${distributor} / ${period} (removed ${deletedCount} rows)`,
+    ]);
+    
+    return ContentService.createTextOutput(
+      `OK: Deleted ${deletedCount} rows for ${distributor} / ${period}`
+    );
+  } catch (err) {
+    try {
+      const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      const logs = getOrCreateSheet(ss, LOGS_SHEET_NAME);
+      logs.appendRow([
+        new Date().toISOString(),
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0,
+        "Error in delete: " + err,
       ]);
     } catch (_ignore) {}
     return ContentService.createTextOutput("Error: " + err);
@@ -572,115 +674,6 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
 
   currentRow += 2; // spacing
 
-  // BUILD NEW/LOST CUSTOMERS DETAIL SECTION (COLLAPSIBLE)
-  const detailSectionStart = currentRow;
-  
-  sheet
-    .getRange(currentRow, 1)
-    .setValue("▼ NEW & LOST CUSTOMERS DETAIL - " + latestYear + " (Click to expand/collapse)");
-  sheet.getRange(currentRow, 1, 1, 14).mergeAcross();
-  sheet
-    .getRange(currentRow, 1)
-    .setFontWeight("bold")
-    .setFontSize(14)
-    .setBackground("#9c27b0")
-    .setFontColor("#ffffff")
-    .setHorizontalAlignment("center");
-  currentRow++;
-  
-  const detailContentStart = currentRow;
-
-  // New customers detail
-  sheet.getRange(currentRow, 1).setValue("NEW CUSTOMERS:");
-  sheet
-    .getRange(currentRow, 1)
-    .setFontWeight("bold")
-    .setFontSize(11)
-    .setBackground("#c8e6c9")
-    .setFontColor("#1b5e20");
-  currentRow++;
-
-  let hasNewCustomers = false;
-  for (let m = 0; m < 12; m++) {
-    if (newCustomerNames[m] && newCustomerNames[m].length > 0) {
-      hasNewCustomers = true;
-      const customerList = newCustomerNames[m].sort().join(", ");
-      sheet.getRange(currentRow, 1).setValue(monthNames[m] + ":");
-      sheet
-        .getRange(currentRow, 1)
-        .setFontWeight("bold")
-        .setBackground("#e8f5e9");
-      sheet.getRange(currentRow, 2, 1, 13).setValue(customerList);
-      sheet
-        .getRange(currentRow, 2, 1, 13)
-        .mergeAcross()
-        .setWrap(true)
-        .setBackground("#f1f8e9");
-      currentRow++;
-    }
-  }
-
-  if (!hasNewCustomers) {
-    sheet.getRange(currentRow, 1, 1, 14).setValue("No new customers this year");
-    sheet
-      .getRange(currentRow, 1, 1, 14)
-      .mergeAcross()
-      .setFontStyle("italic")
-      .setFontColor("#757575");
-    currentRow++;
-  }
-
-  currentRow++; // spacing
-
-  // Lost customers detail
-  sheet.getRange(currentRow, 1).setValue("LOST CUSTOMERS:");
-  sheet
-    .getRange(currentRow, 1)
-    .setFontWeight("bold")
-    .setFontSize(11)
-    .setBackground("#ffcdd2")
-    .setFontColor("#b71c1c");
-  currentRow++;
-
-  let hasLostCustomers = false;
-  for (let m = 0; m < 12; m++) {
-    if (lostCustomerNames[m] && lostCustomerNames[m].length > 0) {
-      hasLostCustomers = true;
-      const customerList = lostCustomerNames[m].sort().join(", ");
-      sheet.getRange(currentRow, 1).setValue(monthNames[m] + ":");
-      sheet
-        .getRange(currentRow, 1)
-        .setFontWeight("bold")
-        .setBackground("#ffebee");
-      sheet.getRange(currentRow, 2, 1, 13).setValue(customerList);
-      sheet
-        .getRange(currentRow, 2, 1, 13)
-        .mergeAcross()
-        .setWrap(true)
-        .setBackground("#fff5f5");
-      currentRow++;
-    }
-  }
-
-  if (!hasLostCustomers) {
-    sheet
-      .getRange(currentRow, 1, 1, 14)
-      .setValue("No lost customers this year - Great job!");
-    sheet
-      .getRange(currentRow, 1, 1, 14)
-      .mergeAcross()
-      .setFontStyle("italic")
-      .setFontColor("#2e7d32");
-    currentRow++;
-  }
-
-  // Create collapsible group for the detail section
-  if (currentRow > detailContentStart) {
-    sheet.getRowGroup(detailContentStart, currentRow - 1, true).collapse();
-  }
-
-  currentRow += 2; // spacing
-
   // BUILD PIVOT TABLE SECTION: CUSTOMERS AND PRODUCTS
   sheet
     .getRange(currentRow, 1)
@@ -797,10 +790,23 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
   ];
   let colorIndex = 0;
 
-  sortedMainCustomers.forEach((mainCustomer) => {
+  sortedMainCustomers.forEach((mainCustomer, customerIndex) => {
     const hierarchy = customerHierarchy[mainCustomer];
     const customerColor = customerColors[colorIndex % customerColors.length];
     colorIndex++;
+
+    // Add date header before first customer
+    if (customerIndex === 0) {
+      sheet.getRange(currentRow, 1).setValue(latestYear);
+      sheet
+        .getRange(currentRow, 1)
+        .setFontWeight("bold")
+        .setFontSize(12)
+        .setBackground("#404040")
+        .setFontColor("#ffffff");
+      currentRow++;
+      currentRow++; // spacing
+    }
 
     // Calculate main customer total (sum of all sub-vendors and direct products)
     let mainCustomerTotals = Array(12).fill(0);
@@ -826,6 +832,9 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
 
     const mainTotal = mainCustomerTotals.reduce((a, b) => a + b, 0);
     const mainRevTotal = mainCustomerRevenues.reduce((a, b) => a + b, 0);
+
+    // Store customer section start for collapsibility
+    const customerSectionStart = currentRow;
 
     // Main customer row (bold, colored) - Cases
     const mainRow = ["▼ " + mainCustomer + " (Cases)", ...mainCustomerTotals, mainTotal];
@@ -1003,10 +1012,11 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
       });
     }
 
-    // Create collapsible group for this customer's details
-    if (currentRow > customerDetailStart) {
-      sheet.getRowGroup(customerDetailStart, currentRow - 1, true).collapse();
-    }
+    // Create collapsible group for this customer's details AND header
+    // NOTE: Temporarily disabled due to compatibility issues during uploads
+    // if (currentRow > customerDetailStart) {
+    //   sheet.getRowGroup(customerSectionStart, currentRow - 1).collapse();
+    // }
 
     // Blank row between main customers
     currentRow++;

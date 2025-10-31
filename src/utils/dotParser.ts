@@ -1,11 +1,40 @@
 import { AlpineSalesRecord } from './alpineParser';
-import { mapToCanonicalProductName, getItemNumberFromDotCode, PRODUCT_MAPPINGS } from './productMapping';
+import { mapToCanonicalProductName, PRODUCT_MAPPINGS } from './productMapping';
 
 // Helper function to safely parse numbers
 function toNumber(val: any): number {
   if (val === null || val === undefined || val === '') return 0;
   const num = parseFloat(String(val).trim());
   return isNaN(num) ? 0 : num;
+}
+
+// Strict normalization to mirror productMapping.ts behavior for exact matching
+function normalizeDotName(name: string): string {
+  return String(name || '')
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, ' ')
+    .replace(/[^\w\s&]/g, '')
+    .trim();
+}
+
+// Exact description match against canonical and alternate names only
+function mapDotDescriptionToCanonical(itemDesc: string): string | undefined {
+  if (!itemDesc) return undefined;
+  const normalizedDesc = normalizeDotName(itemDesc);
+  for (const mapping of PRODUCT_MAPPINGS) {
+    // Check canonical name
+    if (normalizeDotName(mapping.canonicalName) === normalizedDesc) {
+      return mapping.canonicalName;
+    }
+    // Check alternates
+    for (const alt of mapping.alternateNames || []) {
+      if (normalizeDotName(alt) === normalizedDesc) {
+        return mapping.canonicalName;
+      }
+    }
+  }
+  return undefined;
 }
 
 export async function parseDotCSV(file: File): Promise<{ records: AlpineSalesRecord[] }> {
@@ -165,24 +194,28 @@ export async function parseDotCSV(file: File): Promise<{ records: AlpineSalesRec
       }
     }
     
-    // Try to map by DOT product code first, then fall back to description
-    let canonicalProductName = mapToCanonicalProductName(dotId || '');
-    // If the DOT code didn't map, try the MFG code
-    if (canonicalProductName === (dotId || '')) {
-      canonicalProductName = mapToCanonicalProductName(mfgCode || '');
+    // First, strictly match the product description to get the canonical product name
+    // Avoid fuzzy/partial matches to prevent wrong mappings
+    let canonicalProductName = mapDotDescriptionToCanonical(itemDesc) || '';
+    
+    // If description didn't match exactly, try DOT code as fallback (allows code-based mapping)
+    if (!canonicalProductName && dotId) {
+      const codeMapped = mapToCanonicalProductName(dotId);
+      canonicalProductName = codeMapped !== dotId ? codeMapped : '';
     }
-    // If still no mapping, try the product description
-    if (canonicalProductName === (mfgCode || '') || !canonicalProductName) {
-      canonicalProductName = mapToCanonicalProductName(itemDesc);
+    // If still no match, try MFG code as last resort
+    if (!canonicalProductName && mfgCode) {
+      const mfgMapped = mapToCanonicalProductName(mfgCode);
+      canonicalProductName = mfgMapped !== mfgCode ? mfgMapped : '';
+    }
+    // As a final fallback, keep the original description (will surface as unmapped)
+    if (!canonicalProductName) {
+      canonicalProductName = itemDesc || 'Unknown Product';
     }
     
-    // Get our internal item number from the DOT product code if available
-    let ourItemNumber = getItemNumberFromDotCode(dotId);
-    // If not found by DOT code, try by MFG code via canonical name lookup
-    if (!ourItemNumber) {
-      const mapping = PRODUCT_MAPPINGS.find(m => m.canonicalName === canonicalProductName);
-      ourItemNumber = mapping ? mapping.itemNumber : undefined;
-    }
+    // Once we have the canonical product name, get the item number from the product mapping
+    const mapping = PRODUCT_MAPPINGS.find(m => m.canonicalName === canonicalProductName);
+    const ourItemNumber = mapping ? mapping.itemNumber : undefined;
     
     const record: AlpineSalesRecord = {
       period,

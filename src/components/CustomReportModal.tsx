@@ -16,6 +16,7 @@ interface CustomReportModalProps {
   troiaData?: AlpineSalesRecord[];
   mhdData?: AlpineSalesRecord[];
   dotData?: AlpineSalesRecord[];
+  activeDistributor?: 'ALL' | 'ALPINE' | 'PETES' | 'KEHE' | 'VISTAR' | 'TONYS' | 'TROIA' | 'MHD' | 'DOT';
 }
 
 type GroupMode = 'customer' | 'product';
@@ -63,7 +64,8 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
   tonysData = [],
   troiaData = [],
   mhdData = [],
-  dotData = []
+  dotData = [],
+  activeDistributor
 }) => {
   const [reportMode, setReportMode] = React.useState<ReportMode>('comparison');
   const [rangeAStart, setRangeAStart] = React.useState<string>('');
@@ -123,22 +125,13 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
       setSelectedPeriods([last]);
     }
     
-    // Initialize with customers from all available data sources
-    const allCustomers = new Set<string>();
-    data.forEach(record => allCustomers.add(record.customerName));
-    alpineData.forEach(record => allCustomers.add(record.customerName));
-    petesData.forEach(record => allCustomers.add(record.customerName));
-    keheData.forEach(record => allCustomers.add(record.customerName));
-    vistarData.forEach(record => allCustomers.add(record.customerName));
-    tonysData.forEach(record => allCustomers.add(record.customerName));
-    troiaData.forEach(record => allCustomers.add(record.customerName));
-    mhdData.forEach(record => allCustomers.add(record.customerName));
-    dotData.forEach(record => allCustomers.add(record.customerName));
-    setSelectedCustomers(Array.from(allCustomers).sort());
+    // Initialize customers from current dashboard data only
+    const currentCustomers = Array.from(new Set(data.map(r => r.customerName))).sort();
+    setSelectedCustomers(currentCustomers);
     
     // Initialize sub-customers
     setSelectedSubCustomers([]);
-  }, [isOpen, availablePeriods, data, alpineData, petesData, keheData, vistarData, tonysData, troiaData, mhdData, dotData]);
+  }, [isOpen, availablePeriods, data]);
 
   const isPeriodInRange = (p: string, start: string, end: string) => {
     const a = start <= end ? start : end;
@@ -401,16 +394,21 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
       return;
     }
 
-    const distributorDatasets = [
-      { name: 'Alpine', data: alpineData, isSubDistributor: false },
-      { name: "Pete's Coffee", data: petesData, isSubDistributor: true },
-      { name: 'KeHe', data: keheData, isSubDistributor: false },
-      { name: 'Vistar', data: vistarData, isSubDistributor: false },
-      { name: "Tony's", data: tonysData, isSubDistributor: false },
-      { name: 'Troia Foods', data: troiaData, isSubDistributor: false },
-      { name: 'Mike Hudson', data: mhdData, isSubDistributor: false },
-      { name: 'DOT', data: dotData, isSubDistributor: false },
+    // Build distributor list, optionally scoped to active distributor (current dashboard)
+    const allDatasets = [
+      { key: 'ALPINE' as const, name: 'Alpine', data: alpineData, isSubDistributor: false },
+      { key: 'PETES' as const, name: "Pete's Coffee", data: petesData, isSubDistributor: true },
+      { key: 'KEHE' as const, name: 'KeHe', data: keheData, isSubDistributor: false },
+      { key: 'VISTAR' as const, name: 'Vistar', data: vistarData, isSubDistributor: false },
+      { key: 'TONYS' as const, name: "Tony's", data: tonysData, isSubDistributor: false },
+      { key: 'TROIA' as const, name: 'Troia Foods', data: troiaData, isSubDistributor: false },
+      { key: 'MHD' as const, name: 'Mike Hudson', data: mhdData, isSubDistributor: false },
+      { key: 'DOT' as const, name: 'DOT', data: dotData, isSubDistributor: false },
     ];
+
+    const distributorDatasets = activeDistributor && activeDistributor !== 'ALL'
+      ? allDatasets.filter(d => d.key === activeDistributor)
+      : allDatasets;
 
     const rows: BrokerReportRow[] = [];
 
@@ -418,6 +416,10 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
       if (dist.data.length === 0) return;
 
       dist.data.forEach(record => {
+        // In ALL mode, never show Pete's as a distributor
+        if (activeDistributor === 'ALL' && dist.name === "Pete's Coffee") {
+          return;
+        }
         // Check if record matches selected criteria
         const matchesPeriod = selectedPeriods.includes(record.period);
         const matchesCustomer = selectedCustomers.includes(record.customerName);
