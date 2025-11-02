@@ -431,7 +431,6 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     canonicalName: 'Jumbo Beef Frank Bagel Dog',
     alternateNames: [
       'GAL BAGEL DOG BEEF',
-      'GAL BAGEL DOG BEEF FRANK',
       'JUMBO BEEF FRANK BAGEL DOG',
       'BEEF FRANK BAGEL DOG',
       'BEEF BAGEL DOG',
@@ -445,7 +444,7 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'CLARAS KITCHEN INDIVIDUALLY PACKAGED BEEF FRANK BAGEL DOG 1 - 12 PC',
     ],
     category: 'Bagel Dog',
-    alpineProductCodes: ['999978', '183922'],
+    alpineProductCodes: ['999978'],
     keheProductCodes: ['611665100013', '611665200010'],
     vistarProductCodes: ['GFO10001'],
     dotProductCodes: ['765031'] // DOT code from SHOP data
@@ -455,7 +454,6 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     canonicalName: 'Jumbo Polish Sausage Bagel Dog',
     alternateNames: [
       'GAL BAGEL DOG POLISH',
-      'GAL BAGEL DOG POLISH SSG',
       'JUMBO POLISH SAUSAGE BAGEL DOG',
       'POLISH SAUSAGE BAGEL DOG',
       'POLISH BAGEL DOG',
@@ -466,9 +464,9 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'MH404003',
     ],
     category: 'Bagel Dog',
-    alpineProductCodes: ['999979', '183923'],
+    alpineProductCodes: ['999979'],
     keheProductCodes: ['611665200218'],
-    vistarProductCodes: ['GFO12021']
+    vistarProductCodes: ['GFO10001']
   },
   {
     itemNumber: '280',
@@ -542,10 +540,12 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       "BENNY'S BEEF FRANK BAGEL DOGS",
       "BENNY'S BEEF BAGEL DOGS",
       "BENNY BEEF BAGEL DOG",
+      'GAL BAGEL DOG BEEF FRANK', // Alpine description
       'MH400030',
       "BENNY'S INDIVIDUALLY PACKAGED BEEF FRANK BAGEL DOGS 12 - 5 OZ", // SHOP/DOT description
     ],
     category: 'Bagel Dog',
+    alpineProductCodes: ['183922'],
     vistarProductCodes: ['GFO12001'],
     dotProductCodes: ['765647'] // DOT code from SHOP data
   },
@@ -556,10 +556,13 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       "BENNY'S POLISH SAUSAGE BAGEL DOGS",
       "BENNY'S POLISH BAGEL DOGS",
       "BENNY POLISH BAGEL DOG",
+      'GAL BAGEL DOG POLISH SSG', // Alpine description
       'MH400031',
       "BENNY'S INDIVIDUALLY PACKAGED POLISH SAUSAGE BAGEL DOGS 12 - 5 OZ", // SHOP/DOT description
     ],
     category: 'Bagel Dog',
+    alpineProductCodes: ['183923'],
+    vistarProductCodes: ['GFO12021'],
     dotProductCodes: ['763492'] // DOT code from SHOP data
   },
   {
@@ -743,20 +746,6 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     category: 'Breakfast Sandwich'
   },
   
-  // Piroshkies
-  {
-    itemNumber: '721',
-    canonicalName: 'Beef & Cheese Piroshkies',
-    alternateNames: [
-      'Piroshkies Beef & Cheese',
-      'BEEF & CHEESE PIROSHKIES',
-      'BEEF CHEESE PIROSHKIES',
-      'PIROSHKIES BEEF CHEESE',
-      'PARAMOUNT PIROSHKI INDIVIDUALLY PACKAGED BEEF & CHEESE PIROSHKI 1 - 12 EA',
-    ],
-    category: 'Piroshkies'
-  },
-  
   // Empanadas
   {
     itemNumber: '711',
@@ -908,35 +897,6 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'BEEF & CHEESE PIROSHKI RETAIL',
       'BEEF & CHEESE PIROSHKI (RETAIL PACK)',
       'MH406016',
-    ],
-    category: 'Piroshki'
-  },
-  {
-    itemNumber: '621',
-    canonicalName: 'Potato & Cheese Piroshki',
-    alternateNames: [
-      'POTATO CHEESE PIROSHKI',
-      'POTATO & CHEESE PIROSHKI',
-      'MH406039',
-    ],
-    category: 'Piroshki'
-  },
-  {
-    itemNumber: '622',
-    canonicalName: 'Potato & Mushroom Piroshki',
-    alternateNames: [
-      'POTATO MUSHROOM PIROSHKI',
-      'POTATO & MUSHROOM PIROSHKI',
-      'MH406046',
-    ],
-    category: 'Piroshki'
-  },
-  {
-    itemNumber: '623',
-    canonicalName: 'Spinach & Cheese Piroshki',
-    alternateNames: [
-      'SPINACH CHEESE PIROSHKI',
-      'SPINACH & CHEESE PIROSHKI',
     ],
     category: 'Piroshki'
   },

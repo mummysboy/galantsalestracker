@@ -640,6 +640,7 @@ const Dashboard: React.FC = () => {
     loadCustomerProgressionsByDistributor,
     saveAppState,
     loadAppState,
+    clearDistributorData,
   } = useDynamoDB();
 
   // Customer modal handlers
@@ -1199,10 +1200,16 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleClearAlpineData = () => {
+  const handleClearAlpineData = async () => {
     console.log('Clearing Alpine data');
-    setCurrentAlpineData([]);
-    setCurrentCustomerProgressions(new Map());
+    try {
+      await clearDistributorData('ALPINE');
+      setCurrentAlpineData([]);
+      setCurrentCustomerProgressions(new Map());
+      console.log('Alpine data cleared successfully');
+    } catch (error) {
+      console.error('Error clearing Alpine data:', error);
+    }
   };
 
   const handleClearPetesData = () => {

@@ -52,6 +52,18 @@ const formatCurrency = (amount: number) => new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 2
 }).format(amount || 0);
 
+// Helper function to format period range from "YYYY-MM" to "mm/yy-mm/yy"
+const formatPeriodRange = (start: string, end: string): string => {
+  if (!start || !end) return '';
+  const formatPeriod = (period: string): string => {
+    const [year, month] = period.split('-');
+    return `${month}/${year.slice(-2)}`;
+  };
+  const startFormatted = formatPeriod(start);
+  const endFormatted = formatPeriod(end);
+  return startFormatted === endFormatted ? startFormatted : `${startFormatted}-${endFormatted}`;
+};
+
 const CustomReportModal: React.FC<CustomReportModalProps> = ({ 
   isOpen, 
   onClose, 
@@ -172,8 +184,10 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
 
     const csvRows: string[] = [];
     
-    // Add headers
-    const headers = ['Customer/Product', 'A Revenue', 'B Revenue', 'Revenue Δ', 'Revenue Δ %', 'A Cases', 'B Cases', 'Cases Δ'];
+    // Add headers with formatted date ranges
+    const rangeALabel = formatPeriodRange(rangeAStart, rangeAEnd);
+    const rangeBLabel = formatPeriodRange(rangeBStart, rangeBEnd);
+    const headers = ['Customer/Product', `${rangeALabel} Revenue`, `${rangeBLabel} Revenue`, 'Revenue Δ', 'Revenue Δ %', `${rangeALabel} Cases`, `${rangeBLabel} Cases`, 'Cases Δ'];
     csvRows.push(headers.map(escapeCSVField).join(','));
 
     // Add customer data with indented product breakdowns
@@ -261,8 +275,10 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
     const productBreakdown = getProductBreakdown(customerName);
     if (!productBreakdown || productBreakdown.length === 0) return;
 
-    // Create CSV content
-    const headers = ['Product', 'A Revenue', 'B Revenue', 'Revenue Δ', 'A Cases', 'B Cases', 'Cases Δ'];
+    // Create CSV content with formatted date ranges
+    const rangeALabel = formatPeriodRange(rangeAStart, rangeAEnd);
+    const rangeBLabel = formatPeriodRange(rangeBStart, rangeBEnd);
+    const headers = ['Product', `${rangeALabel} Revenue`, `${rangeBLabel} Revenue`, 'Revenue Δ', `${rangeALabel} Cases`, `${rangeBLabel} Cases`, 'Cases Δ'];
     const rows = productBreakdown.map(product => {
       const prodDeltaRevenue = product.bRevenue - product.aRevenue;
       const prodDeltaCases = product.bCases - product.aCases;
@@ -1453,12 +1469,12 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
                 <thead className="bg-gray-50 sticky top-0">
                   <tr>
                     <th className="p-2 text-left w-64">{groupMode === 'customer' ? 'Customer' : 'Product'}</th>
-                    <th className="p-2 text-right">A Revenue</th>
-                    <th className="p-2 text-right">B Revenue</th>
+                    <th className="p-2 text-right">{formatPeriodRange(rangeAStart, rangeAEnd)} Revenue</th>
+                    <th className="p-2 text-right">{formatPeriodRange(rangeBStart, rangeBEnd)} Revenue</th>
                     <th className="p-2 text-right">Δ Revenue</th>
                     <th className="p-2 text-right">Δ %</th>
-                    <th className="p-2 text-right">A Cases</th>
-                    <th className="p-2 text-right">B Cases</th>
+                    <th className="p-2 text-right">{formatPeriodRange(rangeAStart, rangeAEnd)} Cases</th>
+                    <th className="p-2 text-right">{formatPeriodRange(rangeBStart, rangeBEnd)} Cases</th>
                     <th className="p-2 text-right">Δ Cases</th>
                   </tr>
                 </thead>
@@ -1524,11 +1540,11 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
                                   <thead className="bg-gray-100 sticky top-0">
                                     <tr>
                                       <th className="p-2 text-left border-b">Product</th>
-                                      <th className="p-2 text-right border-b">A Revenue</th>
-                                      <th className="p-2 text-right border-b">B Revenue</th>
+                                      <th className="p-2 text-right border-b">{formatPeriodRange(rangeAStart, rangeAEnd)} Revenue</th>
+                                      <th className="p-2 text-right border-b">{formatPeriodRange(rangeBStart, rangeBEnd)} Revenue</th>
                                       <th className="p-2 text-right border-b">Revenue Δ</th>
-                                      <th className="p-2 text-right border-b">A Cases</th>
-                                      <th className="p-2 text-right border-b">B Cases</th>
+                                      <th className="p-2 text-right border-b">{formatPeriodRange(rangeAStart, rangeAEnd)} Cases</th>
+                                      <th className="p-2 text-right border-b">{formatPeriodRange(rangeBStart, rangeBEnd)} Cases</th>
                                       <th className="p-2 text-right border-b">Cases Δ</th>
                                     </tr>
                                   </thead>

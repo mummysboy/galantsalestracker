@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
-import { Upload, FileText, AlertCircle, CheckCircle, X } from 'lucide-react';
+import { Upload, FileText, AlertCircle, CheckCircle, X, Trash2 } from 'lucide-react';
 import { parseMultipleAlpineReports, analyzeCustomerProgress, AlpineSalesRecord, ParsedAlpineData } from '../utils/alpineParser';
 
 interface AlpineReportUploadProps {
@@ -35,6 +35,7 @@ const AlpineReportUpload: React.FC<AlpineReportUploadProps> = ({
   const [isProcessingComplete, setIsProcessingComplete] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [isClearingData, setIsClearingData] = useState(false);
 
   const handleFileUpload = useCallback(async (file: File, period: string) => {
     try {
@@ -161,6 +162,9 @@ const AlpineReportUpload: React.FC<AlpineReportUploadProps> = ({
       setIsProcessingComplete(true);
       setShowSuccessMessage(true);
       
+      // Signal that upload is complete
+      onUploadEnd?.();
+      
       // Auto-close upload section after successful processing
       setTimeout(() => {
         if (onProcessingComplete) {
@@ -172,19 +176,35 @@ const AlpineReportUpload: React.FC<AlpineReportUploadProps> = ({
     } catch (error) {
       console.error('Processing error:', error);
       setErrors(prev => [...prev, `Processing error: ${error}`]);
+      onUploadEnd?.(); // Make sure to close overlay even on error
     } finally {
       setIsProcessing(false);
     }
-  }, [reports, onDataParsed, onProcessingComplete, onUploadStart]);
+  }, [reports, onDataParsed, onProcessingComplete, onUploadStart, onUploadEnd]);
 
   const removeReport = (index: number) => {
     setReports(prev => prev.filter((_, i) => i !== index));
   };
 
-  const clearAllData = () => {
+  const clearAllData = async () => {
     setReports([]);
     setErrors([]);
-    onClearData();
+    await onClearData();
+  };
+
+  const clearAllStoredData = async () => {
+    if (!window.confirm('Are you sure you want to delete ALL Alpine data from the database? This action cannot be undone.')) {
+      return;
+    }
+    setIsClearingData(true);
+    try {
+      await onClearData();
+    } catch (error) {
+      console.error('Error clearing Alpine data:', error);
+      window.alert('Failed to clear Alpine data. Please try again.');
+    } finally {
+      setIsClearingData(false);
+    }
   };
 
   const getPeriodFromFileName = (fileName: string): string => {
@@ -383,21 +403,43 @@ const AlpineReportUpload: React.FC<AlpineReportUploadProps> = ({
         )}
 
         {/* Action Buttons */}
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+        <div className="flex justify-between items-center mt-6 pt-4 border-t">
           <Button
             variant="outline"
             size="sm"
-            onClick={clearAllData}
-            disabled={reports.length === 0}
+            onClick={clearAllStoredData}
+            disabled={isClearingData}
+            className="text-red-600 hover:text-red-700 border-red-300"
           >
-            Clear All Data
+            {isClearingData ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-600 border-opacity-30 mr-2" style={{borderTopColor: 'red'}}></div>
+                Deleting...
+              </>
+            ) : (
+              <>
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete All Alpine Data
+              </>
+            )}
           </Button>
           
-          {reports.length > 0 && (
-            <div className="text-sm text-gray-600 flex items-center">
-              Ready to analyze Alpine customer trends ✨
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={clearAllData}
+              disabled={reports.length === 0}
+            >
+              Clear Uploaded Files
+            </Button>
+            
+            {reports.length > 0 && (
+              <div className="text-sm text-gray-600 flex items-center">
+                Ready to analyze Alpine customer trends ✨
+              </div>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
