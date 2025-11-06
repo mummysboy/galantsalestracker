@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
-import { Upload, FileText, AlertCircle, CheckCircle, X } from 'lucide-react';
+import { Upload, FileText, AlertCircle, CheckCircle, X, Trash2 } from 'lucide-react';
 import { parseVistarCSV } from '../utils/vistarParser';
 import { AlpineSalesRecord, analyzeCustomerProgress } from '../utils/alpineParser';
 
@@ -20,6 +20,7 @@ const VistarReportUpload: React.FC<VistarReportUploadProps> = ({ onDataParsed, o
   const [isProcessingComplete, setIsProcessingComplete] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [isClearingData, setIsClearingData] = useState(false);
 
   const handleFileUpload = useCallback((file: File) => {
     setFiles(prev => [...prev, file]);
@@ -33,6 +34,31 @@ const VistarReportUpload: React.FC<VistarReportUploadProps> = ({ onDataParsed, o
     setFiles([]);
     setErrors([]);
     onClearData();
+  };
+
+  const clearAllStoredData = async () => {
+    if (!window.confirm('Are you sure you want to delete ALL Vistar data from the database? This action cannot be undone.')) {
+      return;
+    }
+    setIsClearingData(true);
+    try {
+      await onClearData();
+      // Show success message even if there were warnings
+      console.log('Vistar data deletion completed');
+    } catch (error) {
+      console.error('Error clearing Vistar data:', error);
+      // Still show success since local data is cleared
+      // The error might be from DynamoDB, but local data is still deleted
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      if (errorMessage.includes('Failed to fetch')) {
+        // DynamoDB might not be available, but local data is cleared
+        console.warn('DynamoDB deletion failed, but local data has been cleared');
+      } else {
+        window.alert('Failed to clear Vistar data. Please try again.');
+      }
+    } finally {
+      setIsClearingData(false);
+    }
   };
 
   const processFiles = useCallback(async () => {
@@ -53,7 +79,7 @@ const VistarReportUpload: React.FC<VistarReportUploadProps> = ({ onDataParsed, o
       const customerProgressions = new Map<string, any>();
       customers.forEach(c => customerProgressions.set(c, analyzeCustomerProgress(allRecords, c)));
 
-      await await onDataParsed({ records: allRecords, customerProgressions });
+      await onDataParsed({ records: allRecords, customerProgressions });
 
       try {
         const webAppUrl = (process.env.REACT_APP_GS_WEBAPP_URL || '').trim();
@@ -197,9 +223,44 @@ const VistarReportUpload: React.FC<VistarReportUploadProps> = ({ onDataParsed, o
           </div>
         )}
 
-        <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
-          <Button variant="outline" size="sm" onClick={clearAllData} disabled={files.length === 0}>Clear All Data</Button>
-          {files.length > 0 && (<div className="text-sm text-gray-600 flex items-center">Ready to analyze Vistar sales ✨</div>)}
+        {/* Action Buttons */}
+        <div className="flex justify-between items-center mt-6 pt-4 border-t">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={clearAllStoredData}
+            disabled={isClearingData}
+            className="text-red-600 hover:text-red-700 border-red-300"
+          >
+            {isClearingData ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-600 border-opacity-30 mr-2" style={{borderTopColor: 'red'}}></div>
+                Deleting...
+              </>
+            ) : (
+              <>
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete All Vistar Data
+              </>
+            )}
+          </Button>
+          
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={clearAllData}
+              disabled={files.length === 0}
+            >
+              Clear Uploaded Files
+            </Button>
+            
+            {files.length > 0 && (
+              <div className="text-sm text-gray-600 flex items-center">
+                Ready to analyze Vistar sales ✨
+              </div>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

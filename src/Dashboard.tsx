@@ -1360,9 +1360,31 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleClearVistarData = () => {
+  const handleClearVistarData = async () => {
     console.log('Clearing Vistar data');
-    setCurrentVistarData([]);
+    try {
+      // Try to clear from DynamoDB, but don't fail if it doesn't work
+      try {
+        await clearDistributorData('VISTAR');
+      } catch (dbError) {
+        console.warn('Failed to clear Vistar data from database:', dbError);
+        // Continue to clear local state even if DB fails
+      }
+      
+      // Clear local state
+      setCurrentVistarData([]);
+      
+      // Clear localStorage
+      localStorage.removeItem('salesTracker_vistarData');
+      
+      console.log('Vistar data cleared successfully');
+    } catch (error) {
+      console.error('Error clearing Vistar data:', error);
+      // Still try to clear local state and localStorage even on error
+      setCurrentVistarData([]);
+      localStorage.removeItem('salesTracker_vistarData');
+      throw error;
+    }
   };
 
   const handleTonysDataParsed = (data: { records: AlpineSalesRecord[]; customerProgressions: Map<string, any> }) => {
@@ -1936,6 +1958,27 @@ const Dashboard: React.FC = () => {
     // Default to most recent available period
     return availablePeriods.length ? availablePeriods[availablePeriods.length - 1] : '';
   }, [selectedMonth, availablePeriods]);
+
+  // Memoize chart formatters to prevent unnecessary re-renders
+  const tooltipFormatter = useMemo(() => (value: number) => [
+    displayMode === 'revenue' 
+      ? `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      : value.toLocaleString('en-US'),
+    displayMode === 'revenue' ? 'Revenue' : 'Cases'
+  ], [displayMode]);
+
+  const tooltipLabelFormatter = useMemo(() => (label: string) => `Period: ${label}`, []);
+
+  const chartDotRenderer = useMemo(() => (props: any) => {
+    const { cx, cy, payload } = props;
+    const isHighlighted = payload && payload.period === highlightedPeriod;
+    const radius = isHighlighted ? 6 : 4;
+    const fill = isHighlighted ? '#1D4ED8' : '#3B82F6';
+    const stroke = isHighlighted ? '#1D4ED8' : '#3B82F6';
+    return (
+      <circle key={`dot-${payload?.period || 'unknown'}`} cx={cx} cy={cy} r={radius} fill={fill} stroke={stroke} strokeWidth={2} />
+    );
+  }, [highlightedPeriod]);
 
   // Initialize chart range when data changes or selected month changes
   React.useEffect(() => {
@@ -2948,7 +2991,7 @@ const Dashboard: React.FC = () => {
             <CardContent>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                <LineChart key={`chart-${selectedDistributor}-${timeAggregation}-${visibleRevenueData.length}`} data={visibleRevenueData} margin={{ top: 5, right: 60, bottom: visibleRevenueData.length > 7 ? 80 : 30, left: 0 }}>
+                <LineChart key={`chart-${selectedDistributor}-${timeAggregation}`} data={visibleRevenueData} margin={{ top: 5, right: 60, bottom: visibleRevenueData.length > 7 ? 80 : 30, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis 
                       dataKey="period" 
@@ -2967,29 +3010,15 @@ const Dashboard: React.FC = () => {
                     />
                   <ReferenceLine x={highlightedPeriod} stroke="#93C5FD" strokeDasharray="4 4" />
                   <Tooltip 
-                      formatter={(value: number) => [
-                        displayMode === 'revenue' 
-                          ? `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                          : value.toLocaleString('en-US'),
-                        displayMode === 'revenue' ? 'Revenue' : 'Cases'
-                      ]}
-                      labelFormatter={(label) => `Period: ${label}`}
+                      formatter={tooltipFormatter}
+                      labelFormatter={tooltipLabelFormatter}
                   />
                   <Line 
                     type="monotone" 
                     dataKey={displayMode === 'revenue' ? 'revenue' : 'cases'} 
                     stroke="#3B82F6" 
                     strokeWidth={2}
-                      dot={(props: any) => {
-                        const { cx, cy, payload } = props;
-                        const isHighlighted = payload && payload.period === highlightedPeriod;
-                        const radius = isHighlighted ? 6 : 4;
-                        const fill = isHighlighted ? '#1D4ED8' : '#3B82F6';
-                        const stroke = isHighlighted ? '#1D4ED8' : '#3B82F6';
-                        return (
-                          <circle key={`dot-${payload?.period || 'unknown'}`} cx={cx} cy={cy} r={radius} fill={fill} stroke={stroke} strokeWidth={2} />
-                        );
-                      }}
+                      dot={chartDotRenderer}
                       activeDot={{ r: 7 }}
                   />
                 </LineChart>

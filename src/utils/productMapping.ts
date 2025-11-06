@@ -208,7 +208,6 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     category: 'Wrap',
     alpineProductCodes: ['183981'],
     keheProductCodes: ['611665888089'],
-    vistarProductCodes: ['GFO88811'],
     dotProductCodes: ['764437'] // DOT code from SHOP data
   },
   {
@@ -710,7 +709,7 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     alpineProductCodes: ['999982'],
     petesProductCodes: ['59987'],
     keheProductCodes: ['611665900101'],
-    vistarProductCodes: ['GFO90010'],
+    vistarProductCodes: ['GFO88811'],
     dotProductCodes: ['763495'] // DOT code from SHOP data
   },
   {
