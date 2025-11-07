@@ -45,6 +45,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'BACON BREAKFAST BURRITO',
       'BACON BRKFST BURRITO',
       "CLARA'S Uncured Bacon Breakfast Burrito",
+      "Clara's Kitchen Wrap, Breakfast Bacon Egg Cheese",
+      'WRAP, BREAKFAST BACON EGG CHEESE',
       'BURRITO BRKFST BCN EGG CHS',
       'BurritoUncured Bacon Breakfast',
       'MH400002',
@@ -67,6 +69,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'CHILLE VERDE BREAKFAST BURRITO',
       'VERDE BREAKFAST BURRITO',
       "CLARA'S Chille Verde Breakfast Burrito",
+      "Clara's Kitchen Burrito, Breakfast Chili Verde",
+      'BURRITO, BREAKFAST CHILI VERDE',
       'WRAP BRKFST CHILE EGG CHS',
       'BURRITO CHILE VERDE BRKFT',
       'Burrito Chile Verde Breakfast',
@@ -108,6 +112,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'BEAN AND CHEESE BURRITO',
       'BLACK BEAN BREAKFAST BURRITO',
       'BLACK BEAN BURRITO',
+      "Clara's Kitchen Burrito, Breakfast Black Bean",
+      'BURRITO, BREAKFAST BLACK BEAN',
       'BLK BEAN BREAKFAST BURRITO', // MHD name
       'BURRITO BREAKFAST',
       'BURRITO BEAN CHEESE',
@@ -145,6 +151,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'PLANT BASED BREAKFAST BURRITO',
       'PLANT BASED BURRITO',
       'VEGAN BREAKFAST BURRITO',
+      "Clara's Kitchen Burrito, Vegan Breakfast",
+      'BURRITO, VEGAN BREAKFAST',
       'BURRITO BEAN CHSE PLNTBSD',
       'MH400008',
       'CLARAS KITCHEN INDIVIDUALLY PACKAGED VEGAN BREAKFAST BURRITO 1 - 12 EA',
@@ -160,6 +168,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'GLNT VEGN SSGE BRKFST BRT',
       'VEGAN SAUSAGE BREAKFAST BURRITO',
       'PLANT BASED SAUSAGE BREAKFAST BURRITO',
+      "Clara's Kitchen Burrito, Vegan Sausage Breakfast",
+      'BURRITO, VEGAN SAUSAGE BREAKFAST',
       'VEGAN SSAGE BURRITO',
       'BFAST BURRITO VEGAN SAUSAGE', // MHD name
       'MH400123',
@@ -186,6 +196,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     alternateNames: [
       'CHICKEN PARMESEAN WRAP',
       'CHICKEN PARMESAN WRAP',
+      "Clara's Kitchen Wrap, Chicken Parmesan",
+      'WRAP, CHICKEN PARMESAN',
       'CHKN PARMESEAN WRAP',
       'MH402002',
     ],
@@ -232,6 +244,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'Wrap Spicy Thai Chicken',
       'SPICY THAI CHICKEN WRAP',
       'THAI STYLE CHICKEN WRAP',
+      "Clara's Kitchen Wrap, Spicy Thai Style Chicken",
+      'WRAP, SPICY THAI STYLE CHICKEN',
       'SPICY THAI WRAP',
       'MH402007',
       'CLARAS KITCHEN INDIVIDUALLY WRAPPED SPICY THAI STYLE CHICKEN WRAP 12 - 12 PC',
@@ -247,6 +261,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     alternateNames: [
       'PLANT BASED BEAN BURRITO',
       'VEGAN BEAN BURRITO',
+      "Clara's Kitchen Burrito, Vegan Bean",
+      'BURRITO, VEGAN BEAN',
       'MH400009',
       'CLARAS KITCHEN INDIVIDUALLY PACKAGED VEGAN BEAN & CHEESE BURRITO 1 - 12 EA',
     ],
@@ -260,6 +276,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'GLNT BEAN & CHEESE BURRTO',
       'BEAN AND CHEESE BURRITO',
       'BEAN & CHEESE BURRITO',
+      "Clara's Kitchen Burrito Bean & Cheese",
+      'BURRITO BEAN & CHEESE',
       'BURRITO CHICKN CHEES BEAN',
       'MH400171',
     ],
@@ -271,6 +289,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     canonicalName: 'Chicken Chile Burrito',
     alternateNames: [
       'CHICKEN CHILE BURRITO',
+      "Clara's Kitchen Burrito, Chicken Chili",
+      'BURRITO, CHICKEN CHILI',
       'CHKN CHILE BURRITO',
       'MH400015',
     ],
@@ -283,6 +303,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'GLNT STEAK AND CHESE BRTO',
       'STEAK AND CHEESE BURRITO',
       'STEAK & CHEESE BURRITO',
+      "Clara's Kitchen Burrito, Steak & Cheese",
+      'BURRITO, STEAK & CHEESE',
       'MH400122',
     ],
     category: 'Burrito'
@@ -318,6 +340,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     alternateNames: [
       'CHICKEN BACON RANCH WRAP',
       'CHICKEN BACON RANCH BURRITO',
+      "Clara's Kitchen Wrap, Chicken Bacon Ranch",
+      'WRAP, CHICKEN BACON RANCH',
       'CHKN BACON RANCH WRAP',
       'MH400015',
     ],
@@ -356,6 +380,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'BEEF & CHEESE PIROSHKI',
       'BEEF CHEESE PIROSHKI',
       'PIROSHKI BEEF CHEESE',
+      'Paramount Piroshki, Beef & Cheese Clear Label', // 6 oz version (Tonys)
+      'PIROSHKI, BEEF & CHEESE CLEAR LABEL',
       'PIROSHKI BEEF & CHEESE WRAPPED', // MHD name
       'PIROSHKI BEEF WRAPPED', // MHD name
       'Beef & Cheese Piroshki',
@@ -365,19 +391,22 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     category: 'Piroshki',
     alpineProductCodes: ['183979'],
     vistarProductCodes: ['GFO02208'],
-    dotProductCodes: ['765043'] // DOT code from SHOP data
+    dotProductCodes: ['765043', '100100'] // DOT code from SHOP data + Tonys vendor code
   },
   {
     itemNumber: '213',
     canonicalName: 'Beef & Cheese Piroshki (retail pack)',
     alternateNames: [
       'BEEF & CHEESE PIROSHKI (RETAIL PACK)',
+      'Paramount Piroshki, Beef & Cheese', // 4.5 oz version (Tonys)
+      'PIROSHKI, BEEF & CHEESE',
       'BEEF CHEESE PIROSHKI RETAIL',
       'PIROSHKI BEEF CHEESE RETAIL',
       'Beef & Cheese Piroshki (retail pack)',
       'Beef and Cheese Piroshki (retail pack)', // MHD variation with "and"
     ],
-    category: 'Piroshki'
+    category: 'Piroshki',
+    dotProductCodes: ['101220'] // Tonys vendor code for 4.5 oz version
   },
 
   // Missing Products from Master List
@@ -538,6 +567,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     alternateNames: [
       "BENNY'S BEEF FRANK BAGEL DOGS",
       "BENNY'S BEEF BAGEL DOGS",
+      "Benny's Bagel Dog, Beef Frank",
+      'BAGEL DOG, BEEF FRANK',
       "BENNY BEEF BAGEL DOG",
       'GAL BAGEL DOG BEEF FRANK', // Alpine description
       'MH400030',
@@ -570,6 +601,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     alternateNames: [
       "BENNY'S JALAPENO & CHEDDAR BAGEL DOGS",
       "BENNY'S JALAPENO CHEDDAR BAGEL DOGS",
+      "Benny's Bagel Dog, Jalapeno & Cheese",
+      'BAGEL DOG, JALAPENO & CHEESE',
       "BENNY JALAPENO BAGEL DOG",
       'MH400032',
       "BENNY'S INDIVIDUALLY PACKAGED JALAPENO CHEDDAR BAGEL DOG 1 - 12 EA", // SHOP/DOT description
@@ -655,6 +688,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'GLNT TURKEY SSAGE', // Troia truncated name
       'TURKEY SAUSAGE SANDWICH',
       'TURKEY SSAGE SANDWICH',
+      "Clara's Kitchen Sandwich, Breakfast Turkey Sausage",
+      'SANDWICH, BREAKFAST TURKEY SAUSAGE',
       'TURKEY SAUSAGE BFAST SANDWICH', // MHD name
       "CLARA'S Breakfast Sandwich-Turkey",
       'Sandwich Breakfast Turkey',
@@ -698,6 +733,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'GLNT BACON BREAKF SANDWCH',
       'BACON BREAKFAST SANDWICH',
       'BACON BRKFST SANDWICH',
+      "Clara's Kitchen Sandwich, Breakfast Bacon",
+      'SANDWICH, BREAKFAST BACON',
       'BACON BREAKFAST WRAP', // MHD name
       "CLARA'S Breakfast Sandwich-Bacon",
       'SANDWICH BREAKFAST BACON',
@@ -720,6 +757,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'GLNT CHORIZO BFAST SNDWCH',
       'CHORIZO BREAKFAST SANDWICH',
       'CHORIZO BRKFST SANDWICH',
+      "Clara's Kitchen Sandwich, Breakfast Chorizo",
+      'SANDWICH, BREAKFAST CHORIZO',
       'BREAKFAST WRAP GREEN CHILIES', // MHD name
       "CLARA'S Breakfast Sandwich-Chorizo",
       'SANDWICH BREAKFST CHORIZO',
@@ -739,6 +778,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     canonicalName: 'Chicken Sausage Breakfast Sandwich',
     alternateNames: [
       'CHICKEN SAUSAGE SANDWICH',
+      "Clara's Kitchen Sandwich, Breakfast Chicken Sausage",
+      'SANDWICH, BREAKFAST CHICKEN SAUSAGE',
       'CHKN SAUSAGE SANDWICH',
       'MH400108',
     ],

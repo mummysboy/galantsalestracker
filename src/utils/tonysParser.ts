@@ -1,7 +1,8 @@
 import * as XLSX from 'xlsx';
 import { AlpineSalesRecord } from './alpineParser';
-import { mapToCanonicalProductName } from './productMapping';
+import { mapToCanonicalProductName, getItemNumberForProduct, getItemNumberFromDotCode } from './productMapping';
 import { loadPricingData, getProductWeight } from './pricingLoader';
+import { loadMasterPricingData, MasterPricingProduct } from './masterPricingLoader';
 
 export interface ParsedTonysData {
   records: AlpineSalesRecord[];
@@ -82,6 +83,9 @@ export async function parseTonysXLSX(file: File): Promise<ParsedTonysData> {
 
   // Load pricing data for weight calculations
   const pricingDb = await loadPricingData();
+  
+  // Load master pricing data for proper product mapping
+  const masterPricingData = await loadMasterPricingData();
 
   // Header is in row 1 (index 0)
   const headers = (rows[0] || []).map(c => String(c || '').trim());
@@ -167,13 +171,93 @@ export async function parseTonysXLSX(file: File): Promise<ParsedTonysData> {
     const currentRevenue = toNumber(row[currentPeriodCostIdx]);
     const previousRevenue = toNumber(row[previousPeriodCostIdx]);
 
-    // Calculate mapped product name once for weight lookup
-    const mappedProductName = mapToCanonicalProductName(productName);
+    // Enhanced product mapping: Try multiple methods to find master pricing product
+    let masterProduct: MasterPricingProduct | undefined;
+    // Initialize with mapped product name as fallback
+    let mappedProductName: string = mapToCanonicalProductName(productName);
+    let galantItemNumber: string | undefined;
+    
+    // Priority 1: Try to find by item number from Tonys report
+    if (itemNumber) {
+      masterProduct = masterPricingData.itemNumberMap.get(itemNumber);
+      if (masterProduct) {
+        mappedProductName = masterProduct.productDescription;
+        galantItemNumber = masterProduct.itemNumber;
+        console.log(`[Tonys] Found master product by item number ${itemNumber}: ${mappedProductName}`);
+      }
+    }
+    
+    // Priority 2: Try to find by DOT number (if itemNumber is actually a DOT number)
+    if (!masterProduct && itemNumber) {
+      const dotMapping = getItemNumberFromDotCode(itemNumber);
+      if (dotMapping) {
+        masterProduct = masterPricingData.itemNumberMap.get(dotMapping);
+        if (masterProduct) {
+          mappedProductName = masterProduct.productDescription;
+          galantItemNumber = masterProduct.itemNumber;
+          console.log(`[Tonys] Found master product by DOT number ${itemNumber} -> item ${dotMapping}: ${mappedProductName}`);
+        }
+      }
+    }
+    
+    // Priority 3: Try to find by vendor item code
+    if (!masterProduct && vendorItem) {
+      // Try vendor item as item number
+      masterProduct = masterPricingData.itemNumberMap.get(vendorItem);
+      if (masterProduct) {
+        mappedProductName = masterProduct.productDescription;
+        galantItemNumber = masterProduct.itemNumber;
+        console.log(`[Tonys] Found master product by vendor item ${vendorItem}: ${mappedProductName}`);
+      } else {
+        // Try vendor item as DOT number
+        const dotMapping = getItemNumberFromDotCode(vendorItem);
+        if (dotMapping) {
+          masterProduct = masterPricingData.itemNumberMap.get(dotMapping);
+          if (masterProduct) {
+            mappedProductName = masterProduct.productDescription;
+            galantItemNumber = masterProduct.itemNumber;
+            console.log(`[Tonys] Found master product by vendor item DOT ${vendorItem} -> item ${dotMapping}: ${mappedProductName}`);
+          }
+        }
+      }
+    }
+    
+    // Priority 4: Map by product name (canonical mapping)
+    if (!masterProduct) {
+      mappedProductName = mapToCanonicalProductName(productName);
+      // Try to get item number from canonical name
+      galantItemNumber = getItemNumberForProduct(mappedProductName);
+      if (galantItemNumber) {
+        masterProduct = masterPricingData.itemNumberMap.get(galantItemNumber);
+        if (masterProduct) {
+          // Use master pricing description if found
+          mappedProductName = masterProduct.productDescription;
+          console.log(`[Tonys] Found master product by canonical name mapping: ${mappedProductName} (item ${galantItemNumber})`);
+        }
+      }
+    }
+    
+    // Priority 5: Fallback to mapped product name without master pricing
+    if (!masterProduct) {
+      mappedProductName = mapToCanonicalProductName(productName);
+      galantItemNumber = getItemNumberForProduct(mappedProductName);
+      if (!galantItemNumber) {
+        console.log(`[Tonys] No master pricing found for: ${productName} (itemNumber: ${itemNumber}, vendorItem: ${vendorItem})`);
+      }
+    }
+    
+    // Use master pricing weight if available, otherwise fall back to pricing loader
+    let weightPerCase: number;
+    if (masterProduct && masterProduct.caseWeight > 0) {
+      weightPerCase = masterProduct.caseWeight;
+    } else if (galantItemNumber) {
+      weightPerCase = getProductWeight(pricingDb, galantItemNumber, mappedProductName);
+    } else {
+      weightPerCase = getProductWeight(pricingDb, undefined, mappedProductName);
+    }
     
     // Create records for current period if there's data
     if (currentQty > 0 || currentRevenue > 0) {
-      // Calculate weight for this product
-      const weightPerCase = getProductWeight(pricingDb, undefined, mappedProductName);
       const totalWeight = Math.round(currentQty) * weightPerCase;
 
       const record: AlpineSalesRecord = {
@@ -185,6 +269,7 @@ export async function parseTonysXLSX(file: File): Promise<ParsedTonysData> {
         revenue: Math.round(currentRevenue * 100) / 100,
         period: currentPeriod,
         productCode: itemNumber || vendorItem || undefined,
+        itemNumber: galantItemNumber, // Galant item number from master pricing
         customerId: storeName, // Level 2: Customer with Branch (e.g., "RALEY'S #108")
         accountName: shipToCustomer, // Level 3: Store/Customer ID (e.g., "07010850")
         weightLbs: totalWeight, // Total weight in pounds
@@ -195,8 +280,6 @@ export async function parseTonysXLSX(file: File): Promise<ParsedTonysData> {
 
     // Create records for previous period if there's data
     if (previousQty > 0 || previousRevenue > 0) {
-      // Calculate weight for this product
-      const weightPerCase = getProductWeight(pricingDb, undefined, mappedProductName);
       const totalWeight = Math.round(previousQty) * weightPerCase;
 
       const record: AlpineSalesRecord = {
@@ -208,6 +291,7 @@ export async function parseTonysXLSX(file: File): Promise<ParsedTonysData> {
         revenue: Math.round(previousRevenue * 100) / 100,
         period: previousPeriod,
         productCode: itemNumber || vendorItem || undefined,
+        itemNumber: galantItemNumber, // Galant item number from master pricing
         customerId: storeName, // Level 2: Customer with Branch (e.g., "RALEY'S #108")
         accountName: shipToCustomer, // Level 3: Store/Customer ID (e.g., "07010850")
         weightLbs: totalWeight, // Total weight in pounds

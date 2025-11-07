@@ -14,7 +14,7 @@ function calculateTonysCustomerDataAllPeriods(tonysData: AlpineSalesRecord[], ma
   const customersMap = new Map<string, Map<string, number>>();
   const customerMetadata = new Map<string, { accountName?: string }>();
   const productsMap = new Map<string, Map<string, Map<string, number>>>();
-  const productMetadata = new Map<string, { size?: string; productCode?: string }>();
+  const productMetadata = new Map<string, { size?: string; productCode?: string; itemNumber?: string }>();
 
   // Convert to quarter format if needed
   const periodToQuarter = (period: string) => {
@@ -55,6 +55,7 @@ function calculateTonysCustomerDataAllPeriods(tonysData: AlpineSalesRecord[], ma
       productMetadata.set(productName, {
         size: record.size,
         productCode: record.productCode,
+        itemNumber: record.itemNumber,
       });
     }
 
@@ -79,6 +80,7 @@ function calculateTonysCustomerDataAllPeriods(tonysData: AlpineSalesRecord[], ma
       periodData: productPeriodData,
       size: productMetadata.get(productName)?.size,
       productCode: productMetadata.get(productName)?.productCode,
+      itemNumber: productMetadata.get(productName)?.itemNumber,
     })).sort((a, b) => {
       const aTotal = Array.from(a.periodData.values()).reduce((sum, qty) => sum + qty, 0);
       const bTotal = Array.from(b.periodData.values()).reduce((sum, qty) => sum + qty, 0);
@@ -442,7 +444,21 @@ const TonysCustomerDetailModal: React.FC<TonysCustomerDetailModalProps> = ({
                                       </thead>
                                       <tbody>
                                         {products.map((product, productIndex) => {
-                                          const masterProduct = findMasterPricingProduct(product.productName, product.productCode);
+                                          // Use item number from record if available, otherwise try to find from master pricing
+                                          let masterProduct: MasterPricingProduct | undefined;
+                                          
+                                          // Priority 1: Use item number from record
+                                          if (product.itemNumber) {
+                                            masterProduct = masterPricingData.find(p => p.itemNumber === product.itemNumber);
+                                          }
+                                          
+                                          // Priority 2: Try to find by product code/item number
+                                          if (!masterProduct) {
+                                            masterProduct = findMasterPricingProduct(product.productName, product.productCode);
+                                          }
+                                          
+                                          // Priority 3: Try to get item number from canonical name
+                                          const itemNumber = product.itemNumber || masterProduct?.itemNumber || getItemNumberForProduct(product.productName);
                                           
                                           return (
                                             <tr key={`${product.productName}-${productIndex}`} className="border-b border-gray-100 hover:bg-gray-50">
@@ -452,7 +468,7 @@ const TonysCustomerDetailModal: React.FC<TonysCustomerDetailModalProps> = ({
                                                 </span>
                                               </td>
                                               <td className="px-4 py-3 text-sm text-center text-gray-900">
-                                                {masterProduct?.itemNumber || getItemNumberForProduct(product.productName) || ''}
+                                                {itemNumber || ''}
                                               </td>
                                               <td className="px-4 py-3 text-sm text-center text-gray-900">
                                                 {masterProduct?.dotNumber || product.productCode || ''}

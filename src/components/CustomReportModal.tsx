@@ -512,6 +512,16 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
           else if (dist.name === 'Vistar' && record.pack && record.sizeOz && record.cases) {
             weight = (record.pack * record.sizeOz * record.cases) / 16;
           }
+          // For Tony's: use weightLbs field if available, otherwise calculate from pack × sizeOz × cases / 16
+          else if (dist.name === "Tony's" && record.cases) {
+            if (record.weightLbs !== undefined && record.weightLbs > 0) {
+              // Use the weightLbs field calculated from Master Pricing data
+              weight = record.weightLbs;
+            } else if (record.pack && record.sizeOz) {
+              // Fallback: calculate weight from pack × sizeOz × cases / 16
+              weight = (record.pack * record.sizeOz * record.cases) / 16;
+            }
+          }
           // For DOT: use weightLbs field if available, otherwise calculate from pack × sizeOz × cases / 16
           else if (dist.name === 'DOT' && record.cases) {
             if (record.weightLbs !== undefined && record.weightLbs > 0) {
