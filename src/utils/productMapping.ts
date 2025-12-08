@@ -32,7 +32,7 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'CLARAS KITCHEN INDIVIDUALLY PACKAGED EGG WHITE SPINACH FETA WRAP 1 - 12 PC',
     ],
     category: 'Breakfast Fold',
-    dotProductCodes: ['765034'] // DOT code from SHOP data
+    dotProductCodes: ['765034', '791866'] // DOT codes from SHOP data
   },
   
   // Breakfast Burritos
@@ -282,7 +282,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'MH400171',
     ],
     category: 'Burrito',
-    keheProductCodes: ['611665901054']
+    keheProductCodes: ['611665901054'],
+    dotProductCodes: ['765048'] // DOT code from SHOP data
   },
   {
     itemNumber: '471',
@@ -294,7 +295,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'CHKN CHILE BURRITO',
       'MH400015',
     ],
-    category: 'Burrito'
+    category: 'Burrito',
+    dotProductCodes: ['765047'] // DOT code from SHOP data
   },
   {
     itemNumber: '531',
@@ -307,7 +309,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'BURRITO, STEAK & CHEESE',
       'MH400122',
     ],
-    category: 'Burrito'
+    category: 'Burrito',
+    dotProductCodes: ['765049'] // DOT code from SHOP data
   },
 
   // Missing Wraps from Master List
@@ -391,7 +394,7 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
     category: 'Piroshki',
     alpineProductCodes: ['183979'],
     vistarProductCodes: ['GFO02208'],
-    dotProductCodes: ['765043', '100100'] // DOT code from SHOP data + Tonys vendor code
+    dotProductCodes: ['765043', '765030', '100100'] // DOT codes from SHOP data + Tonys vendor code
   },
   {
     itemNumber: '213',
@@ -504,7 +507,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'BEEF CHEDDAR HANDPIE',
       'MH400024',
     ],
-    category: 'Handpie'
+    category: 'Handpie',
+    dotProductCodes: ['791636'] // DOT code from SHOP data
   },
   {
     itemNumber: '281',
@@ -515,7 +519,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'MH400025',
     ],
     category: 'Handpie',
-    vistarProductCodes: ['GFO10110']
+    vistarProductCodes: ['GFO10110'],
+    dotProductCodes: ['791291'] // DOT code from SHOP data
   },
   {
     itemNumber: '282',
@@ -525,7 +530,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'PEPPERONI PIZZA',
       'MH400026',
     ],
-    category: 'Handpie'
+    category: 'Handpie',
+    dotProductCodes: ['791635'] // DOT code from SHOP data
   },
   {
     itemNumber: '283',
@@ -536,7 +542,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'PIROSHKI SPINACH & CHEESE WRPD', // MHD name
       'MH400027',
     ],
-    category: 'Handpie'
+    category: 'Handpie',
+    dotProductCodes: ['791634'] // DOT code from SHOP data
   },
   {
     itemNumber: '913',
@@ -547,7 +554,8 @@ export const PRODUCT_MAPPINGS: ProductMapping[] = [
       'MH400028',
     ],
     category: 'Sandwich',
-    vistarProductCodes: ['GFO10608']
+    vistarProductCodes: ['GFO10608'],
+    dotProductCodes: ['765052'] // DOT code from SHOP data
   },
   {
     itemNumber: '914',
