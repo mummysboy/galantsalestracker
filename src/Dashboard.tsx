@@ -35,9 +35,12 @@ import DotReportUpload from './components/DotReportUpload';
 import DotCustomerDetailModal from './components/DotCustomerDetailModal';
 import { useDynamoDB } from './hooks/useDynamoDB';
 import { dynamoDBService } from './services/dynamodb';
+import galantLogo from './assets/galantfoodco.avif';
 
 const generateDeterministicInvoiceKey = (d: string, p: string, c: string, pn: string, cs: number, r: number): string => {
-  const k = `${p}|${c}|${pn}|${cs}|${r.toFixed(2)}`.toUpperCase();
+  // Ensure cases is properly converted to string (negative numbers like -1 become "-1")
+  const casesStr = String(cs); // This preserves negative sign
+  const k = `${p}|${c}|${pn}|${casesStr}|${r.toFixed(2)}`.toUpperCase();
   let h = 5381;
   for (let i = 0; i < k.length; i++) { h = ((h << 5) + h) + k.charCodeAt(i); h >>>= 0; }
   return `${d}-${p.replace(/-/g, "")}-${h.toString(36).toUpperCase()}`;
@@ -631,7 +634,11 @@ const RevenueByProductComponent: React.FC<RevenueByProductProps> = ({ revenueByP
   );
 };
 
-const Dashboard: React.FC = () => {
+interface DashboardProps {
+  // Props can be added here in the future if needed
+}
+
+const Dashboard: React.FC<DashboardProps> = () => {
   // DynamoDB hook for persisting and loading data
   const {
     saveSalesRecords,
@@ -684,24 +691,65 @@ const Dashboard: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>('');
 
   // Helper function to convert DynamoDB SalesRecord to AlpineSalesRecord
-  const convertSalesRecordToAlpineRecord = (r: any): AlpineSalesRecord & { invoiceKey?: string } => ({
-    period: r.period,
-    customerName: r.customerName,
-    productName: r.productName,
-    productCode: r.productCode || '',
-    cases: r.cases,
-    pieces: 0, // Default value since not stored in DynamoDB
-    revenue: r.revenue,
-    accountName: r.accountName,
-    customerId: r.customerId,
-    itemNumber: r.itemNumber,
-    size: r.size,
-    weightLbs: r.weightLbs,
-    excludeFromTotals: r.distributor === 'PETES' || r.distributor === 'DOT',
-    invoiceKey: r.invoiceKey, // Preserve invoiceKey for deduplication
-  });
-
-  // Save UI preferences to DynamoDB app state
+  const convertSalesRecordToAlpineRecord = (r: any): AlpineSalesRecord & { invoiceKey?: string } => {
+    // For hierarchical distributors (Tony's, KeHe, Vistar), reconstruct hierarchical customer name
+    // This matches the format used when uploading: "Distributor/Vendor - Customer/Store"
+    let customerName = r.customerName;
+    
+    // Tony's: Uses customerName (distributor) + customerId/accountName (sub-customer)
+    if (r.distributor === 'TONYS') {
+      // Prefer customerId over accountName (customerId is more descriptive like "RALEY'S #108")
+      const subCustomer = (r.customerId && r.customerId.trim() !== '') 
+        ? r.customerId 
+        : ((r.accountName && r.accountName.trim() !== '') ? r.accountName : null);
+      
+      if (subCustomer && subCustomer !== r.customerName) {
+        // Only create hierarchical name if sub-customer exists and is different from distributor
+        customerName = `${r.customerName} - ${subCustomer}`;
+      }
+      // If no sub-customer, use distributor name as-is (shouldn't happen in normal cases)
+    }
+    
+    // KeHe & Vistar: Uses customerName (vendor/retailer) + accountName (sub-customer)
+    if ((r.distributor === 'KEHE' || r.distributor === 'VISTAR') && r.accountName && r.accountName !== r.customerName) {
+      customerName = `${r.customerName} - ${r.accountName}`;
+    }
+    
+    // Ensure cases is a number and preserve negative values
+    // DynamoDB should return numbers, but explicitly convert to handle any edge cases
+    const cases = typeof r.cases === 'number' ? r.cases : (typeof r.cases === 'string' ? parseFloat(r.cases) : 0);
+    
+    // Log if we're converting a negative case (for debugging)
+    if (r.distributor === 'TONYS' && cases < 0 && typeof r.cases !== 'number') {
+      console.log('[Dashboard Convert] Converting negative cases from non-number type:', {
+        distributor: r.distributor,
+        period: r.period,
+        customerName: r.customerName,
+        productName: r.productName,
+        casesOriginal: r.cases,
+        casesOriginalType: typeof r.cases,
+        casesConverted: cases,
+        invoiceKey: r.invoiceKey
+      });
+    }
+    
+    return {
+      period: r.period,
+      customerName: customerName,
+      productName: r.productName,
+      productCode: r.productCode || '',
+      cases: cases, // Explicitly convert to number, preserving negative values
+      pieces: 0, // Default value since not stored in DynamoDB
+      revenue: typeof r.revenue === 'number' ? r.revenue : (typeof r.revenue === 'string' ? parseFloat(r.revenue) : 0),
+      accountName: r.accountName,
+      customerId: r.customerId,
+      itemNumber: r.itemNumber,
+      size: r.size,
+      weightLbs: typeof r.weightLbs === 'number' ? r.weightLbs : (r.weightLbs ? parseFloat(r.weightLbs) : undefined),
+      excludeFromTotals: r.distributor === 'PETES' || r.distributor === 'DOT',
+      invoiceKey: r.invoiceKey, // Preserve invoiceKey for deduplication
+    };
+  };
   React.useEffect(() => {
     if (selectedMonth) {
       saveAppState('selectedMonth', selectedMonth).catch(console.error);
@@ -728,15 +776,120 @@ const Dashboard: React.FC = () => {
             // Convert SalesRecord back to AlpineSalesRecord format
             const convertedRecords: AlpineSalesRecord[] = records.map(convertSalesRecordToAlpineRecord);
             
+            // Debug: Check for negative cases before deduplication
+            if (distributor === 'TONYS' && convertedRecords.length > 0) {
+              const negativeBeforeDedup = convertedRecords.filter(r => r.cases < 0);
+              console.log('[Dashboard Load] Before deduplication:', {
+                distributor,
+                totalRecords: convertedRecords.length,
+                recordsWithNegativeCases: negativeBeforeDedup.length,
+                totalNegativeCases: negativeBeforeDedup.reduce((sum, r) => sum + r.cases, 0),
+                sampleNegativeRecords: negativeBeforeDedup.slice(0, 5).map(r => ({
+                  customerName: r.customerName,
+                  productName: r.productName,
+                  cases: r.cases,
+                  period: r.period,
+                  invoiceKey: (r as any).invoiceKey
+                }))
+              });
+            }
+            
             // Deduplicate records based on invoiceKey to prevent counting duplicates
             const deduplicatedRecords = Array.from(
               new Map(convertedRecords.map(r => {
-                // Create a unique key from invoice-relevant fields if invoiceKey doesn't exist
+                // Use stored invoiceKey if available (preferred), otherwise generate from record data
+                // For Tony's, the invoiceKey in DynamoDB was generated with customerId/accountName included
                 const key = (r as any).invoiceKey || 
                   `${distributor}-${r.period}-${r.customerName}-${r.productName}-${r.cases}-${r.revenue}`;
+                
+                // Log if we're generating a key for a negative case (shouldn't happen if invoiceKey was saved correctly)
+                if (distributor === 'TONYS' && r.cases < 0 && !(r as any).invoiceKey) {
+                  console.warn('[Dashboard Load] Missing invoiceKey for negative case record:', {
+                    customerName: r.customerName,
+                    productName: r.productName,
+                    cases: r.cases,
+                    period: r.period,
+                    generatedKey: key
+                  });
+                }
+                
                 return [key, r];
               })).values()
             );
+            
+            // Debug: Check for negative cases after deduplication
+            if (distributor === 'TONYS' && deduplicatedRecords.length > 0) {
+              const negativeAfterDedup = deduplicatedRecords.filter(r => r.cases < 0);
+              const negativeBeforeDedup = convertedRecords.filter(r => r.cases < 0);
+              if (negativeAfterDedup.length !== negativeBeforeDedup.length) {
+                console.warn('[Dashboard Load] Negative cases lost during deduplication:', {
+                  distributor,
+                  beforeDedup: negativeBeforeDedup.length,
+                  afterDedup: negativeAfterDedup.length,
+                  lost: negativeBeforeDedup.length - negativeAfterDedup.length,
+                  beforeDedupTotal: negativeBeforeDedup.reduce((sum, r) => sum + r.cases, 0),
+                  afterDedupTotal: negativeAfterDedup.reduce((sum, r) => sum + r.cases, 0)
+                });
+              }
+            }
+            
+            // Debug: Log summary for Tony's to verify data integrity
+            if (distributor === 'TONYS' && deduplicatedRecords.length > 0) {
+              const totalRevenue = deduplicatedRecords.reduce((sum, r) => sum + r.revenue, 0);
+              const totalCases = deduplicatedRecords.reduce((sum, r) => sum + r.cases, 0);
+              const uniqueCustomers = new Set(deduplicatedRecords.map(r => r.customerName)).size;
+              const recordsWithSubCustomers = deduplicatedRecords.filter(r => {
+                const hasHierarchy = r.customerName.includes(' - ') && r.customerName !== r.customerName.split(' - ')[0];
+                return hasHierarchy;
+              }).length;
+              
+              // Check for negative cases in loaded data
+              const recordsWithNegativeCases = deduplicatedRecords.filter(r => r.cases < 0);
+              const totalNegativeCases = recordsWithNegativeCases.reduce((sum, r) => sum + r.cases, 0);
+              
+              // Group by customer name to see revenue breakdown
+              const revenueByCustomer = deduplicatedRecords.reduce((acc, r) => {
+                acc[r.customerName] = (acc[r.customerName] || 0) + r.revenue;
+                return acc;
+              }, {} as Record<string, number>);
+              
+              const topCustomers = Object.entries(revenueByCustomer)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 10)
+                .map(([name, rev]) => ({ name, revenue: rev.toFixed(2) }));
+              
+              // Check for records that should have hierarchical names but don't
+              const recordsMissingHierarchy = deduplicatedRecords.filter(r => {
+                const hasSubCustomer = (r as any).customerId || (r as any).accountName;
+                const hasHierarchy = r.customerName.includes(' - ');
+                return hasSubCustomer && !hasHierarchy;
+              });
+              
+              console.log('[Tony\'s Load Summary]', {
+                totalRecords: deduplicatedRecords.length,
+                totalRevenue: totalRevenue.toFixed(2),
+                totalCases: totalCases,
+                recordsWithNegativeCases: recordsWithNegativeCases.length,
+                totalNegativeCases: totalNegativeCases, // Sum of all negative cases (should be negative)
+                uniqueCustomers: uniqueCustomers,
+                recordsWithHierarchicalNames: recordsWithSubCustomers,
+                recordsWithoutHierarchy: deduplicatedRecords.length - recordsWithSubCustomers,
+                recordsMissingHierarchy: recordsMissingHierarchy.length,
+                topCustomersByRevenue: topCustomers,
+                sampleCustomerNames: Array.from(new Set(deduplicatedRecords.map(r => r.customerName))).slice(0, 10),
+                sampleNegativeCases: recordsWithNegativeCases.slice(0, 5).map(r => ({
+                  customerName: r.customerName,
+                  productName: r.productName,
+                  cases: r.cases,
+                  period: r.period
+                })),
+                sampleMissingHierarchy: recordsMissingHierarchy.slice(0, 3).map(r => ({
+                  customerName: r.customerName,
+                  customerId: (r as any).customerId,
+                  accountName: (r as any).accountName
+                }))
+              });
+            }
 
             if (distributor === 'ALPINE') {
               setCurrentAlpineData(deduplicatedRecords);
@@ -747,6 +900,17 @@ const Dashboard: React.FC = () => {
             } else if (distributor === 'VISTAR') {
               setCurrentVistarData(deduplicatedRecords);
             } else if (distributor === 'TONYS') {
+              // Debug: Log sample records to verify hierarchical customer names
+              if (deduplicatedRecords.length > 0) {
+                const sampleRecord = deduplicatedRecords[0];
+                console.log('[Tony\'s Load] Sample loaded record:', {
+                  customerName: sampleRecord.customerName,
+                  customerId: (sampleRecord as any).customerId,
+                  accountName: (sampleRecord as any).accountName,
+                  totalRecords: deduplicatedRecords.length,
+                  uniqueCustomers: new Set(deduplicatedRecords.map(r => r.customerName)).size
+                });
+              }
               setCurrentTonysData(deduplicatedRecords);
             } else if (distributor === 'TROIA') {
               setCurrentTroiaData(deduplicatedRecords);
@@ -1390,10 +1554,67 @@ const Dashboard: React.FC = () => {
   const handleTonysDataParsed = (data: { records: AlpineSalesRecord[]; customerProgressions: Map<string, any> }) => {
     const newPeriods = new Set(data.records.map(r => r.period));
 
+    // Build hierarchical customer names for Tony's records (matching the format used when sending to Google Sheets)
+    // This must match the conversion logic in convertSalesRecordToAlpineRecord
+    const recordsWithHierarchicalNames = data.records.map(record => {
+      // Prefer customerId over accountName (customerId is more descriptive like "RALEY'S #108")
+      const subCustomer = (record.customerId && record.customerId.trim() !== '') 
+        ? record.customerId 
+        : ((record.accountName && record.accountName.trim() !== '') ? record.accountName : null);
+      
+      const hierarchicalCustomerName = (subCustomer && subCustomer !== record.customerName)
+        ? `${record.customerName} - ${subCustomer}`
+        : record.customerName;
+      
+      return {
+        ...record,
+        customerName: hierarchicalCustomerName,
+      };
+    });
+
     const filteredExistingData = currentTonysData.filter(record => !newPeriods.has(record.period));
-    const mergedData = [...filteredExistingData, ...data.records];
+    const mergedData = [...filteredExistingData, ...recordsWithHierarchicalNames];
 
     setCurrentTonysData(mergedData);
+
+    // Debug: Log summary after upload to compare with load
+    const totalRevenueUpload = mergedData.reduce((sum, r) => sum + r.revenue, 0);
+    const totalCasesUpload = mergedData.reduce((sum, r) => sum + r.cases, 0);
+    const uniqueCustomersUpload = new Set(mergedData.map(r => r.customerName)).size;
+    
+    // Check for negative cases in uploaded data
+    const recordsWithNegativeCasesUpload = mergedData.filter(r => r.cases < 0);
+    const totalNegativeCasesUpload = recordsWithNegativeCasesUpload.reduce((sum, r) => sum + r.cases, 0);
+    
+    // Group by customer name to see revenue breakdown (for comparison with load)
+    const revenueByCustomerUpload = mergedData.reduce((acc, r) => {
+      acc[r.customerName] = (acc[r.customerName] || 0) + r.revenue;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    const topCustomersUpload = Object.entries(revenueByCustomerUpload)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 10)
+      .map(([name, rev]) => ({ name, revenue: rev.toFixed(2) }));
+    
+    console.log('[Tony\'s Upload Summary]', {
+      totalRecords: mergedData.length,
+      totalRevenue: totalRevenueUpload.toFixed(2),
+      totalCases: totalCasesUpload,
+      recordsWithNegativeCases: recordsWithNegativeCasesUpload.length,
+      totalNegativeCases: totalNegativeCasesUpload, // Sum of all negative cases (should be negative)
+      uniqueCustomers: uniqueCustomersUpload,
+      topCustomersByRevenue: topCustomersUpload,
+      sampleCustomerNames: Array.from(new Set(mergedData.map(r => r.customerName))).slice(0, 10),
+      newRecordsUploaded: recordsWithHierarchicalNames.length,
+      existingRecordsMerged: filteredExistingData.length,
+      sampleNegativeCases: recordsWithNegativeCasesUpload.slice(0, 5).map(r => ({
+        customerName: r.customerName,
+        productName: r.productName,
+        cases: r.cases,
+        period: r.period
+      }))
+    });
 
     const allCustomers = Array.from(new Set(mergedData.map(r => r.customerName)));
     const updatedCustomerProgressions = new Map();
@@ -1403,26 +1624,65 @@ const Dashboard: React.FC = () => {
     });
     setCurrentTonysCustomerProgressions(updatedCustomerProgressions);
 
-    // Save to DynamoDB
+    // Save to DynamoDB - save original customerName (distributor) separately so we can reconstruct hierarchical format on load
     (async () => {
       try {
-        const salesRecords = data.records.map(record => ({
-          distributor: 'TONYS',
-          period: record.period,
-          customerName: record.customerName,
-          productName: record.productName,
-          productCode: record.productCode,
-          cases: record.cases,
-          revenue: record.revenue,
-          invoiceKey: generateDeterministicInvoiceKey('TONYS', record.period, record.customerName, record.productName, record.cases, record.revenue),
-          source: 'Tony\'s Upload',
-          timestamp: new Date().toISOString(),
-          accountName: record.accountName,
-          customerId: record.customerId,
-          itemNumber: record.itemNumber,
-          size: record.size,
-          weightLbs: record.weightLbs,
-        }));
+        const salesRecords = data.records.map(record => {
+          // For Tony's, include sub-customer (customerId or accountName) in invoiceKey to ensure uniqueness
+          // This prevents different sub-customers from the same distributor from being treated as duplicates
+          const customerKey = record.customerId || record.accountName || record.customerName;
+          const invoiceKey = generateDeterministicInvoiceKey('TONYS', record.period, customerKey, record.productName, record.cases, record.revenue);
+          
+          // Log negative cases to verify they're being saved correctly
+          if (record.cases < 0) {
+            // Verify the invoiceKey includes the negative cases value
+            const expectedKey = generateDeterministicInvoiceKey('TONYS', record.period, customerKey, record.productName, record.cases, record.revenue);
+            console.log('[Tony\'s Save] Saving record with negative cases:', {
+              customerName: record.customerName,
+              customerKey: customerKey,
+              productName: record.productName,
+              cases: record.cases,
+              revenue: record.revenue,
+              period: record.period,
+              invoiceKey: invoiceKey,
+              expectedKey: expectedKey,
+              keysMatch: invoiceKey === expectedKey,
+              invoiceKeyIncludesNegative: invoiceKey.includes(String(record.cases))
+            });
+          }
+          
+          return {
+            distributor: 'TONYS',
+            period: record.period,
+            customerName: record.customerName, // Original distributor name (e.g., "TONY'S FINE FOODS - REED")
+            productName: record.productName,
+            productCode: record.productCode,
+            cases: record.cases, // Preserve negative values (e.g., -1 from "(1)")
+            revenue: record.revenue,
+            invoiceKey: invoiceKey,
+            source: 'Tony\'s Upload',
+            timestamp: new Date().toISOString(),
+            accountName: record.accountName,
+            customerId: record.customerId,
+            itemNumber: record.itemNumber,
+            size: record.size,
+            weightLbs: record.weightLbs,
+          };
+        });
+        
+        // Debug: Count records with negative cases being saved
+        const negativeCasesRecords = salesRecords.filter(r => r.cases < 0);
+        if (negativeCasesRecords.length > 0) {
+          console.log('[Tony\'s Save] Total records with negative cases being saved:', negativeCasesRecords.length, {
+            totalNegativeCases: negativeCasesRecords.reduce((sum, r) => sum + r.cases, 0),
+            sampleNegativeRecords: negativeCasesRecords.slice(0, 3).map(r => ({
+              customerName: r.customerName,
+              productName: r.productName,
+              cases: r.cases,
+              period: r.period
+            }))
+          });
+        }
 
         await saveSalesRecords(salesRecords);
         
@@ -2468,7 +2728,7 @@ const Dashboard: React.FC = () => {
           <div className="flex justify-between items-start">
             <div>
               <div className="flex items-center gap-3">
-                <img src="/galantfoodco.avif" alt="Galant Food Co." className="h-24 w-auto" />
+                <img src={galantLogo} alt="Galant Food Co." className="h-24 w-auto" />
                 <h1 className="text-3xl font-bold text-gray-900">{getDistributorLabel()} Sales Reports</h1>
                 <div className="relative distributor-dropdown">
                   <Button
