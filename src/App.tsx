@@ -16,7 +16,7 @@ import {
 } from '@aws-sdk/client-cognito-identity-provider';
 
 // Logo is in public folder for better hosting compatibility
-const logo = '/galantfoodco.avif';
+const logo = `${process.env.PUBLIC_URL || ''}/galantfoodco.avif`;
 
 interface AuthState {
   username: string;

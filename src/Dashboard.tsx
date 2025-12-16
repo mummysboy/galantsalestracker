@@ -36,7 +36,7 @@ import DotCustomerDetailModal from './components/DotCustomerDetailModal';
 import { useDynamoDB } from './hooks/useDynamoDB';
 import { dynamoDBService } from './services/dynamodb';
 // Logo is in public folder for better hosting compatibility
-const galantLogo = '/galantfoodco.avif';
+const galantLogo = `${process.env.PUBLIC_URL || ''}/galantfoodco.avif`;
 
 const generateDeterministicInvoiceKey = (d: string, p: string, c: string, pn: string, cs: number, r: number): string => {
   // Ensure cases is properly converted to string (negative numbers like -1 become "-1")
