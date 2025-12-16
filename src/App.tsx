@@ -3,7 +3,8 @@ import Dashboard from './Dashboard';
 import AdminPage from './components/AdminPage';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
 import { Button } from './components/ui/button';
-import logo from './assets/galantfoodco.avif';
+// Logo is in public folder for better hosting compatibility
+const logo = '/galantfoodco.avif';
 import {
   CognitoIdentityProviderClient,
   InitiateAuthCommand,
@@ -98,7 +99,7 @@ function App() {
     !!cognitoClient && !!awsRegion && !!cognitoUserPoolId && !!cognitoClientId;
   const configError =
     !awsRegion || !awsAccessKeyId || !awsSecretAccessKey || !cognitoUserPoolId || !cognitoClientId
-      ? 'AWS Cognito is not fully configured. Set region, access keys, user pool ID, and client ID.'
+      ? 'AWS Cognito is not fully configured. Missing environment variables. If this is a hosted deployment, configure environment variables in your hosting platform (see DEPLOYMENT_GUIDE.md). Required: REACT_APP_AWS_REGION, REACT_APP_AWS_ACCESS_KEY_ID, REACT_APP_AWS_SECRET_ACCESS_KEY, REACT_APP_COGNITO_USER_POOL_ID, REACT_APP_COGNITO_CLIENT_ID'
       : '';
 
   const handleLogin = (event: React.FormEvent<HTMLFormElement>) => {
