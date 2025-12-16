@@ -1,0 +1,8 @@
+# AWS Amplify redirects file
+# Serve static files with proper content types before SPA routing
+/galantfoodco.avif /galantfoodco.avif 200
+/static/* /static/:splat 200
+
+# SPA fallback - must be last
+/* /index.html 200
+
