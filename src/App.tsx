@@ -3,8 +3,6 @@ import Dashboard from './Dashboard';
 import AdminPage from './components/AdminPage';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
 import { Button } from './components/ui/button';
-// Logo is in public folder for better hosting compatibility
-const logo = '/galantfoodco.avif';
 import {
   CognitoIdentityProviderClient,
   InitiateAuthCommand,
@@ -16,6 +14,9 @@ import {
   AdminAddUserToGroupCommand,
   AdminRemoveUserFromGroupCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
+
+// Logo is in public folder for better hosting compatibility
+const logo = '/galantfoodco.avif';
 
 interface AuthState {
   username: string;
