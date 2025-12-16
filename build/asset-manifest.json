@@ -1,15 +1,18 @@
 {
   "files": {
-    "main.css": "/static/css/main.8e3752ed.css",
-    "main.js": "/static/js/main.26d64ae0.js",
+    "main.css": "/static/css/main.da6aca68.css",
+    "main.js": "/static/js/main.3f5deb4e.js",
+    "static/js/82.6aeaf02f.chunk.js": "/static/js/82.6aeaf02f.chunk.js",
     "static/js/453.cbaca6bb.chunk.js": "/static/js/453.cbaca6bb.chunk.js",
+    "static/media/galantfoodco.avif": "/static/media/galantfoodco.a827aa3a4da33daa0cee.avif",
     "index.html": "/index.html",
-    "main.8e3752ed.css.map": "/static/css/main.8e3752ed.css.map",
-    "main.26d64ae0.js.map": "/static/js/main.26d64ae0.js.map",
+    "main.da6aca68.css.map": "/static/css/main.da6aca68.css.map",
+    "main.3f5deb4e.js.map": "/static/js/main.3f5deb4e.js.map",
+    "82.6aeaf02f.chunk.js.map": "/static/js/82.6aeaf02f.chunk.js.map",
     "453.cbaca6bb.chunk.js.map": "/static/js/453.cbaca6bb.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.8e3752ed.css",
-    "static/js/main.26d64ae0.js"
+    "static/css/main.da6aca68.css",
+    "static/js/main.3f5deb4e.js"
   ]
 }

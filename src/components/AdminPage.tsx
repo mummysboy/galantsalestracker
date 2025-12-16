@@ -7,8 +7,6 @@ import {
   AdminCreateUserCommand,
   AdminSetUserPasswordCommand,
   AdminGetUserCommand,
-  AdminAddUserToGroupCommand,
-  AdminRemoveUserFromGroupCommand,
   ListUsersCommand,
   AdminDeleteUserCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
@@ -16,22 +14,18 @@ import {
 interface AdminPageProps {
   cognitoClient: CognitoIdentityProviderClient | null;
   cognitoUserPoolId: string;
-  adminGroupName: string;
   onBack: () => void;
 }
 
 const AdminPage: React.FC<AdminPageProps> = ({
   cognitoClient,
   cognitoUserPoolId,
-  adminGroupName,
   onBack,
 }) => {
   const [newUsername, setNewUsername] = useState('');
   const [createUserPassword, setCreateUserPassword] = useState('');
   const [resetUsername, setResetUsername] = useState('');
   const [resetPassword, setResetPassword] = useState('');
-  const [groupUsername, setGroupUsername] = useState('');
-  const [groupName, setGroupName] = useState(adminGroupName);
   const [userFeedback, setUserFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
   
   // User list state
@@ -145,87 +139,6 @@ const AdminPage: React.FC<AdminPageProps> = ({
         const message = err instanceof Error ? err.message : 'Failed to reset password.';
         const errorDetails = err?.name ? `${err.name}: ${message}` : message;
         setUserFeedback({ type: 'error', message: `${errorDetails} Check AWS permissions and User Pool ID.` });
-      }
-    }
-  };
-
-  const handleAddUserToGroup = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setUserFeedback(null);
-
-    if (!cognitoClient || !cognitoUserPoolId) {
-      setUserFeedback({ type: 'error', message: 'Cognito is not configured for group management.' });
-      return;
-    }
-
-    const trimmedUsername = groupUsername.trim();
-    const trimmedGroupName = groupName.trim();
-
-    if (!trimmedUsername || !trimmedGroupName) {
-      setUserFeedback({ type: 'error', message: 'Username and group name are required.' });
-      return;
-    }
-
-    try {
-      await cognitoClient.send(
-        new AdminAddUserToGroupCommand({
-          UserPoolId: cognitoUserPoolId,
-          Username: trimmedUsername,
-          GroupName: trimmedGroupName,
-        })
-      );
-
-      setGroupUsername('');
-      setUserFeedback({ type: 'success', message: `User "${trimmedUsername}" added to group "${trimmedGroupName}".` });
-    } catch (err: any) {
-      if (err?.name === 'UserNotFoundException') {
-        setUserFeedback({ type: 'error', message: `User "${trimmedUsername}" not found.` });
-      } else if (err?.name === 'ResourceNotFoundException' && err?.message?.includes('group')) {
-        setUserFeedback({ type: 'error', message: `Group "${trimmedGroupName}" not found. Create it in Cognito Console first.` });
-      } else {
-        const message = err instanceof Error ? err.message : 'Failed to add user to group. Check AWS permissions.';
-        setUserFeedback({ type: 'error', message });
-      }
-    }
-  };
-
-  const handleRemoveUserFromGroup = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setUserFeedback(null);
-
-    if (!cognitoClient || !cognitoUserPoolId) {
-      setUserFeedback({ type: 'error', message: 'Cognito is not configured for group management.' });
-      return;
-    }
-
-    const trimmedUsername = groupUsername.trim();
-    const trimmedGroupName = groupName.trim();
-
-    if (!trimmedUsername || !trimmedGroupName) {
-      setUserFeedback({ type: 'error', message: 'Username and group name are required.' });
-      return;
-    }
-
-    try {
-      await cognitoClient.send(
-        new AdminRemoveUserFromGroupCommand({
-          UserPoolId: cognitoUserPoolId,
-          Username: trimmedUsername,
-          GroupName: trimmedGroupName,
-        })
-      );
-
-      setGroupUsername('');
-      setUserFeedback({ type: 'success', message: `User "${trimmedUsername}" removed from group "${trimmedGroupName}".` });
-      loadUsers(); // Refresh user list
-    } catch (err: any) {
-      if (err?.name === 'UserNotFoundException') {
-        setUserFeedback({ type: 'error', message: `User "${trimmedUsername}" not found.` });
-      } else if (err?.name === 'ResourceNotFoundException' && err?.message?.includes('group')) {
-        setUserFeedback({ type: 'error', message: `Group "${trimmedGroupName}" not found.` });
-      } else {
-        const message = err instanceof Error ? err.message : 'Failed to remove user from group. Check AWS permissions.';
-        setUserFeedback({ type: 'error', message });
       }
     }
   };
@@ -401,70 +314,6 @@ const AdminPage: React.FC<AdminPageProps> = ({
                 <div className="flex items-end">
                   <Button type="submit" className="w-full" variant="outline">
                     Reset password
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-sm">
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-slate-900 text-lg">Group management</CardTitle>
-              <CardDescription>Add or remove users from Cognito groups (e.g., admin group).</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <form className="grid grid-cols-1 gap-4 md:grid-cols-4" onSubmit={handleAddUserToGroup}>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700" htmlFor="group-username">
-                    Username
-                  </label>
-                  <input
-                    id="group-username"
-                    name="group-username"
-                    type="text"
-                    value={groupUsername}
-                    onChange={(e) => setGroupUsername(e.target.value)}
-                    placeholder="e.g. admin or josh@galantfoodco.com"
-                    className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700" htmlFor="group-name">
-                    Group name
-                  </label>
-                  <input
-                    id="group-name"
-                    name="group-name"
-                    type="text"
-                    value={groupName}
-                    onChange={(e) => setGroupName(e.target.value)}
-                    placeholder="admin"
-                    className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div className="flex items-end">
-                  <Button type="submit" className="w-full">
-                    Add to group
-                  </Button>
-                </div>
-                <div className="flex items-end">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={async (e) => {
-                      e.preventDefault();
-                      if (!groupUsername.trim() || !groupName.trim()) {
-                        setUserFeedback({ type: 'error', message: 'Username and group name are required.' });
-                        return;
-                      }
-                      const fakeEvent = {
-                        preventDefault: () => {},
-                      } as React.FormEvent<HTMLFormElement>;
-                      await handleRemoveUserFromGroup(fakeEvent);
-                    }}
-                  >
-                    Remove from group
                   </Button>
                 </div>
               </form>

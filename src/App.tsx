@@ -15,8 +15,7 @@ import {
   AdminRemoveUserFromGroupCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
 
-// Logo is in public folder for better hosting compatibility
-const logo = `${process.env.PUBLIC_URL || ''}/galantfoodco.avif`;
+import logo from './assets/galantfoodco.avif';
 
 interface AuthState {
   username: string;
@@ -458,7 +457,6 @@ function App() {
         <AdminPage
           cognitoClient={cognitoClient}
           cognitoUserPoolId={cognitoUserPoolId}
-          adminGroupName={adminGroupName}
           onBack={() => setCurrentPage('dashboard')}
         />
       ) : (
