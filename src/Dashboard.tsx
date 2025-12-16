@@ -35,7 +35,8 @@ import DotReportUpload from './components/DotReportUpload';
 import DotCustomerDetailModal from './components/DotCustomerDetailModal';
 import { useDynamoDB } from './hooks/useDynamoDB';
 import { dynamoDBService } from './services/dynamodb';
-import galantLogo from './assets/galantfoodco.avif';
+// Use public folder for AWS Amplify compatibility
+const galantLogo = '/galantfoodco.avif';
 
 const generateDeterministicInvoiceKey = (d: string, p: string, c: string, pn: string, cs: number, r: number): string => {
   // Ensure cases is properly converted to string (negative numbers like -1 become "-1")

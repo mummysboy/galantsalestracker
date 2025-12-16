@@ -15,7 +15,8 @@ import {
   AdminRemoveUserFromGroupCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
 
-import logo from './assets/galantfoodco.avif';
+// Use public folder for AWS Amplify compatibility
+const logo = '/galantfoodco.avif';
 
 interface AuthState {
   username: string;
