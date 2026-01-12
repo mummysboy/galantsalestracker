@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
-import { Trash2, RefreshCw, Search } from 'lucide-react';
+import { Trash2, RefreshCw, Search, Eye, EyeOff } from 'lucide-react';
 import {
   CognitoIdentityProviderClient,
   AdminCreateUserCommand,
@@ -10,6 +10,7 @@ import {
   ListUsersCommand,
   AdminDeleteUserCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
+import { dynamoDBService } from '../services/dynamodb';
 
 interface AdminPageProps {
   cognitoClient: CognitoIdentityProviderClient | null;
@@ -34,6 +35,13 @@ const AdminPage: React.FC<AdminPageProps> = ({
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [paginationToken, setPaginationToken] = useState<string | undefined>(undefined);
   const [hasMoreUsers, setHasMoreUsers] = useState(false);
+  
+  // Report visibility management
+  const [userPermissions, setUserPermissions] = useState<Record<string, string[]>>({});
+  const [loadingPermissions, setLoadingPermissions] = useState<Record<string, boolean>>({});
+  const [selectedUserForPermissions, setSelectedUserForPermissions] = useState<string | null>(null);
+  
+  const distributors = ['ALPINE', 'PETES', 'KEHE', 'VISTAR', 'TONYS', 'TROIA', 'MHD', 'DOT'] as const;
 
   const handleCreateUser = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -198,9 +206,125 @@ const AdminPage: React.FC<AdminPageProps> = ({
     }
   };
 
+  // Load user permissions - uses email as identifier if available, otherwise username
+  const loadUserPermissions = async (identifier: string) => {
+    try {
+      setLoadingPermissions(prev => ({ ...prev, [identifier]: true }));
+      const key = `userPermissions:${identifier}`;
+      console.log('[AdminPage] Loading permissions:', { 
+        identifier, 
+        identifierType: typeof identifier,
+        identifierLength: identifier.length,
+        key,
+        keyLength: key.length
+      });
+      const appState = await dynamoDBService.getAppState(key);
+      console.log('[AdminPage] Loaded app state:', { 
+        identifier, 
+        key, 
+        appState: appState ? 'found' : 'null',
+        value: appState?.value,
+        valueType: typeof appState?.value,
+        valueIsArray: Array.isArray(appState?.value),
+        valueLength: appState && Array.isArray(appState.value) ? appState.value.length : 'N/A'
+      });
+      if (appState && appState.value) {
+        setUserPermissions(prev => ({ ...prev, [identifier]: appState.value }));
+        console.log('[AdminPage] Set permissions for user:', { identifier, permissions: appState.value });
+      } else {
+        // Default: no permissions (empty array means user can't see any reports)
+        setUserPermissions(prev => ({ ...prev, [identifier]: [] }));
+        console.log('[AdminPage] No permissions found for user:', { identifier, key });
+      }
+    } catch (error) {
+      console.error(`Error loading permissions for ${identifier}:`, error);
+      setUserPermissions(prev => ({ ...prev, [identifier]: [] }));
+    } finally {
+      setLoadingPermissions(prev => ({ ...prev, [identifier]: false }));
+    }
+  };
+
+  // List all saved permissions (for debugging)
+  const listAllPermissions = async () => {
+    try {
+      const allStates = await dynamoDBService.getAllAppStates();
+      const permissionStates = allStates.filter(state => state.key.startsWith('userPermissions:'));
+      console.log('[AdminPage] All saved permissions:', permissionStates.map(s => ({
+        key: s.key,
+        username: s.key.replace('userPermissions:', ''),
+        value: s.value,
+        valueType: typeof s.value,
+        valueIsArray: Array.isArray(s.value),
+        valueLength: Array.isArray(s.value) ? s.value.length : 'N/A'
+      })));
+      return permissionStates;
+    } catch (error) {
+      console.error('[AdminPage] Error listing permissions:', error);
+      return [];
+    }
+  };
+
+  // Save user permissions - uses email as identifier if available, otherwise username
+  const saveUserPermissions = async (identifier: string, allowedDistributors: string[]) => {
+    try {
+      // Normalize identifier (trim whitespace)
+      const normalizedIdentifier = identifier.trim();
+      const key = `userPermissions:${normalizedIdentifier}`;
+      console.log('[AdminPage] Saving permissions:', { 
+        originalIdentifier: identifier,
+        normalizedIdentifier,
+        identifierType: typeof normalizedIdentifier,
+        identifierLength: normalizedIdentifier.length,
+        key,
+        keyLength: key.length,
+        allowedDistributors,
+        allowedDistributorsType: typeof allowedDistributors,
+        allowedDistributorsIsArray: Array.isArray(allowedDistributors),
+        allowedDistributorsLength: allowedDistributors.length
+      });
+      await dynamoDBService.saveAppState(key, allowedDistributors);
+      
+      // Verify it was saved
+      const verify = await dynamoDBService.getAppState(key);
+      console.log('[AdminPage] Verified saved permissions:', { 
+        normalizedIdentifier, 
+        key, 
+        saved: verify?.value,
+        savedType: typeof verify?.value,
+        savedIsArray: Array.isArray(verify?.value),
+        savedLength: verify && Array.isArray(verify.value) ? verify.value.length : 'N/A'
+      });
+      
+      // List all permissions for debugging
+      await listAllPermissions();
+      
+      setUserPermissions(prev => ({ ...prev, [normalizedIdentifier]: allowedDistributors }));
+      setUserFeedback({ type: 'success', message: `Report visibility updated for "${normalizedIdentifier}". Permissions: ${allowedDistributors.join(', ') || 'None'}` });
+    } catch (error) {
+      console.error(`Error saving permissions for ${identifier}:`, error);
+      setUserFeedback({ type: 'error', message: `Failed to save permissions for "${identifier}": ${error instanceof Error ? error.message : 'Unknown error'}` });
+    }
+  };
+
+  // Toggle distributor permission for a user
+  const toggleDistributorPermission = (identifier: string, distributor: string) => {
+    const currentPermissions = userPermissions[identifier] || [];
+    const newPermissions = currentPermissions.includes(distributor)
+      ? currentPermissions.filter(d => d !== distributor)
+      : [...currentPermissions, distributor];
+    saveUserPermissions(identifier, newPermissions);
+  };
+
   useEffect(() => {
     loadUsers();
   }, []);
+
+  // Load permissions when a user is selected
+  useEffect(() => {
+    if (selectedUserForPermissions) {
+      loadUserPermissions(selectedUserForPermissions);
+    }
+  }, [selectedUserForPermissions]);
 
   // Filter users based on search term
   const filteredUsers = users.filter(user => {
@@ -428,6 +552,119 @@ const AdminPage: React.FC<AdminPageProps> = ({
                     </div>
                   )}
                 </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Report Visibility Management */}
+          <Card className="shadow-sm">
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-slate-900 text-lg">Report Visibility Management</CardTitle>
+              <CardDescription>Control which reports each user can see. Only admins can upload/delete reports.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-4">
+                {filteredUsers.map((user) => {
+                  const username = user.Username || '';
+                  const email = user.Attributes?.find((attr: any) => attr.Name === 'email')?.Value || '-';
+                  // Use email as the identifier if available, otherwise use username
+                  // This ensures we match the login username which is often the email
+                  const identifier = email !== '-' ? email : username;
+                  const userPerms = userPermissions[identifier] || [];
+                  const isExpanded = selectedUserForPermissions === identifier;
+                  
+                  return (
+                    <div key={username} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900">{username}</div>
+                          <div className="text-sm text-gray-500">{email}</div>
+                          <div className="text-xs text-gray-400 mt-1">
+                            Identifier: {identifier} {identifier !== username && identifier !== email ? `(using ${identifier === email ? 'email' : 'username'})` : ''}
+                          </div>
+                          <div className="text-xs text-gray-400 mt-1">
+                            {userPerms.length === 0 
+                              ? 'No reports visible' 
+                              : `${userPerms.length} report${userPerms.length === 1 ? '' : 's'} visible`}
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (isExpanded) {
+                              setSelectedUserForPermissions(null);
+                            } else {
+                              setSelectedUserForPermissions(identifier);
+                              if (!userPermissions[identifier]) {
+                                loadUserPermissions(identifier);
+                              }
+                            }
+                          }}
+                          className="flex items-center gap-2"
+                        >
+                          {isExpanded ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          {isExpanded ? 'Hide' : 'Manage'}
+                        </Button>
+                      </div>
+                      
+                      {isExpanded && (
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          {loadingPermissions[identifier] ? (
+                            <div className="text-sm text-gray-500">Loading permissions...</div>
+                          ) : (
+                            <div className="space-y-3">
+                              <div className="text-sm font-medium text-gray-700 mb-2">
+                                Select reports this user can view:
+                              </div>
+                              <div className="text-xs text-gray-500 mb-2">
+                                Saving permissions for: {identifier}
+                              </div>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                {distributors.map((distributor) => {
+                                  const isAllowed = userPerms.includes(distributor);
+                                  const distributorLabels: Record<string, string> = {
+                                    'ALPINE': 'Alpine',
+                                    'PETES': "Pete's Coffee",
+                                    'KEHE': 'KeHe',
+                                    'VISTAR': 'Vistar',
+                                    'TONYS': "Tony's Fine Foods",
+                                    'TROIA': 'Troia Foods',
+                                    'MHD': 'Mike Hudson',
+                                    'DOT': 'DOT',
+                                  };
+                                  
+                                  return (
+                                    <button
+                                      key={distributor}
+                                      onClick={() => toggleDistributorPermission(identifier, distributor)}
+                                      className={`px-3 py-2 text-sm rounded-md border transition-colors ${
+                                        isAllowed
+                                          ? 'bg-blue-50 border-blue-500 text-blue-700 font-medium'
+                                          : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                                      }`}
+                                    >
+                                      {distributorLabels[distributor] || distributor}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-2">
+                                Note: Users can only view reports. Only admins can upload or delete data.
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              
+              {filteredUsers.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No users found. Create a user first to manage report visibility.</p>
+                </div>
               )}
             </CardContent>
           </Card>

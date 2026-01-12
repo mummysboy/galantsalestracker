@@ -461,7 +461,7 @@ function App() {
           onBack={() => setCurrentPage('dashboard')}
         />
       ) : (
-        <Dashboard />
+        <Dashboard isAdmin={isAdminSession} username={authState?.username || ''} />
       )}
     </div>
   );

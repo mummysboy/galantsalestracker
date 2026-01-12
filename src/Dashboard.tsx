@@ -636,10 +636,11 @@ const RevenueByProductComponent: React.FC<RevenueByProductProps> = ({ revenueByP
 };
 
 interface DashboardProps {
-  // Props can be added here in the future if needed
+  isAdmin?: boolean;
+  username?: string;
 }
 
-const Dashboard: React.FC<DashboardProps> = () => {
+const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' }) => {
   // DynamoDB hook for persisting and loading data
   const {
     saveSalesRecords,
@@ -667,6 +668,9 @@ const Dashboard: React.FC<DashboardProps> = () => {
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [showUploadSection, setShowUploadSection] = useState(false);
   const [uploadSectionKey, setUploadSectionKey] = useState(0);
+  
+  // User permissions for report visibility
+  const [allowedDistributors, setAllowedDistributors] = useState<string[] | null>(null);
   
   // Initialize all data as empty arrays - will load from DynamoDB
   const [currentAlpineData, setCurrentAlpineData] = useState<AlpineSalesRecord[]>([]);
@@ -763,10 +767,98 @@ const Dashboard: React.FC<DashboardProps> = () => {
       try {
         console.log('Loading all data from DynamoDB...');
         
-        // Load data for each distributor
-        const distributors = ['ALPINE', 'PETES', 'KEHE', 'VISTAR', 'TONYS', 'TROIA', 'MHD', 'DOT'] as const;
+        // FIRST: Load user permissions (if not admin)
+        let userPerms: string[] | null = null;
+        if (!isAdmin && username) {
+          try {
+            // Normalize username (trim whitespace) to match how it's saved
+            const normalizedUsername = username.trim();
+            
+            
+            // Try loading with normalized username first
+            const key = `userPermissions:${normalizedUsername}`;
+            let appState = await dynamoDBService.getAppState(key);
+            
+            // If not found, try with original username (for backwards compatibility)
+            if (!appState && username !== normalizedUsername) {
+              const originalKey = `userPermissions:${username}`;
+              console.log('[Dashboard] Trying with original username:', { username, key: originalKey });
+              appState = await dynamoDBService.getAppState(originalKey);
+            }
+            
+            // List all permissions for debugging
+            const allStates = await dynamoDBService.getAllAppStates();
+            const permissionStates = allStates.filter(state => state.key.startsWith('userPermissions:'));
+            console.log('[Dashboard] All saved permissions in DB:', JSON.stringify(permissionStates.map(s => ({
+              key: s.key,
+              username: s.key.replace('userPermissions:', ''),
+              usernameLength: s.key.replace('userPermissions:', '').length,
+              value: s.value,
+              valueType: typeof s.value,
+              valueIsArray: Array.isArray(s.value),
+              valueLength: Array.isArray(s.value) ? s.value.length : 'N/A',
+              valueString: JSON.stringify(s.value)
+            })), null, 2));
+            
+            console.log('[Dashboard] Looking for username:', JSON.stringify({
+              originalUsername: username,
+              originalUsernameType: typeof username,
+              originalUsernameLength: username.length,
+              originalUsernameCharCodes: username.split('').map(c => c.charCodeAt(0)),
+              normalizedUsername: normalizedUsername,
+              normalizedUsernameLength: normalizedUsername.length,
+              normalizedUsernameCharCodes: normalizedUsername.split('').map(c => c.charCodeAt(0))
+            }, null, 2));
+            
+            console.log('[Dashboard] Saved usernames in DB:', JSON.stringify(permissionStates.map(s => {
+              const dbUsername = s.key.replace('userPermissions:', '');
+              return {
+                dbUsername,
+                dbUsernameLength: dbUsername.length,
+                dbUsernameCharCodes: dbUsername.split('').map(c => c.charCodeAt(0)),
+                matches: dbUsername === normalizedUsername,
+                matchesOriginal: dbUsername === username
+              };
+            }), null, 2));
+            
+            console.log('[Dashboard] Loaded app state:', { 
+              normalizedUsername, 
+              key, 
+              appState: appState ? 'found' : 'null',
+              value: appState?.value,
+              valueType: typeof appState?.value,
+              valueIsArray: Array.isArray(appState?.value),
+              valueLength: appState && Array.isArray(appState.value) ? appState.value.length : 'N/A'
+            });
+            if (appState && appState.value) {
+              userPerms = appState.value;
+              console.log('[Dashboard] Setting allowed distributors:', { normalizedUsername, userPerms });
+              setAllowedDistributors(userPerms);
+            } else {
+              // No permissions set - user can't see any reports
+              console.log('[Dashboard] No permissions found for user:', { normalizedUsername, key });
+              userPerms = [];
+              setAllowedDistributors([]);
+            }
+          } catch (error) {
+            console.error('[Dashboard] Error loading user permissions from DynamoDB:', { username, error });
+            userPerms = [];
+            setAllowedDistributors([]);
+          }
+        } else {
+          // Admin can see all distributors
+          console.log('[Dashboard] Admin user - no permission restrictions');
+          setAllowedDistributors(null);
+        }
+        setPermissionsLoaded(true);
         
-        for (const distributor of distributors) {
+        // SECOND: Load data only for distributors user has access to
+        const allDistributors = ['ALPINE', 'PETES', 'KEHE', 'VISTAR', 'TONYS', 'TROIA', 'MHD', 'DOT'] as const;
+        const distributorsToLoad = isAdmin || userPerms === null
+          ? allDistributors
+          : allDistributors.filter(d => userPerms && userPerms.includes(d));
+        
+        for (const distributor of distributorsToLoad) {
           try {
             await loadSalesRecordsByDistributor(distributor);
             // The hook sets salesRecords, but we need to convert and set our state
@@ -956,13 +1048,47 @@ const Dashboard: React.FC<DashboardProps> = () => {
           console.log('Note: Could not load selectedMonth from DynamoDB:', error);
         }
         
+        // THIRD: Set initial distributor after permissions and data are loaded
         try {
           const savedDistributor = await loadAppState('selectedDistributor');
           if (savedDistributor) {
-            setSelectedDistributor(savedDistributor);
+            // Only set if user has permission to see this distributor (or is admin)
+            if (isAdmin || userPerms === null || (userPerms && userPerms.includes(savedDistributor))) {
+              setSelectedDistributor(savedDistributor);
+            } else if (userPerms && userPerms.length > 0) {
+              // Set to first allowed distributor if saved one is not allowed
+              setSelectedDistributor(userPerms[0] as any);
+            }
+            // If userPerms is empty array, don't set distributor (will show no permissions message)
+          } else {
+            // No saved distributor - set based on permissions
+            if (isAdmin || userPerms === null) {
+              // Admin or no permission system - default to ALPINE
+              setSelectedDistributor('ALPINE');
+            } else if (userPerms && userPerms.length > 0) {
+              // User has permissions - set to first allowed or ALL if multiple
+              if (userPerms.length === 1) {
+                setSelectedDistributor(userPerms[0] as any);
+              } else {
+                setSelectedDistributor('ALL');
+              }
+            }
+            // If userPerms is empty array, don't set distributor - leave as default 'ALPINE' 
+            // but hasNoPermissions check will prevent rendering
           }
         } catch (error) {
           console.log('Note: Could not load selectedDistributor from DynamoDB:', error);
+          // Fallback: set based on permissions
+          if (isAdmin || userPerms === null) {
+            setSelectedDistributor('ALPINE');
+          } else if (userPerms && userPerms.length > 0) {
+            if (userPerms.length === 1) {
+              setSelectedDistributor(userPerms[0] as any);
+            } else {
+              setSelectedDistributor('ALL');
+            }
+          }
+          // If userPerms is empty array, don't set distributor
         }
         
         console.log('DynamoDB data load complete');
@@ -985,6 +1111,7 @@ const Dashboard: React.FC<DashboardProps> = () => {
   const [deltaModalOpen, setDeltaModalOpen] = useState(false);
   const [newAccountsModalOpen, setNewAccountsModalOpen] = useState(false);
   const [selectedDistributor, setSelectedDistributor] = useState<'ALPINE' | 'PETES' | 'KEHE' | 'VISTAR' | 'TONYS' | 'TROIA' | 'MHD' | 'DOT' | 'ALL'>('ALPINE');
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false);
 
   // Save selectedDistributor to DynamoDB app state
   React.useEffect(() => {
@@ -1064,6 +1191,27 @@ const Dashboard: React.FC<DashboardProps> = () => {
 
   // Determine current dataset based on distributor
   const currentData = useMemo(() => {
+    // Check if user has access to the selected distributor
+    if (!isAdmin && allowedDistributors !== null) {
+      if (selectedDistributor !== 'ALL' && !allowedDistributors.includes(selectedDistributor)) {
+        // User doesn't have access to this distributor - return empty array
+        return [];
+      }
+      if (selectedDistributor === 'ALL') {
+        // For 'ALL', only include distributors user has access to
+        const allowedData: AlpineSalesRecord[] = [];
+        if (allowedDistributors.includes('ALPINE')) allowedData.push(...currentAlpineData);
+        if (allowedDistributors.includes('PETES')) allowedData.push(...currentPetesData);
+        if (allowedDistributors.includes('KEHE')) allowedData.push(...currentKeHeData);
+        if (allowedDistributors.includes('VISTAR')) allowedData.push(...currentVistarData);
+        if (allowedDistributors.includes('TONYS')) allowedData.push(...currentTonysData);
+        if (allowedDistributors.includes('TROIA')) allowedData.push(...currentTroiaData);
+        if (allowedDistributors.includes('MHD')) allowedData.push(...currentMhdData);
+        if (allowedDistributors.includes('DOT')) allowedData.push(...currentDotData);
+        return allowedData.filter(r => !r.excludeFromTotals);
+      }
+    }
+    
     if (selectedDistributor === 'ALPINE') return currentAlpineData;
     if (selectedDistributor === 'PETES') return currentPetesData;
     if (selectedDistributor === 'KEHE') return currentKeHeData;
@@ -1074,7 +1222,7 @@ const Dashboard: React.FC<DashboardProps> = () => {
     if (selectedDistributor === 'DOT') return currentDotData;
     // For 'ALL': combine all data but exclude sub-distributors and DOT from totals
     return [...currentAlpineData, ...currentPetesData, ...currentKeHeData, ...currentVistarData, ...currentTonysData, ...currentTroiaData, ...currentMhdData];
-  }, [selectedDistributor, currentAlpineData, currentPetesData, currentKeHeData, currentVistarData, currentTonysData, currentTroiaData, currentMhdData, currentDotData]);
+  }, [selectedDistributor, currentAlpineData, currentPetesData, currentKeHeData, currentVistarData, currentTonysData, currentTroiaData, currentMhdData, currentDotData, isAdmin, allowedDistributors]);
 
   // Data for calculations - excludes sub-distributors when viewing "All Businesses"
   const dataForTotals = useMemo(() => {
@@ -2721,9 +2869,66 @@ const Dashboard: React.FC<DashboardProps> = () => {
     );
   }
 
+  // Check if user has no permissions
+  const hasNoPermissions = !isAdmin && allowedDistributors !== null && allowedDistributors.length === 0;
+  
+  // Debug logging
+  if (!isAdmin && username) {
+    console.log('[Dashboard] Permissions check:', {
+      isAdmin,
+      username,
+      usernameType: typeof username,
+      usernameLength: username.length,
+      usernameTrimmed: username.trim(),
+      usernameTrimmedLength: username.trim().length,
+      allowedDistributors,
+      allowedDistributorsType: typeof allowedDistributors,
+      allowedDistributorsIsArray: Array.isArray(allowedDistributors),
+      allowedDistributorsLength: allowedDistributors?.length,
+      permissionsLoaded,
+      hasNoPermissions,
+      selectedDistributor
+    });
+  }
+
+  // Don't render data-dependent components until permissions are loaded
+  if (!permissionsLoaded && !isAdmin && username) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading permissions...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto p-6">
+        {/* No Permissions Message */}
+        {hasNoPermissions && (
+          <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="flex items-center gap-3">
+              <svg className="w-5 h-5 text-yellow-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <div>
+                <p className="text-sm font-medium text-yellow-800">No Reports Available</p>
+                <p className="text-xs text-yellow-700 mt-1">You don't have permission to view any reports. Please contact an administrator to grant access.</p>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Don't show dashboard content if user has no permissions */}
+        {hasNoPermissions ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500">No data available. Please contact an administrator to grant access to reports.</p>
+          </div>
+        ) : (
+          <>
+        
         {/* Header */}
         <div className="mb-8">
           <div className="flex justify-between items-start">
@@ -2744,20 +2949,36 @@ const Dashboard: React.FC<DashboardProps> = () => {
                   {isDistributorDropdownOpen && (
                     <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
                       <div className="py-1">
-                        {(['ALPINE','PETES','KEHE','VISTAR','TONYS','TROIA','MHD','DOT','ALL'] as const).map((d) => (
-                          <button
-                            key={d}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setSelectedDistributor(d);
-                              setIsDistributorDropdownOpen(false);
-                            }}
-                            className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${selectedDistributor === d ? 'text-blue-700 font-medium' : 'text-gray-700'}`}
-                          >
-                            {getDistributorLabel(d)}
-                          </button>
-                        ))}
+                        {(() => {
+                          // Filter distributors based on user permissions
+                          const allDistributors = ['ALPINE','PETES','KEHE','VISTAR','TONYS','TROIA','MHD','DOT','ALL'] as const;
+                          const visibleDistributors = isAdmin || allowedDistributors === null
+                            ? allDistributors
+                            : allDistributors.filter(d => d === 'ALL' || allowedDistributors.includes(d));
+                          
+                          if (visibleDistributors.length === 0) {
+                            return (
+                              <div className="px-3 py-2 text-sm text-gray-500">
+                                No reports available. Contact an admin.
+                              </div>
+                            );
+                          }
+                          
+                          return visibleDistributors.map((d) => (
+                            <button
+                              key={d}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setSelectedDistributor(d);
+                                setIsDistributorDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 ${selectedDistributor === d ? 'text-blue-700 font-medium' : 'text-gray-700'}`}
+                            >
+                              {getDistributorLabel(d)}
+                            </button>
+                          ));
+                        })()}
                       </div>
                     </div>
                   )}
@@ -2802,7 +3023,7 @@ const Dashboard: React.FC<DashboardProps> = () => {
                             >
                               {getShortMonthLabel(period)}
                             </button>
-                            {selectedDistributor !== 'ALL' && period !== 'ALL_MONTHS' && (
+                            {isAdmin && selectedDistributor !== 'ALL' && period !== 'ALL_MONTHS' && (
                               <button
                                 onClick={(e) => {
                                   e.preventDefault();
@@ -2864,20 +3085,22 @@ const Dashboard: React.FC<DashboardProps> = () => {
               >
                 Custom Report
               </Button>
-              <Button
-                onClick={() => {
-                  if (!showUploadSection) {
-                    // Increment key to force fresh component mount when opening
-                    setUploadSectionKey(prev => prev + 1);
-                  }
-                  setShowUploadSection(!showUploadSection);
-                }}
-                className="flex items-center gap-2"
-                variant={showUploadSection ? "default" : "outline"}
-              >
-                {showUploadSection ? <BarChart3 className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
-                {showUploadSection ? 'View Dashboard' : 'Upload Data'}
-              </Button>
+              {isAdmin && (
+                <Button
+                  onClick={() => {
+                    if (!showUploadSection) {
+                      // Increment key to force fresh component mount when opening
+                      setUploadSectionKey(prev => prev + 1);
+                    }
+                    setShowUploadSection(!showUploadSection);
+                  }}
+                  className="flex items-center gap-2"
+                  variant={showUploadSection ? "default" : "outline"}
+                >
+                  {showUploadSection ? <BarChart3 className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
+                  {showUploadSection ? 'View Dashboard' : 'Upload Data'}
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -3778,6 +4001,8 @@ const Dashboard: React.FC<DashboardProps> = () => {
               </div>
             </div>
           </div>
+        )}
+          </>
         )}
       </div>
     </div>
