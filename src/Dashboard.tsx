@@ -1090,11 +1090,14 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '', a
           userPermsIsNull: userPerms === null,
           userPermsLength: Array.isArray(userPerms) ? userPerms.length : 'N/A',
           distributorsToLoad,
-          distributorsToLoadCount: distributorsToLoad.length
+          distributorsToLoadCount: distributorsToLoad.length,
+          includesVISTAR: distributorsToLoad.includes('VISTAR'),
+          allDistributors: allDistributors
         });
         
         for (const distributor of distributorsToLoad) {
           try {
+            console.log(`[Dashboard Load] Starting to load ${distributor}...`);
             await loadSalesRecordsByDistributor(distributor);
             // The hook sets salesRecords, but we need to convert and set our state
             // Let's use the service directly to get records
@@ -1105,6 +1108,16 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '', a
             // This prevents overwriting localStorage data with empty arrays if Supabase query fails
             if (records.length === 0) {
               console.log(`[Dashboard Load] No records found for ${distributor} in Supabase, keeping existing data`);
+              // For VISTAR specifically, log more details and ensure localStorage data is preserved
+              if (distributor === 'VISTAR') {
+                const existingLocalData = loadArrayFromStorage<AlpineSalesRecord>('salesTracker_vistarData');
+                console.log(`[Dashboard Load] VISTAR: Supabase returned 0 records, keeping ${existingLocalData.length} records from localStorage`);
+                // If we have localStorage data but Supabase returned 0, make sure state is set from localStorage
+                if (existingLocalData.length > 0) {
+                  console.log(`[Dashboard Load] VISTAR: Setting state from localStorage (${existingLocalData.length} records)`);
+                  setCurrentVistarData(existingLocalData);
+                }
+              }
               continue;
             }
             
@@ -1279,7 +1292,18 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '', a
               setCurrentDotData(deduplicatedRecords);
             }
           } catch (error) {
-            console.log(`Note: Could not load ${distributor} from Supabase (may not have data yet):`, error instanceof Error ? error.message : error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error(`[Dashboard Load] Error loading ${distributor} from Supabase:`, errorMessage, error);
+            // For VISTAR specifically, log more details and preserve localStorage data
+            if (distributor === 'VISTAR') {
+              const existingLocalData = loadArrayFromStorage<AlpineSalesRecord>('salesTracker_vistarData');
+              console.log(`[Dashboard Load] VISTAR: Error occurred, preserving ${existingLocalData.length} records from localStorage`);
+              // If we have localStorage data, use it as fallback
+              if (existingLocalData.length > 0) {
+                console.log(`[Dashboard Load] VISTAR: Using localStorage data as fallback (${existingLocalData.length} records)`);
+                setCurrentVistarData(existingLocalData);
+              }
+            }
           }
         }
         
@@ -1357,9 +1381,25 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '', a
           // If userPerms is empty array, don't set distributor
         }
         
+        // After loading all distributors, check if VISTAR is selected but wasn't loaded
+        // This can happen if VISTAR isn't in permissions but user has localStorage data
+        if (!distributorsToLoad.includes('VISTAR')) {
+          const vistarLocalData = loadArrayFromStorage<AlpineSalesRecord>('salesTracker_vistarData');
+          if (vistarLocalData.length > 0) {
+            console.log(`[Dashboard Load] VISTAR not in permissions but found ${vistarLocalData.length} records in localStorage, using them`);
+            setCurrentVistarData(vistarLocalData);
+          }
+        }
+        
         console.log('Supabase data load complete');
       } catch (error) {
         console.error('Error loading from Supabase:', error);
+        // On error, try to preserve localStorage data for VISTAR
+        const vistarLocalData = loadArrayFromStorage<AlpineSalesRecord>('salesTracker_vistarData');
+        if (vistarLocalData.length > 0) {
+          console.log(`[Dashboard Load] Error occurred, using ${vistarLocalData.length} VISTAR records from localStorage as fallback`);
+          setCurrentVistarData(vistarLocalData);
+        }
       }
     };
 
