@@ -47,6 +47,54 @@ const DotReportUpload: React.FC<DotReportUploadProps> =
       customers.forEach(c => customerProgressions.set(c, analyzeCustomerProgress(allRecords, c)));
 
       await onDataParsed({ records: allRecords, customerProgressions });
+
+      // Push parsed DOT records to Google Sheets via Apps Script
+      try {
+        const webAppUrl = (process.env.REACT_APP_GS_WEBAPP_URL || '').trim();
+        const token = (process.env.REACT_APP_GS_TOKEN || '').trim();
+        if (webAppUrl && token && allRecords.length > 0) {
+          // Map DOT record to the same row schema used for other uploads
+          const rows = allRecords.map(r => {
+            // Convert period (YYYY-MM) to a mid-month date for the first column
+            const dateStr = `${r.period}-15`;
+            // Synthetic key for DOT
+            const base = `${dateStr.replace(/-/g,'')}|${r.customerName}|${r.productName}|${r.cases}|${(Math.round(r.revenue*100)/100).toFixed(2)}`.toUpperCase();
+            let hash = 5381;
+            for (let i = 0; i < base.length; i++) { hash = ((hash << 5) + hash) + base.charCodeAt(i); hash = hash >>> 0; }
+            const syntheticKey = `SYN-${dateStr.replace(/-/g,'')}-${hash.toString(36).toUpperCase()}`;
+            return [
+              dateStr,
+              r.customerName,
+              r.productName,
+              r.productCode || '',  // Add product code
+              r.cases,
+              Math.round(r.revenue * 100) / 100,
+              syntheticKey,
+              'DOT CSV',
+              new Date().toISOString()
+            ];
+          });
+
+          console.log('DOT Upload - Sending to Google Sheets:', {
+            url: webAppUrl,
+            recordCount: rows.length,
+            sampleRows: rows.slice(0, 2)
+          });
+
+          await fetch(webAppUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            // Simple request to bypass browser CORS preflight
+            body: JSON.stringify({ token, rows })
+          });
+
+          console.log('DOT Upload - Data sent successfully to Google Sheets');
+        }
+      } catch (_e) {
+        // Log error but don't fail the upload
+        console.warn('DOT Upload - Failed to send to Google Sheets:', _e);
+      }
+
       setIsProcessingComplete(true);
       onUploadDescription?.(`Processed ${allRecords.length} DOT records from ${files.length} file(s)`);
       

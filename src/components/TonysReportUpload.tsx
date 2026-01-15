@@ -59,22 +59,32 @@ const TonysReportUpload: React.FC<TonysReportUploadProps> = ({ onDataParsed, onC
         const webAppUrl = (process.env.REACT_APP_GS_WEBAPP_URL || '').trim();
         const token = (process.env.REACT_APP_GS_TOKEN || '').trim();
         if (webAppUrl && token && allRecords.length > 0) {
-          const rows = allRecords.map(r => [
-            `${r.period}-15`,
-            r.customerName,
-            r.productName,
-            r.productCode || '',  // Add product code
-            r.cases,
-            Math.round(r.revenue * 100) / 100,
-            // Synthetic invoice key
-            (() => {
-              const dateStr = `${r.period.replace(/-/g,'')}|${r.customerName}|${r.productName}|${r.cases}|${(Math.round(r.revenue*100)/100).toFixed(2)}`.toUpperCase();
-              let hash = 5381; for (let i = 0; i < dateStr.length; i++) { hash = ((hash << 5) + hash) + dateStr.charCodeAt(i); hash = hash >>> 0; }
-              return `SYN-${r.period.replace(/-/g,'')}-${hash.toString(36).toUpperCase()}`;
-            })(),
-            "Tony's XLSX",
-            new Date().toISOString()
-          ]);
+          const rows = allRecords.map(r => {
+            // Build hierarchical customer name: "Distributor - Customer/Store"
+            // This allows Google Sheets to display distributor > customer hierarchy
+            // and show which customers of each distributor have changed
+            const subCustomer = r.customerId || r.accountName || '';
+            const hierarchicalCustomer = subCustomer && subCustomer !== r.customerName
+              ? `${r.customerName} - ${subCustomer}`
+              : r.customerName;
+            
+            return [
+              `${r.period}-15`,
+              hierarchicalCustomer,
+              r.productName,
+              r.productCode || '',  // Add product code
+              r.cases,
+              Math.round(r.revenue * 100) / 100,
+              // Synthetic invoice key
+              (() => {
+                const dateStr = `${r.period.replace(/-/g,'')}|${hierarchicalCustomer}|${r.productName}|${r.cases}|${(Math.round(r.revenue*100)/100).toFixed(2)}`.toUpperCase();
+                let hash = 5381; for (let i = 0; i < dateStr.length; i++) { hash = ((hash << 5) + hash) + dateStr.charCodeAt(i); hash = hash >>> 0; }
+                return `SYN-${r.period.replace(/-/g,'')}-${hash.toString(36).toUpperCase()}`;
+              })(),
+              "Tony's XLSX",
+              new Date().toISOString()
+            ];
+          });
           await fetch(webAppUrl, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ token, rows }) });
         }
       } catch (_e) {}

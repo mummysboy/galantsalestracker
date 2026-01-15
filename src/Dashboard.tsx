@@ -19,7 +19,7 @@ import AlpineReportUpload from './components/AlpineReportUpload';
 import CustomReportModal from './components/CustomReportModal';
 import { AlpineSalesRecord, analyzeCustomerProgress } from './utils/alpineParser';
 // Removed hardcoded June seed; start empty and let uploads populate
-import { Upload, BarChart3, ChevronDown, Trash2, X, ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { Upload, BarChart3, ChevronDown, Trash2, X, ChevronLeft, ChevronRight, Download, RefreshCw } from 'lucide-react';
 import { toTitleCase } from './lib/utils';
 import PetesReportUpload from './components/PetesReportUpload';
 import KeHeReportUpload from './components/KeHeReportUpload';
@@ -33,12 +33,13 @@ import MhdReportUpload from './components/MhdReportUpload';
 import MhdCustomerDetailModal from './components/MhdCustomerDetailModal';
 import DotReportUpload from './components/DotReportUpload';
 import DotCustomerDetailModal from './components/DotCustomerDetailModal';
-import { useDynamoDB } from './hooks/useDynamoDB';
-import { dynamoDBService } from './services/dynamodb';
+import { useSupabase } from './hooks/useSupabase';
+import { supabaseService } from './services/supabase';
+import { supabase } from './services/supabase';
 // Use public folder for AWS Amplify compatibility
 const galantLogo = '/galantfoodco.avif';
 
-const generateDeterministicInvoiceKey = (d: string, p: string, c: string, pn: string, cs: number, r: number): string => {
+  const generateDeterministicInvoiceKey = (d: string, p: string, c: string, pn: string, cs: number, r: number): string => {
   // Ensure cases is properly converted to string (negative numbers like -1 become "-1")
   const casesStr = String(cs); // This preserves negative sign
   const k = `${p}|${c}|${pn}|${casesStr}|${r.toFixed(2)}`.toUpperCase();
@@ -638,10 +639,12 @@ const RevenueByProductComponent: React.FC<RevenueByProductProps> = ({ revenueByP
 interface DashboardProps {
   isAdmin?: boolean;
   username?: string;
+  authReady?: boolean;
+  hasSession?: boolean;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' }) => {
-  // DynamoDB hook for persisting and loading data
+const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '', authReady = false, hasSession = false }) => {
+  // Supabase hook for persisting and loading data
   const {
     saveSalesRecords,
     saveCustomerProgressionWithDedup,
@@ -650,7 +653,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
     saveAppState,
     loadAppState,
     clearDistributorData,
-  } = useDynamoDB();
+  } = useSupabase();
 
   // Customer modal handlers
   const handleCustomerClick = (customerName: string) => {
@@ -672,19 +675,57 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
   // User permissions for report visibility
   const [allowedDistributors, setAllowedDistributors] = useState<string[] | null>(null);
   
-  // Initialize all data as empty arrays - will load from DynamoDB
-  const [currentAlpineData, setCurrentAlpineData] = useState<AlpineSalesRecord[]>([]);
-  const [currentPetesData, setCurrentPetesData] = useState<AlpineSalesRecord[]>([]);
-  const [currentKeHeData, setCurrentKeHeData] = useState<AlpineSalesRecord[]>([]);
-  const [currentVistarData, setCurrentVistarData] = useState<AlpineSalesRecord[]>([]);
-  const [currentTonysData, setCurrentTonysData] = useState<AlpineSalesRecord[]>([]);
-  const [currentTroiaData, setCurrentTroiaData] = useState<AlpineSalesRecord[]>([]);
-  const [currentMhdData, setCurrentMhdData] = useState<AlpineSalesRecord[]>([]);
-  const [currentDotData, setCurrentDotData] = useState<AlpineSalesRecord[]>([]);
+  const loadArrayFromStorage = <T,>(key: string): T[] => {
+    try {
+      const saved = localStorage.getItem(key);
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? (parsed as T[]) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const loadMapFromStorage = (key: string): Map<string, any> => {
+    try {
+      const saved = localStorage.getItem(key);
+      if (!saved) return new Map();
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? new Map(parsed) : new Map();
+    } catch {
+      return new Map();
+    }
+  };
+
+  const loadStringFromStorage = (key: string, fallback = ''): string => {
+    try {
+      return localStorage.getItem(key) || fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
+  const normalizeDistributor = (value: string | null) => {
+    const valid = ['ALPINE', 'PETES', 'KEHE', 'VISTAR', 'TONYS', 'TROIA', 'MHD', 'DOT', 'ALL'] as const;
+    if (value && valid.includes(value as typeof valid[number])) {
+      return value as typeof valid[number];
+    }
+    return null;
+  };
+
+  // Initialize data from localStorage for refresh resilience
+  const [currentAlpineData, setCurrentAlpineData] = useState<AlpineSalesRecord[]>(() => loadArrayFromStorage<AlpineSalesRecord>('salesTracker_alpineData'));
+  const [currentPetesData, setCurrentPetesData] = useState<AlpineSalesRecord[]>(() => loadArrayFromStorage<AlpineSalesRecord>('salesTracker_petesData'));
+  const [currentKeHeData, setCurrentKeHeData] = useState<AlpineSalesRecord[]>(() => loadArrayFromStorage<AlpineSalesRecord>('salesTracker_keheData'));
+  const [currentVistarData, setCurrentVistarData] = useState<AlpineSalesRecord[]>(() => loadArrayFromStorage<AlpineSalesRecord>('salesTracker_vistarData'));
+  const [currentTonysData, setCurrentTonysData] = useState<AlpineSalesRecord[]>(() => loadArrayFromStorage<AlpineSalesRecord>('salesTracker_tonysData'));
+  const [currentTroiaData, setCurrentTroiaData] = useState<AlpineSalesRecord[]>(() => loadArrayFromStorage<AlpineSalesRecord>('salesTracker_troiaData'));
+  const [currentMhdData, setCurrentMhdData] = useState<AlpineSalesRecord[]>(() => loadArrayFromStorage<AlpineSalesRecord>('salesTracker_mhdData'));
+  const [currentDotData, setCurrentDotData] = useState<AlpineSalesRecord[]>(() => loadArrayFromStorage<AlpineSalesRecord>('salesTracker_dotData'));
   
-  // Initialize customer progressions as empty maps - will load from DynamoDB
-  const [currentCustomerProgressions, setCurrentCustomerProgressions] = useState<Map<string, any>>(new Map());
-  const [currentPetesCustomerProgressions, setCurrentPetesCustomerProgressions] = useState<Map<string, any>>(new Map());
+  // Initialize customer progressions from localStorage
+  const [currentCustomerProgressions, setCurrentCustomerProgressions] = useState<Map<string, any>>(() => loadMapFromStorage('salesTracker_alpineProgressions'));
+  const [currentPetesCustomerProgressions, setCurrentPetesCustomerProgressions] = useState<Map<string, any>>(() => loadMapFromStorage('salesTracker_petesProgressions'));
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [currentKeHeCustomerProgressions, setCurrentKeHeCustomerProgressions] = useState<Map<string, any>>(new Map());
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -692,8 +733,8 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [currentTroiaCustomerProgressions, setCurrentTroiaCustomerProgressions] = useState<Map<string, any>>(new Map());
   
-  // Initialize UI state - will load from DynamoDB app state
-  const [selectedMonth, setSelectedMonth] = useState<string>('');
+  // Initialize UI state - will load from Supabase app state
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => loadStringFromStorage('salesTracker_selectedMonth'));
 
   // Helper function to convert DynamoDB SalesRecord to AlpineSalesRecord
   const convertSalesRecordToAlpineRecord = (r: any): AlpineSalesRecord & { invoiceKey?: string } => {
@@ -721,7 +762,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
     }
     
     // Ensure cases is a number and preserve negative values
-    // DynamoDB should return numbers, but explicitly convert to handle any edge cases
+    // Supabase should return numbers, but explicitly convert to handle any edge cases
     const cases = typeof r.cases === 'number' ? r.cases : (typeof r.cases === 'string' ? parseFloat(r.cases) : 0);
     
     // Log if we're converting a negative case (for debugging)
@@ -750,10 +791,32 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
       customerId: r.customerId,
       itemNumber: r.itemNumber,
       size: r.size,
+      pack: typeof r.pack === 'number' ? r.pack : (r.pack ? parseFloat(r.pack) : undefined),
+      sizeOz: typeof r.sizeOz === 'number' ? r.sizeOz : (r.sizeOz ? parseFloat(r.sizeOz) : undefined),
       weightLbs: typeof r.weightLbs === 'number' ? r.weightLbs : (r.weightLbs ? parseFloat(r.weightLbs) : undefined),
       excludeFromTotals: r.distributor === 'PETES' || r.distributor === 'DOT',
       invoiceKey: r.invoiceKey, // Preserve invoiceKey for deduplication
     };
+  };
+
+  const buildDedupKey = (record: AlpineSalesRecord & { invoiceKey?: string }, distributor: string): string => {
+    if (distributor === 'KEHE' || distributor === 'VISTAR') {
+      return [
+        distributor,
+        record.period,
+        record.customerName,
+        record.accountName || '',
+        record.productName || '',
+        record.productCode || '',
+        record.itemNumber || '',
+        record.size || '',
+        record.cases,
+        record.revenue,
+      ].join('|');
+    }
+
+    return record.invoiceKey ||
+      `${distributor}-${record.period}-${record.customerName}-${record.productName}-${record.cases}-${record.revenue}`;
   };
   React.useEffect(() => {
     if (selectedMonth) {
@@ -761,11 +824,14 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
     }
   }, [selectedMonth, saveAppState]);
 
-  // Load data from DynamoDB on component mount
+  // Load data from Supabase when auth/session is ready
   React.useEffect(() => {
-    const loadFromDynamoDB = async () => {
+    if (!authReady || !hasSession) {
+      return;
+    }
+    const loadFromSupabase = async () => {
       try {
-        console.log('Loading all data from DynamoDB...');
+        console.log('Loading all data from Supabase...');
         
         // FIRST: Load user permissions (if not admin)
         let userPerms: string[] | null = null;
@@ -774,21 +840,143 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
             // Normalize username (trim whitespace) to match how it's saved
             const normalizedUsername = username.trim();
             
+            // WORKAROUND: Get all app states first and filter client-side to avoid 406 RLS errors
+            // Individual getAppState() calls are failing with 406, but getAllAppStates() works
+            console.log('[Dashboard] Loading all app states to find permissions (workaround for 406 errors)...');
+            const allStates = await supabaseService.getAllAppStates();
+            const permissionStates = allStates.filter(state => state.key.startsWith('userPermissions:'));
+            console.log('[Dashboard] Found', permissionStates.length, 'permission entries in database');
             
-            // Try loading with normalized username first
-            const key = `userPermissions:${normalizedUsername}`;
-            let appState = await dynamoDBService.getAppState(key);
-            
-            // If not found, try with original username (for backwards compatibility)
-            if (!appState && username !== normalizedUsername) {
-              const originalKey = `userPermissions:${username}`;
-              console.log('[Dashboard] Trying with original username:', { username, key: originalKey });
-              appState = await dynamoDBService.getAppState(originalKey);
+            // Build list of possible keys to search for
+            const key = `userPermissions:${normalizedUsername}`; // Primary key for logging
+            const possibleKeys: string[] = [key];
+            if (username !== normalizedUsername) {
+              possibleKeys.push(`userPermissions:${username}`);
             }
             
-            // List all permissions for debugging
-            const allStates = await dynamoDBService.getAllAppStates();
-            const permissionStates = allStates.filter(state => state.key.startsWith('userPermissions:'));
+            // Get user info for additional fallback keys
+            let user: any = null;
+            try {
+              const { data: { user: authUser } } = await supabase?.auth.getUser() || { data: { user: null } };
+              user = authUser;
+              if (user) {
+                if (user.email) {
+                  const emailPrefix = user.email.split('@')[0].trim();
+                  if (emailPrefix !== normalizedUsername && emailPrefix !== username) {
+                    possibleKeys.push(`userPermissions:${emailPrefix}`);
+                  }
+                }
+                if (user.id) {
+                  possibleKeys.push(`userPermissions:${user.id}`);
+                }
+                // Try to get profile username
+                try {
+                  const profile = await supabaseService.getUserProfile(user.id);
+                  if (profile?.username && profile.username !== normalizedUsername && profile.username !== username) {
+                    possibleKeys.push(`userPermissions:${profile.username.trim()}`);
+                  }
+                } catch (profileErr) {
+                  // Ignore profile errors
+                }
+              }
+            } catch (userErr) {
+              console.warn('[Dashboard] Could not get user info:', userErr);
+            }
+            
+            console.log('[Dashboard] Searching for permissions with keys:', JSON.stringify(possibleKeys, null, 2));
+            
+            // Try to get profile username for logging
+            let profileUsername = 'not loaded';
+            if (user?.id) {
+              try {
+                const profile = await supabaseService.getUserProfile(user.id);
+                profileUsername = profile?.username || 'none';
+              } catch (_e) {
+                profileUsername = 'error loading';
+              }
+            }
+            
+            console.log('[Dashboard] User info for matching:', JSON.stringify({
+              userId: user?.id,
+              email: user?.email,
+              emailPrefix: user?.email ? user.email.split('@')[0].trim().toLowerCase() : 'none',
+              normalizedUsername,
+              profileUsername
+            }, null, 2));
+            
+            // Search through permission states for a match
+            let appState = permissionStates.find(s => possibleKeys.includes(s.key));
+            if (appState) {
+              console.log('[Dashboard] ✅ Found exact match:', { key: appState.key, value: appState.value });
+            }
+            
+            // If still not found, try case-insensitive and trimmed matching
+            if (!appState) {
+              const normalizedPossibleKeys = possibleKeys.map(k => k.toLowerCase().trim());
+              appState = permissionStates.find(s => {
+                const normalizedKey = s.key.toLowerCase().trim();
+                const matches = normalizedPossibleKeys.includes(normalizedKey);
+                if (matches) {
+                  console.log('[Dashboard] ✅ Found case-insensitive match:', { 
+                    searchedKey: normalizedKey, 
+                    foundKey: s.key,
+                    value: s.value 
+                  });
+                }
+                return matches;
+              });
+            }
+            
+            // Final fallback: Try to match by user ID in the key
+            if (!appState && user?.id) {
+              console.log('[Dashboard] Trying user ID match:', JSON.stringify({ 
+                userId: user.id,
+                checkingKeys: permissionStates.map(s => ({
+                  key: s.key,
+                  containsUserId: s.key.includes(user.id),
+                  userIdInKey: s.key.replace('userPermissions:', '') === user.id
+                }))
+              }, null, 2));
+              appState = permissionStates.find(s => {
+                const matches = s.key.includes(user.id) || s.key === `userPermissions:${user.id}`;
+                if (matches) {
+                  console.log('[Dashboard] ✅ Found user ID match:', JSON.stringify({ key: s.key, value: s.value }, null, 2));
+                }
+                return matches;
+              });
+            }
+            
+            // Final fallback: Try to match by email prefix in the key (case-insensitive)
+            if (!appState && user?.email) {
+              const emailPrefix = user.email.split('@')[0].trim().toLowerCase();
+              console.log('[Dashboard] Trying email prefix match:', JSON.stringify({ 
+                email: user.email, 
+                emailPrefix,
+                checkingKeys: permissionStates.map(s => {
+                  const keyUsername = s.key.replace('userPermissions:', '').toLowerCase().trim();
+                  return {
+                    key: s.key,
+                    keyUsername,
+                    emailPrefix,
+                    matches: keyUsername === emailPrefix
+                  };
+                })
+              }, null, 2));
+              appState = permissionStates.find(s => {
+                const keyUsername = s.key.replace('userPermissions:', '').toLowerCase().trim();
+                const matches = keyUsername === emailPrefix;
+                if (matches) {
+                  console.log('[Dashboard] ✅ Found email prefix match:', JSON.stringify({ key: s.key, value: s.value }, null, 2));
+                }
+                return matches;
+              });
+            }
+            
+            if (!appState) {
+              console.log('[Dashboard] ⚠️ No permissions found after all search attempts. Available permission keys:', 
+                JSON.stringify(permissionStates.map(s => s.key), null, 2)
+              );
+            }
             console.log('[Dashboard] All saved permissions in DB:', JSON.stringify(permissionStates.map(s => ({
               key: s.key,
               username: s.key.replace('userPermissions:', ''),
@@ -828,20 +1016,51 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
               value: appState?.value,
               valueType: typeof appState?.value,
               valueIsArray: Array.isArray(appState?.value),
-              valueLength: appState && Array.isArray(appState.value) ? appState.value.length : 'N/A'
+              valueLength: appState && Array.isArray(appState.value) ? appState.value.length : 'N/A',
+              finalKey: appState?.key
             });
             if (appState && appState.value) {
-              userPerms = appState.value;
-              console.log('[Dashboard] Setting allowed distributors:', { normalizedUsername, userPerms });
-              setAllowedDistributors(userPerms);
+              // Ensure it's an array
+              const perms = Array.isArray(appState.value) ? appState.value : [];
+              userPerms = perms;
+              console.log('[Dashboard] ✅ Permissions FOUND and loaded:', { 
+                normalizedUsername, 
+                key,
+                finalKey: appState.key,
+                permissions: perms,
+                permissionsCount: perms.length,
+                permissionsString: JSON.stringify(perms)
+              });
+              setAllowedDistributors(perms);
             } else {
               // No permissions set - user can't see any reports
-              console.log('[Dashboard] No permissions found for user:', { normalizedUsername, key });
+              // Try to get user info for better error message
+              let userInfoForError: { userId: string | null; email: string | null } = { userId: null, email: null };
+              try {
+                const { data: { user } } = await supabase?.auth.getUser() || { data: { user: null } };
+                if (user) {
+                  userInfoForError = { userId: user.id, email: user.email || null };
+                }
+              } catch (_e) {
+                // Ignore errors
+              }
+              
+              console.warn('[Dashboard] ⚠️ No permissions found for user:', { 
+                normalizedUsername, 
+                key,
+                'triedKey': key,
+                'appState': appState ? 'exists but no value' : 'null',
+                'appStateValue': appState?.value,
+                userId: userInfoForError.userId,
+                email: userInfoForError.email,
+                allSavedPermissionKeys: permissionStates.map(s => s.key),
+                suggestion: `No permissions found for username "${normalizedUsername}". Please go to Admin Dashboard and set permissions for this user. The system tried to find permissions using: username "${normalizedUsername}", user ID "${userInfoForError.userId}", and email prefix.`
+              });
               userPerms = [];
               setAllowedDistributors([]);
             }
           } catch (error) {
-            console.error('[Dashboard] Error loading user permissions from DynamoDB:', { username, error });
+            console.error('[Dashboard] Error loading user permissions from Supabase:', { username, error });
             userPerms = [];
             setAllowedDistributors([]);
           }
@@ -858,13 +1077,23 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
           ? allDistributors
           : allDistributors.filter(d => userPerms && userPerms.includes(d));
         
+        console.log('[Dashboard] Data loading plan:', {
+          isAdmin,
+          userPerms,
+          userPermsType: typeof userPerms,
+          userPermsIsNull: userPerms === null,
+          userPermsLength: Array.isArray(userPerms) ? userPerms.length : 'N/A',
+          distributorsToLoad,
+          distributorsToLoadCount: distributorsToLoad.length
+        });
+        
         for (const distributor of distributorsToLoad) {
           try {
             await loadSalesRecordsByDistributor(distributor);
             // The hook sets salesRecords, but we need to convert and set our state
             // Let's use the service directly to get records
-            const records = await dynamoDBService.getSalesRecordsByDistributor(distributor);
-            console.log(`Loaded ${records.length} records for ${distributor} from DynamoDB`);
+            const records = await supabaseService.getSalesRecordsByDistributor(distributor);
+            console.log(`Loaded ${records.length} records for ${distributor} from Supabase`);
             
             // Convert SalesRecord back to AlpineSalesRecord format
             const convertedRecords: AlpineSalesRecord[] = records.map(convertSalesRecordToAlpineRecord);
@@ -890,11 +1119,8 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
             // Deduplicate records based on invoiceKey to prevent counting duplicates
             const deduplicatedRecords = Array.from(
               new Map(convertedRecords.map(r => {
-                // Use stored invoiceKey if available (preferred), otherwise generate from record data
-                // For Tony's, the invoiceKey in DynamoDB was generated with customerId/accountName included
-                const key = (r as any).invoiceKey || 
-                  `${distributor}-${r.period}-${r.customerName}-${r.productName}-${r.cases}-${r.revenue}`;
-                
+                const key = buildDedupKey(r, distributor);
+
                 // Log if we're generating a key for a negative case (shouldn't happen if invoiceKey was saved correctly)
                 if (distributor === 'TONYS' && r.cases < 0 && !(r as any).invoiceKey) {
                   console.warn('[Dashboard Load] Missing invoiceKey for negative case record:', {
@@ -905,7 +1131,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
                     generatedKey: key
                   });
                 }
-                
+
                 return [key, r];
               })).values()
             );
@@ -989,6 +1215,18 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
             } else if (distributor === 'PETES') {
               setCurrentPetesData(deduplicatedRecords);
             } else if (distributor === 'KEHE') {
+              console.log('[Dashboard Load] KEHE data loaded:', {
+                totalRecords: deduplicatedRecords.length,
+                periods: Array.from(new Set(deduplicatedRecords.map(r => r.period))).sort(),
+                sampleRecords: deduplicatedRecords.slice(0, 3).map(r => ({
+                  customerName: r.customerName,
+                  accountName: r.accountName,
+                  productName: r.productName,
+                  period: r.period,
+                  cases: r.cases,
+                  revenue: r.revenue
+                }))
+              });
               setCurrentKeHeData(deduplicatedRecords);
             } else if (distributor === 'VISTAR') {
               setCurrentVistarData(deduplicatedRecords);
@@ -1013,39 +1251,39 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
               setCurrentDotData(deduplicatedRecords);
             }
           } catch (error) {
-            console.log(`Note: Could not load ${distributor} from DynamoDB (may not have data yet):`, error instanceof Error ? error.message : error);
+            console.log(`Note: Could not load ${distributor} from Supabase (may not have data yet):`, error instanceof Error ? error.message : error);
           }
         }
         
         // Load customer progressions for distributors that use them
         try {
           await loadCustomerProgressionsByDistributor('ALPINE');
-          const alpineProgressions = await dynamoDBService.getCustomerProgressionsByDistributor('ALPINE');
+          const alpineProgressions = await supabaseService.getCustomerProgressionsByDistributor('ALPINE');
           const alpineMap = new Map<string, any>();
           alpineProgressions.forEach(p => alpineMap.set(p.customerName, p.progression));
           setCurrentCustomerProgressions(alpineMap);
         } catch (error) {
-          console.log('Note: Could not load Alpine progressions from DynamoDB:', error);
+          console.log('Note: Could not load Alpine progressions from Supabase:', error);
         }
         
         try {
           await loadCustomerProgressionsByDistributor('PETES');
-          const petesProgressions = await dynamoDBService.getCustomerProgressionsByDistributor('PETES');
+          const petesProgressions = await supabaseService.getCustomerProgressionsByDistributor('PETES');
           const petesMap = new Map<string, any>();
           petesProgressions.forEach(p => petesMap.set(p.customerName, p.progression));
           setCurrentPetesCustomerProgressions(petesMap);
         } catch (error) {
-          console.log('Note: Could not load Petes progressions from DynamoDB:', error);
+          console.log('Note: Could not load Petes progressions from Supabase:', error);
         }
         
-        // Load UI preferences from DynamoDB app state
+        // Load UI preferences from Supabase app state
         try {
           const savedMonth = await loadAppState('selectedMonth');
           if (savedMonth) {
             setSelectedMonth(savedMonth);
           }
         } catch (error) {
-          console.log('Note: Could not load selectedMonth from DynamoDB:', error);
+          console.log('Note: Could not load selectedMonth from Supabase:', error);
         }
         
         // THIRD: Set initial distributor after permissions and data are loaded
@@ -1077,7 +1315,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
             // but hasNoPermissions check will prevent rendering
           }
         } catch (error) {
-          console.log('Note: Could not load selectedDistributor from DynamoDB:', error);
+          console.log('Note: Could not load selectedDistributor from Supabase:', error);
           // Fallback: set based on permissions
           if (isAdmin || userPerms === null) {
             setSelectedDistributor('ALPINE');
@@ -1091,14 +1329,14 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
           // If userPerms is empty array, don't set distributor
         }
         
-        console.log('DynamoDB data load complete');
+        console.log('Supabase data load complete');
       } catch (error) {
-        console.error('Error loading from DynamoDB:', error);
+        console.error('Error loading from Supabase:', error);
       }
     };
 
-    loadFromDynamoDB();
-  }, [loadSalesRecordsByDistributor, loadCustomerProgressionsByDistributor, loadAppState]);
+    loadFromSupabase();
+  }, [authReady, hasSession, isAdmin, username, loadSalesRecordsByDistributor, loadCustomerProgressionsByDistributor, loadAppState]);
 
   const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
   // Removed CSV invoice upload; no longer tracking last uploaded invoice month
@@ -1110,10 +1348,87 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
   const [showMonthlySummary, setShowMonthlySummary] = useState(false);
   const [deltaModalOpen, setDeltaModalOpen] = useState(false);
   const [newAccountsModalOpen, setNewAccountsModalOpen] = useState(false);
-  const [selectedDistributor, setSelectedDistributor] = useState<'ALPINE' | 'PETES' | 'KEHE' | 'VISTAR' | 'TONYS' | 'TROIA' | 'MHD' | 'DOT' | 'ALL'>('ALPINE');
+  const [selectedDistributor, setSelectedDistributor] = useState<'ALPINE' | 'PETES' | 'KEHE' | 'VISTAR' | 'TONYS' | 'TROIA' | 'MHD' | 'DOT' | 'ALL'>(() => {
+    const saved = normalizeDistributor(loadStringFromStorage('salesTracker_selectedDistributor'));
+    return saved ?? 'ALPINE';
+  });
   const [permissionsLoaded, setPermissionsLoaded] = useState(false);
 
-  // Save selectedDistributor to DynamoDB app state
+  // Persist UI state locally for refresh resilience
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('salesTracker_selectedMonth', selectedMonth);
+    } catch {}
+  }, [selectedMonth]);
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('salesTracker_selectedDistributor', selectedDistributor);
+    } catch {}
+  }, [selectedDistributor]);
+
+  // Persist data locally as a fallback if Supabase is slow/unavailable
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('salesTracker_alpineData', JSON.stringify(currentAlpineData));
+    } catch {}
+  }, [currentAlpineData]);
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('salesTracker_petesData', JSON.stringify(currentPetesData));
+    } catch {}
+  }, [currentPetesData]);
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('salesTracker_keheData', JSON.stringify(currentKeHeData));
+    } catch {}
+  }, [currentKeHeData]);
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('salesTracker_vistarData', JSON.stringify(currentVistarData));
+    } catch {}
+  }, [currentVistarData]);
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('salesTracker_tonysData', JSON.stringify(currentTonysData));
+    } catch {}
+  }, [currentTonysData]);
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('salesTracker_troiaData', JSON.stringify(currentTroiaData));
+    } catch {}
+  }, [currentTroiaData]);
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('salesTracker_mhdData', JSON.stringify(currentMhdData));
+    } catch {}
+  }, [currentMhdData]);
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('salesTracker_dotData', JSON.stringify(currentDotData));
+    } catch {}
+  }, [currentDotData]);
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('salesTracker_alpineProgressions', JSON.stringify(Array.from(currentCustomerProgressions.entries())));
+    } catch {}
+  }, [currentCustomerProgressions]);
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('salesTracker_petesProgressions', JSON.stringify(Array.from(currentPetesCustomerProgressions.entries())));
+    } catch {}
+  }, [currentPetesCustomerProgressions]);
+
+  // Save selectedDistributor to Supabase app state
   React.useEffect(() => {
     saveAppState('selectedDistributor', selectedDistributor).catch(console.error);
   }, [selectedDistributor, saveAppState]);
@@ -1123,11 +1438,11 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
   const [displayMode, setDisplayMode] = useState<'revenue' | 'cases'>('cases');
   const [timeAggregation, setTimeAggregation] = useState<'3mo' | '6mo' | '1yr' | '5yr'>('3mo');
   
-  // Function to clear all DynamoDB data (available for future use)
+  // Function to clear all Supabase data (available for future use)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const clearAllData = async () => {
     try {
-      // Clear from DynamoDB - this would require adding clearAllData to the hook
+      // Clear from Supabase - this would require adding clearAllData to the hook
       // For now, just reset local state
       setCurrentAlpineData([]);
       setCurrentPetesData([]);
@@ -1193,8 +1508,19 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
   const currentData = useMemo(() => {
     // Check if user has access to the selected distributor
     if (!isAdmin && allowedDistributors !== null) {
+      console.log('[currentData] Permission check:', {
+        isAdmin,
+        allowedDistributors,
+        allowedDistributorsType: typeof allowedDistributors,
+        allowedDistributorsIsNull: allowedDistributors === null,
+        allowedDistributorsLength: Array.isArray(allowedDistributors) ? allowedDistributors.length : 'N/A',
+        selectedDistributor,
+        hasAccess: allowedDistributors.includes(selectedDistributor)
+      });
+      
       if (selectedDistributor !== 'ALL' && !allowedDistributors.includes(selectedDistributor)) {
         // User doesn't have access to this distributor - return empty array
+        console.warn('[currentData] ⚠️ User does NOT have access to:', selectedDistributor, 'Allowed:', allowedDistributors);
         return [];
       }
       if (selectedDistributor === 'ALL') {
@@ -1212,9 +1538,23 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
       }
     }
     
-    if (selectedDistributor === 'ALPINE') return currentAlpineData;
+    if (selectedDistributor === 'ALPINE') {
+      console.log('[currentData] Returning ALPINE data:', currentAlpineData.length, 'records');
+      return currentAlpineData;
+    }
     if (selectedDistributor === 'PETES') return currentPetesData;
-    if (selectedDistributor === 'KEHE') return currentKeHeData;
+    if (selectedDistributor === 'KEHE') {
+      console.log('[currentData] Returning KEHE data:', {
+        recordCount: currentKeHeData.length,
+        periods: Array.from(new Set(currentKeHeData.map(r => r.period))).sort(),
+        sampleRecords: currentKeHeData.slice(0, 3).map(r => ({
+          customerName: r.customerName,
+          period: r.period,
+          cases: r.cases
+        }))
+      });
+      return currentKeHeData;
+    }
     if (selectedDistributor === 'VISTAR') return currentVistarData;
     if (selectedDistributor === 'TONYS') return currentTonysData;
     if (selectedDistributor === 'TROIA') return currentTroiaData;
@@ -1404,9 +1744,9 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
     
     setCurrentCustomerProgressions(updatedCustomerProgressions);
     
-    // Save to DynamoDB
+    // Save to Supabase
     try {
-      // Convert to SalesRecord format for DynamoDB
+      // Convert to SalesRecord format for Supabase
       const salesRecords = data.records.map(record => ({
         distributor: 'ALPINE',
         period: record.period,
@@ -1425,7 +1765,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
         weightLbs: record.weightLbs,
       }));
 
-      // Save to DynamoDB
+      // Save to Supabase
       const savedRecords = await saveSalesRecords(salesRecords);
       
       // Only save progressions if records were actually saved
@@ -1433,12 +1773,12 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
         for (const [customerName, progression] of Array.from(data.customerProgressions.entries())) {
           await saveCustomerProgressionWithDedup('ALPINE', customerName, progression);
         }
-        console.log('Alpine data successfully saved to DynamoDB');
+        console.log('Alpine data successfully saved to Supabase');
       } else {
         console.log('[Alpine] Duplicate upload detected, skipping progressions');
       }
     } catch (error) {
-      console.error('[Alpine] Failed to save Alpine data to DynamoDB:', error);
+      console.error('[Alpine] Failed to save Alpine data to Supabase:', error);
         setIsUploading(false);
     }
     
@@ -1468,7 +1808,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
     });
     setCurrentPetesCustomerProgressions(updatedCustomerProgressions);
 
-    // Save to DynamoDB
+    // Save to Supabase
     (async () => {
       try {
         const salesRecords = data.records.map(record => ({
@@ -1495,12 +1835,12 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
           await saveCustomerProgressionWithDedup('PETES', customerName, progression);
         }
         
-        console.log('Pete\'s data successfully saved to DynamoDB');
-        // Hide overlay after all DynamoDB operations complete
+        console.log('Pete\'s data successfully saved to Supabase');
+        // Hide overlay after all Supabase operations complete
         setIsUploading(false);
         setShowUploadSection(false);
       } catch (error) {
-        console.error('Failed to save Pete\'s data to DynamoDB:', error);
+        console.error('Failed to save Pete\'s data to Supabase:', error);
         setIsUploading(false);
         setIsUploading(false);
       }
@@ -1552,26 +1892,44 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
     });
     setCurrentKeHeCustomerProgressions(updatedCustomerProgressions);
 
-    // Save to DynamoDB and manage overlay
+    // Save to Supabase and manage overlay
     (async () => {
       try {
-        const salesRecords = data.records.map(record => ({
-          distributor: 'KEHE',
-          period: record.period,
-          customerName: record.customerName,
-          productName: record.productName,
-          productCode: record.productCode,
-          cases: record.cases,
-          revenue: record.revenue,
-          invoiceKey: generateDeterministicInvoiceKey('KEHE', record.period, record.customerName, record.productName, record.cases, record.revenue),
-          source: 'KeHe Upload',
-          timestamp: new Date().toISOString(),
-          accountName: record.accountName,
-          customerId: record.customerId,
-          itemNumber: record.itemNumber,
-          size: record.size,
-          weightLbs: record.weightLbs,
-        }));
+        const salesRecords = data.records.map(record => {
+          const customerKey = record.accountName && record.accountName !== record.customerName
+            ? `${record.customerName}|${record.accountName}`
+            : record.customerName;
+          const productKey = [
+            record.productName,
+            record.productCode,
+            record.itemNumber,
+            record.size,
+          ].filter(Boolean).join('|');
+          return {
+            distributor: 'KEHE',
+            period: record.period,
+            customerName: record.customerName,
+            productName: record.productName,
+            productCode: record.productCode,
+            cases: record.cases,
+            revenue: record.revenue,
+            invoiceKey: generateDeterministicInvoiceKey(
+              'KEHE',
+              record.period,
+              customerKey,
+              productKey || record.productName,
+              record.cases,
+              record.revenue
+            ),
+            source: 'KeHe Upload',
+            timestamp: new Date().toISOString(),
+            accountName: record.accountName,
+            customerId: record.customerId,
+            itemNumber: record.itemNumber,
+            size: record.size,
+            weightLbs: record.weightLbs,
+          };
+        });
 
         const savedRecords = await saveSalesRecords(salesRecords);
         
@@ -1589,13 +1947,12 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
           console.log('[KeHe Progression] No new records saved, skipping progression updates');
         }
         
-        console.log('KeHe data successfully saved to DynamoDB');
-        // Hide overlay after all DynamoDB operations complete
+        console.log('KeHe data successfully saved to Supabase');
+        // Hide overlay after all Supabase operations complete
         setIsUploading(false);
         setShowUploadSection(false);
       } catch (error) {
-        console.error('Failed to save KeHe data to DynamoDB:', error);
-        setIsUploading(false);
+        console.error('Failed to save KeHe data to Supabase:', error);
         setIsUploading(false);
       }
     })();
@@ -1629,26 +1986,46 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
       updatedCustomerProgressions.set(customer, progress);
     });
 
-    // Save to DynamoDB
+    // Save to Supabase
     (async () => {
       try {
-        const salesRecords = data.records.map(record => ({
-          distributor: 'VISTAR',
-          period: record.period,
-          customerName: record.customerName,
-          productName: record.productName,
-          productCode: record.productCode,
-          cases: record.cases,
-          revenue: record.revenue,
-          invoiceKey: generateDeterministicInvoiceKey('VISTAR', record.period, record.customerName, record.productName, record.cases, record.revenue),
-          source: 'Vistar Upload',
-          timestamp: new Date().toISOString(),
-          accountName: record.accountName,
-          customerId: record.customerId,
-          itemNumber: record.itemNumber,
-          size: record.size,
-          weightLbs: record.weightLbs,
-        }));
+        const salesRecords = data.records.map(record => {
+          const customerKey = record.accountName && record.accountName !== record.customerName
+            ? `${record.customerName}|${record.accountName}`
+            : record.customerName;
+          const productKey = [
+            record.productName,
+            record.productCode,
+            record.itemNumber,
+            record.size,
+          ].filter(Boolean).join('|');
+          return {
+            distributor: 'VISTAR',
+            period: record.period,
+            customerName: record.customerName,
+            productName: record.productName,
+            productCode: record.productCode,
+            cases: record.cases,
+            revenue: record.revenue,
+            invoiceKey: generateDeterministicInvoiceKey(
+              'VISTAR',
+              record.period,
+              customerKey,
+              productKey || record.productName,
+              record.cases,
+              record.revenue
+            ),
+            source: 'Vistar Upload',
+            timestamp: new Date().toISOString(),
+            accountName: record.accountName,
+            customerId: record.customerId,
+            itemNumber: record.itemNumber,
+            size: record.size,
+            pack: record.pack,
+            sizeOz: record.sizeOz,
+            weightLbs: record.weightLbs,
+          };
+        });
 
         await saveSalesRecords(salesRecords);
         
@@ -1656,12 +2033,12 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
           await saveCustomerProgressionWithDedup('VISTAR', customerName, progression);
         }
         
-        console.log('Vistar data successfully saved to DynamoDB');
-        // Hide overlay after all DynamoDB operations complete
+        console.log('Vistar data successfully saved to Supabase');
+        // Hide overlay after all Supabase operations complete
         setIsUploading(false);
         setShowUploadSection(false);
       } catch (error) {
-        console.error('Failed to save Vistar data to DynamoDB:', error);
+        console.error('Failed to save Vistar data to Supabase:', error);
         setIsUploading(false);
       }
     })();
@@ -1676,7 +2053,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
   const handleClearVistarData = async () => {
     console.log('Clearing Vistar data');
     try {
-      // Try to clear from DynamoDB, but don't fail if it doesn't work
+      // Try to clear from Supabase, but don't fail if it doesn't work
       try {
         await clearDistributorData('VISTAR');
       } catch (dbError) {
@@ -1773,7 +2150,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
     });
     setCurrentTonysCustomerProgressions(updatedCustomerProgressions);
 
-    // Save to DynamoDB - save original customerName (distributor) separately so we can reconstruct hierarchical format on load
+    // Save to Supabase - save original customerName (distributor) separately so we can reconstruct hierarchical format on load
     (async () => {
       try {
         const salesRecords = data.records.map(record => {
@@ -1839,12 +2216,12 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
           await saveCustomerProgressionWithDedup('TONYS', customerName, progression);
         }
         
-        console.log('Tony\'s data successfully saved to DynamoDB');
-        // Hide overlay after all DynamoDB operations complete
+        console.log('Tony\'s data successfully saved to Supabase');
+        // Hide overlay after all Supabase operations complete
         setIsUploading(false);
         setShowUploadSection(false);
       } catch (error) {
-        console.error('Failed to save Tony\'s data to DynamoDB:', error);
+        console.error('Failed to save Tony\'s data to Supabase:', error);
         setIsUploading(false);
       }
     })();
@@ -1878,7 +2255,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
     });
     setCurrentTroiaCustomerProgressions(updatedCustomerProgressions);
 
-    // Save to DynamoDB
+    // Save to Supabase
     (async () => {
       try {
         const salesRecords = data.records.map(record => ({
@@ -1905,12 +2282,12 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
           await saveCustomerProgressionWithDedup('TROIA', customerName, progression);
         }
         
-        console.log('Troia data successfully saved to DynamoDB');
-        // Hide overlay after all DynamoDB operations complete
+        console.log('Troia data successfully saved to Supabase');
+        // Hide overlay after all Supabase operations complete
         setIsUploading(false);
         setShowUploadSection(false);
       } catch (error) {
-        console.error('Failed to save Troia data to DynamoDB:', error);
+        console.error('Failed to save Troia data to Supabase:', error);
         setIsUploading(false);
         setIsUploading(false);
       }
@@ -1937,7 +2314,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
 
     setCurrentMhdData(mergedData);
 
-    // Save to DynamoDB
+    // Save to Supabase
     (async () => {
       try {
         const salesRecords = data.records.map(record => ({
@@ -1964,12 +2341,12 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
           await saveCustomerProgressionWithDedup('MHD', customerName, progression);
         }
         
-        console.log('MHD data successfully saved to DynamoDB');
-        // Hide overlay after all DynamoDB operations complete
+        console.log('MHD data successfully saved to Supabase');
+        // Hide overlay after all Supabase operations complete
         setIsUploading(false);
         setShowUploadSection(false);
       } catch (error) {
-        console.error('Failed to save MHD data to DynamoDB:', error);
+        console.error('Failed to save MHD data to Supabase:', error);
         setIsUploading(false);
       }
     })();
@@ -2035,9 +2412,9 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
     console.log(`[DOT] Deduplication: ${combinedData.length} records -> ${mergedData.length} unique records`);
     setCurrentDotData(mergedData);
     
-    // Save to DynamoDB
+    // Save to Supabase
     try {
-      // Convert to SalesRecord format for DynamoDB
+      // Convert to SalesRecord format for Supabase
       const salesRecords = data.records.map(record => ({
         distributor: 'DOT',
         period: record.period,
@@ -2056,16 +2433,16 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
         weightLbs: record.weightLbs,
       }));
 
-      // Save to DynamoDB
+      // Save to Supabase
       const savedRecords = await saveSalesRecords(salesRecords);
       
       if (savedRecords && savedRecords.length > 0) {
-        console.log('DOT data successfully saved to DynamoDB');
+        console.log('DOT data successfully saved to Supabase');
       } else {
         console.log('[DOT] Duplicate upload detected, skipping save');
       }
     } catch (error) {
-      console.error('[DOT] Failed to save DOT data to DynamoDB:', error);
+      console.error('[DOT] Failed to save DOT data to Supabase:', error);
       setIsUploading(false);
     }
     
@@ -2093,7 +2470,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
     
     setIsDeleting(true);
     try {
-      // Delete from DynamoDB first
+      // Delete from Supabase first
       const distributorMap: Record<string, string> = {
         'ALPINE': 'ALPINE',
         'PETES': 'PETES',
@@ -2107,12 +2484,12 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '' })
       const distributorName = distributorMap[selectedDistributor];
       
       if (distributorName) {
-        await dynamoDBService.deleteCustomerProgressionsByPeriod(distributorName, periodToDelete);
-        await dynamoDBService.deleteRecordsByPeriodAndDistributor(distributorName, periodToDelete);
-        console.log(`[Dashboard] Deleted ${distributorName} / ${periodToDelete} from DynamoDB`);
+        await supabaseService.deleteRecordsByPeriodAndDistributor(distributorName, periodToDelete);
+        // Note: Customer progressions are automatically managed via upsert, so we don't need to delete them separately
+        console.log(`[Dashboard] Deleted ${distributorName} / ${periodToDelete} from Supabase`);
       }
     } catch (error) {
-      console.error('[Dashboard] Error deleting from DynamoDB:', error);
+      console.error('[Dashboard] Error deleting from Supabase:', error);
       alert(`Error deleting: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setIsDeleting(false);
       return;

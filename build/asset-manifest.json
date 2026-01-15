@@ -1,18 +1,17 @@
 {
   "files": {
     "main.css": "/static/css/main.da6aca68.css",
-    "main.js": "/static/js/main.3f5deb4e.js",
+    "main.js": "/static/js/main.3d57a34b.js",
     "static/js/82.6aeaf02f.chunk.js": "/static/js/82.6aeaf02f.chunk.js",
     "static/js/453.cbaca6bb.chunk.js": "/static/js/453.cbaca6bb.chunk.js",
-    "static/media/galantfoodco.avif": "/static/media/galantfoodco.a827aa3a4da33daa0cee.avif",
     "index.html": "/index.html",
     "main.da6aca68.css.map": "/static/css/main.da6aca68.css.map",
-    "main.3f5deb4e.js.map": "/static/js/main.3f5deb4e.js.map",
+    "main.3d57a34b.js.map": "/static/js/main.3d57a34b.js.map",
     "82.6aeaf02f.chunk.js.map": "/static/js/82.6aeaf02f.chunk.js.map",
     "453.cbaca6bb.chunk.js.map": "/static/js/453.cbaca6bb.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.da6aca68.css",
-    "static/js/main.3f5deb4e.js"
+    "static/js/main.3d57a34b.js"
   ]
 }

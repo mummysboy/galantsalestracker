@@ -14,6 +14,7 @@
     "@smithy/protocol-http": "^5.3.5",
     "@smithy/smithy-client": "^4.9.10",
     "@smithy/types": "^4.9.0",
+    "@supabase/supabase-js": "^2.90.1",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",

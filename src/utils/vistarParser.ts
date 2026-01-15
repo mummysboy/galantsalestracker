@@ -1,6 +1,7 @@
 // import * as XLSX from 'xlsx'; // Currently unused
 import { AlpineSalesRecord } from './alpineParser';
 import { mapToCanonicalProductName, getItemNumberFromVistarCode, PRODUCT_MAPPINGS } from './productMapping';
+import { loadMasterPricingData } from './masterPricingLoader';
 
 export interface ParsedVistarData {
   records: AlpineSalesRecord[];
@@ -44,6 +45,9 @@ function toNumber(value: any): number {
 // }
 
 export async function parseVistarCSV(file: File): Promise<ParsedVistarData> {
+  // Load master pricing data for weight calculations
+  const masterPricingData = await loadMasterPricingData();
+  
   const text = await file.text();
   const lines = text.split('\n');
   const rows: string[][] = lines.map(line => {
@@ -214,11 +218,41 @@ export async function parseVistarCSV(file: File): Promise<ParsedVistarData> {
       }
     }
 
+    // Calculate weight for this product using master pricing data
+    let weightPerCase = 0;
+    let productWeightSource = 'none';
+    
+    // Try to find the product in master pricing by mapped product name
+    const masterProduct = masterPricingData.productMap.get(canonicalProductName.toLowerCase());
+    if (masterProduct && masterProduct.caseWeight > 0) {
+      weightPerCase = masterProduct.caseWeight;
+      productWeightSource = 'masterPricing';
+    } else if (masterProduct && masterProduct.pack && masterProduct.size) {
+      // Calculate from pack and size if case weight not available
+      const packNum = parseInt(masterProduct.pack) || 0;
+      const sizeNum = parseFloat(masterProduct.size) || 0;
+      if (packNum > 0 && sizeNum > 0) {
+        weightPerCase = (packNum * sizeNum) / 16;
+        productWeightSource = 'calculated';
+      }
+    } else if (packNum && sizeOzNum && packNum > 0 && sizeOzNum > 0) {
+      // Fallback: calculate from pack × sizeOz / 16
+      weightPerCase = (packNum * sizeOzNum) / 16;
+      productWeightSource = 'calculatedFromRecord';
+    }
+    
+    const cases = Math.round(qty);
+    const totalWeight = weightPerCase > 0 ? cases * weightPerCase : undefined;
+    
+    if (totalWeight && totalWeight > 0) {
+      console.log('[Vistar Parser] Weight calculated:', { product: canonicalProductName, source: productWeightSource, weightPerCase, cases, totalWeight });
+    }
+
     const record: AlpineSalesRecord = {
       customerName: opcoDesc, // Level 1: OPCO Desc (e.g., "Vistar Illinois")
       productName: canonicalProductName, // Level 3: Item Description - normalized
       size: sizeStr || undefined,
-      cases: Math.round(qty),
+      cases: cases,
       pieces: 0,
       revenue: Math.round(cost * 100) / 100,
       period,
@@ -228,6 +262,7 @@ export async function parseVistarCSV(file: File): Promise<ParsedVistarData> {
       accountName: customerDesc, // Level 2: Customer Desc (e.g., "MONSTER VENDING LLC")
       pack: packNum && isFinite(packNum) ? packNum : undefined,
       sizeOz: sizeOzNum && isFinite(sizeOzNum) ? sizeOzNum : undefined,
+      weightLbs: totalWeight, // Total weight in pounds (cases × weight per case)
     };
 
     allRecords.push(record);

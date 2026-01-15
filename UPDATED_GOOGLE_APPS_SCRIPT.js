@@ -8,11 +8,14 @@ const VISTAR_SHEET_NAME = "Vistar";
 const TONYS_SHEET_NAME = "Tony's Fine Foods";
 const TROIA_SHEET_NAME = "Troia Foods";
 const MHD_SHEET_NAME = "Mike Hudson";
+const DOT_SHEET_NAME = "DOT Foods";
+const SPROUTS_SHEET_NAME = "Sprouts";
 const LOGS_SHEET_NAME = "Logs";
 
 function doGet() {
   return ContentService.createTextOutput("UP");
 }
+
 
 function doPost(e) {
   try {
@@ -37,6 +40,8 @@ function doPost(e) {
     const tonysSheet = getOrCreateSheet(ss, TONYS_SHEET_NAME);
     const troiaSheet = getOrCreateSheet(ss, TROIA_SHEET_NAME);
     const mhdSheet = getOrCreateSheet(ss, MHD_SHEET_NAME);
+    const dotSheet = getOrCreateSheet(ss, DOT_SHEET_NAME);
+    const sproutsSheet = getOrCreateSheet(ss, SPROUTS_SHEET_NAME);
     const logs = getOrCreateSheet(ss, LOGS_SHEET_NAME);
 
     // Headers are set dynamically in rebuildMonthlyViewFor function
@@ -58,6 +63,8 @@ function doPost(e) {
       "AddedTonys",
       "AddedTroia",
       "AddedMhd",
+      "AddedDot",
+      "AddedSprouts",
       "Note",
     ]);
 
@@ -70,10 +77,12 @@ function doPost(e) {
       String(r[6] || "")
         .toLowerCase()
         .includes("pete");
-    const isKeHe = (r) =>
-      String(r[6] || "")
-        .toLowerCase()
-        .includes("kehe");
+    const isKeHe = (r) => {
+      const source = String(r[6] || "").toLowerCase();
+      const customer = String(r[1] || "").toLowerCase();
+      // Check if it's KeHe but NOT Sprouts (Sprouts will be filtered separately)
+      return source.includes("kehe") && !customer.includes("sprouts");
+    };
     const isVistar = (r) =>
       String(r[6] || "")
         .toLowerCase()
@@ -93,6 +102,16 @@ function doPost(e) {
       String(r[6] || "")
         .toLowerCase()
         .includes("mike hudson");
+    const isDot = (r) => {
+      const source = String(r[7] || "").toLowerCase(); // Source is in column 7
+      const invoiceId = String(r[6] || "").toLowerCase(); // Also check invoiceId column 6
+      return source.includes("dot") || invoiceId.includes("dot");
+    };
+    const isSprouts = (r) => {
+      const source = String(r[6] || "").toLowerCase();
+      const customer = String(r[1] || "").toLowerCase();
+      return source.includes("kehe") && customer.includes("sprouts");
+    };
 
     const alpineRows = normalized.filter(isAlpine);
     const petesRows = normalized.filter(isPetes);
@@ -101,14 +120,18 @@ function doPost(e) {
     const tonysRows = normalized.filter(isTonys);
     const troiaRows = normalized.filter(isTroia);
     const mhdRows = normalized.filter(isMhd);
+    const dotRows = normalized.filter(isDot);
+    const sproutsRows = normalized.filter(isSprouts);
 
     const addedAlpine = mergeAndRebuild(alpineSheet, alpineRows);
     const addedPetes = mergeAndRebuild(petesSheet, petesRows);
     const addedKeHe = mergeAndRebuild(keheSheet, keheRows);
     const addedVistar = mergeAndRebuild(vistarSheet, vistarRows);
-    const addedTonys = mergeAndRebuild(tonysSheet, tonysRows);
+    const addedTonys = mergeAndRebuild(tonysSheet, tonysRows, true); // Pass true to enable Tony's special handling
     const addedTroia = mergeAndRebuild(troiaSheet, troiaRows);
     const addedMhd = mergeAndRebuild(mhdSheet, mhdRows);
+    const addedDot = mergeAndRebuild(dotSheet, dotRows);
+    const addedSprouts = mergeAndRebuild(sproutsSheet, sproutsRows, false, true); // Pass true for KeHe-style DC filtering
 
     logs.appendRow([
       new Date().toISOString(),
@@ -120,6 +143,8 @@ function doPost(e) {
       tonysRows.length,
       troiaRows.length,
       mhdRows.length,
+      dotRows.length,
+      sproutsRows.length,
       addedAlpine,
       addedPetes,
       addedKeHe,
@@ -127,11 +152,13 @@ function doPost(e) {
       addedTonys,
       addedTroia,
       addedMhd,
+      addedDot,
+      addedSprouts,
       "doPost",
     ]);
 
     return ContentService.createTextOutput(
-      `OK: Alpine +${addedAlpine}, Pete's Coffee +${addedPetes}, KeHe +${addedKeHe}, Vistar +${addedVistar}, Tony's +${addedTonys}, Troia +${addedTroia}, MHD +${addedMhd}, skipped ${
+      `OK: Alpine +${addedAlpine}, Pete's Coffee +${addedPetes}, KeHe +${addedKeHe}, Vistar +${addedVistar}, Tony's +${addedTonys}, Troia +${addedTroia}, MHD +${addedMhd}, DOT +${addedDot}, Sprouts +${addedSprouts}, skipped ${
         normalized.length -
         addedAlpine -
         addedPetes -
@@ -139,7 +166,9 @@ function doPost(e) {
         addedVistar -
         addedTonys -
         addedTroia -
-        addedMhd
+        addedMhd -
+        addedDot -
+        addedSprouts
       }`
     );
   } catch (err) {
@@ -156,6 +185,8 @@ function doPost(e) {
         "TonysRows",
         "TroiaRows",
         "MhdRows",
+        "DotRows",
+        "SproutsRows",
         "AddedAlpine",
         "AddedPetes",
         "AddedKeHe",
@@ -163,10 +194,16 @@ function doPost(e) {
         "AddedTonys",
         "AddedTroia",
         "AddedMhd",
+        "AddedDot",
+        "AddedSprouts",
         "Note",
       ]);
       logs.appendRow([
         new Date().toISOString(),
+        0,
+        0,
+        0,
+        0,
         0,
         0,
         0,
@@ -206,7 +243,9 @@ function handleDeleteRequest(body) {
       'VISTAR': VISTAR_SHEET_NAME,
       'TONYS': TONYS_SHEET_NAME,
       'TROIA': TROIA_SHEET_NAME,
-      'MHD': MHD_SHEET_NAME
+      'MHD': MHD_SHEET_NAME,
+      'DOT': DOT_SHEET_NAME,
+      'SPROUTS': SPROUTS_SHEET_NAME
     };
     
     const sheetName = distributorToSheet[distributor];
@@ -239,32 +278,36 @@ function handleDeleteRequest(body) {
     rebuildMonthlyViewFor(sheet, filteredData);
     
     // Log the deletion
-    ensureHeader(logs, [
-      "Timestamp",
-      "TotalRows",
-      "AlpineRows",
-      "PetesRows",
-      "KeHeRows",
-      "VistarRows",
-      "TonysRows",
-      "TroiaRows",
-      "MhdRows",
-      "AddedAlpine",
-      "AddedPetes",
-      "AddedKeHe",
-      "AddedVistar",
-      "AddedTonys",
-      "AddedTroia",
-      "AddedMhd",
-      "Note",
-    ]);
-    logs.appendRow([
-      new Date().toISOString(),
-      filteredData.length,
-      0, 0, 0, 0, 0, 0, 0,
-      0, 0, 0, 0, 0, 0, 0,
-      `DELETE: ${distributor} / ${period} (removed ${deletedCount} rows)`,
-    ]);
+      ensureHeader(logs, [
+        "Timestamp",
+        "TotalRows",
+        "AlpineRows",
+        "PetesRows",
+        "KeHeRows",
+        "VistarRows",
+        "TonysRows",
+        "TroiaRows",
+        "MhdRows",
+        "DotRows",
+        "SproutsRows",
+        "AddedAlpine",
+        "AddedPetes",
+        "AddedKeHe",
+        "AddedVistar",
+        "AddedTonys",
+        "AddedTroia",
+        "AddedMhd",
+        "AddedDot",
+        "AddedSprouts",
+        "Note",
+      ]);
+      logs.appendRow([
+        new Date().toISOString(),
+        filteredData.length,
+        0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0,
+        `DELETE: ${distributor} / ${period} (removed ${deletedCount} rows)`,
+      ]);
     
     return ContentService.createTextOutput(
       `OK: Deleted ${deletedCount} rows for ${distributor} / ${period}`
@@ -275,8 +318,8 @@ function handleDeleteRequest(body) {
       const logs = getOrCreateSheet(ss, LOGS_SHEET_NAME);
       logs.appendRow([
         new Date().toISOString(),
-        0, 0, 0, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0,
         "Error in delete: " + err,
       ]);
     } catch (_ignore) {}
@@ -284,11 +327,11 @@ function handleDeleteRequest(body) {
   }
 }
 
-function mergeAndRebuild(sheet, newRows) {
+function mergeAndRebuild(sheet, newRows, isTonysFormat, useDCFiltering) {
   if (!newRows || newRows.length === 0) {
     // If no new data, just rebuild from existing raw data
     const existingData = getRawData(sheet);
-    rebuildMonthlyViewFor(sheet, existingData);
+    rebuildMonthlyViewFor(sheet, existingData, isTonysFormat, useDCFiltering);
     return 0;
   }
 
@@ -321,7 +364,7 @@ function mergeAndRebuild(sheet, newRows) {
   storeRawData(sheet, mergedData);
   
   // Rebuild the view
-  rebuildMonthlyViewFor(sheet, mergedData);
+  rebuildMonthlyViewFor(sheet, mergedData, isTonysFormat, useDCFiltering);
   
   return addedCount;
 }
@@ -365,7 +408,7 @@ function storeRawData(sheet, data) {
   }
 }
 
-function rebuildMonthlyViewFor(sheet, dataRows) {
+function rebuildMonthlyViewFor(sheet, dataRows, isTonysFormat, useDCFiltering) {
   // Clear the sheet and start fresh
   sheet.clear();
 
@@ -396,20 +439,6 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
   }
 
   const values = dataRows;
-  const monthNames = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
 
   // Build monthly summary data
   const monthlyTotals = {}; // key = YYYY-MM
@@ -627,7 +656,8 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
   // Add notes/comments to cells with new customer names
   for (let m = 0; m < 12; m++) {
     if (newCustomerNames[m] && newCustomerNames[m].length > 0) {
-      const noteText = "New Customers:\n" + newCustomerNames[m].sort().join("\n");
+      const formattedNames = formatCustomerNamesWithVendorContext(newCustomerNames[m]);
+      const noteText = "New Customers:\n" + formattedNames;
       sheet.getRange(currentRow, m + 2).setNote(noteText);
     }
   }
@@ -639,8 +669,9 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
         allNewCustomers.push(...newCustomerNames[m]);
       }
     }
-    const uniqueNew = [...new Set(allNewCustomers)].sort();
-    sheet.getRange(currentRow, 14).setNote("All New Customers:\n" + uniqueNew.join("\n"));
+    const uniqueNew = [...new Set(allNewCustomers)];
+    const formattedNames = formatCustomerNamesWithVendorContext(uniqueNew);
+    sheet.getRange(currentRow, 14).setNote("All New Customers:\n" + formattedNames);
   }
   currentRow++;
 
@@ -655,7 +686,8 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
   // Add notes/comments to cells with lost customer names
   for (let m = 0; m < 12; m++) {
     if (lostCustomerNames[m] && lostCustomerNames[m].length > 0) {
-      const noteText = "Lost Customers:\n" + lostCustomerNames[m].sort().join("\n");
+      const formattedNames = formatCustomerNamesWithVendorContext(lostCustomerNames[m]);
+      const noteText = "Lost Customers:\n" + formattedNames;
       sheet.getRange(currentRow, m + 2).setNote(noteText);
     }
   }
@@ -667,8 +699,9 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
         allLostCustomers.push(...lostCustomerNames[m]);
       }
     }
-    const uniqueLost = [...new Set(allLostCustomers)].sort();
-    sheet.getRange(currentRow, 14).setNote("All Lost Customers:\n" + uniqueLost.join("\n"));
+    const uniqueLost = [...new Set(allLostCustomers)];
+    const formattedNames = formatCustomerNamesWithVendorContext(uniqueLost);
+    sheet.getRange(currentRow, 14).setNote("All Lost Customers:\n" + formattedNames);
   }
   currentRow++;
 
@@ -717,17 +750,97 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
     .setHorizontalAlignment("center");
   currentRow++;
 
+  // Set row group control position to show +/- buttons in left margin
+  try {
+    sheet.setRowGroupControlPosition(SpreadsheetApp.GroupControlPosition.BEFORE);
+  } catch (e) {
+    // Control position setting may fail on some sheet types, continue
+  }
+
   // Group data by customer and detect sub-vendors
-  // Sub-vendors are detected by patterns like "Customer - Location" or "Customer: Location"
+  // For Tony's: Create separate sections for North, Reed, and Moreno
+  // For KeHe/Sprouts with DC filtering: Group by DC/Warehouse instead of Sub District
   const customerHierarchy = {}; // main customer -> sub-vendors
+  const tonysSections = {}; // For Tony's: "North", "Reed", "Moreno" -> customers
 
   Object.keys(totalsByKey)
     .filter((k) => String(k).startsWith(String(latestYear) + "|"))
     .forEach((k) => {
       const parts = k.split("|");
-      const fullCustomerName = parts[1];
+      let fullCustomerName = parts[1];
       const product = parts[2];
       const productCode = parts[3] || '';  // Extract product code
+      
+      // Special handling for Tony's: Detect North, Reed, Moreno sections
+      if (isTonysFormat) {
+        let sectionName = null;
+        let displayCustomerName = fullCustomerName;
+        
+        // Check if customer name starts with "TONY'S FINE FOODS - "
+        if (fullCustomerName.toUpperCase().includes("TONY'S FINE FOODS")) {
+          const upperName = fullCustomerName.toUpperCase();
+          if (upperName.includes(" - REED")) {
+            sectionName = "REED";
+            // Extract customer name after "TONY'S FINE FOODS - REED - " or similar
+            const parts = fullCustomerName.split(/TONY'S FINE FOODS\s*-\s*REED\s*-?/i);
+            displayCustomerName = parts.length > 1 ? parts[1].trim() : fullCustomerName.replace(/TONY'S FINE FOODS\s*-\s*REED\s*-?/i, '').trim();
+          } else if (upperName.includes(" - NORTH")) {
+            sectionName = "NORTH";
+            const parts = fullCustomerName.split(/TONY'S FINE FOODS\s*-\s*NORTH\s*-?/i);
+            displayCustomerName = parts.length > 1 ? parts[1].trim() : fullCustomerName.replace(/TONY'S FINE FOODS\s*-\s*NORTH\s*-?/i, '').trim();
+          } else if (upperName.includes("MORENO")) {
+            // For MORENO, keep "TONY'S FINE FOODS MORENO" as the section name if present
+            sectionName = "TONY'S FINE FOODS MORENO";
+            // Extract customer name after "TONY'S FINE FOODS MORENO - " or similar
+            if (upperName.includes(" - ")) {
+              const parts = fullCustomerName.split(/TONY'S FINE FOODS\s*MORENO\s*-?/i);
+              displayCustomerName = parts.length > 1 ? parts[1].trim() : fullCustomerName.replace(/TONY'S FINE FOODS\s*MORENO\s*-?/i, '').trim();
+            } else {
+              // If no sub-customer, this is the main MORENO entry
+              displayCustomerName = fullCustomerName;
+            }
+          }
+        }
+        
+        if (sectionName) {
+          // Initialize section if needed
+          if (!tonysSections[sectionName]) {
+            tonysSections[sectionName] = {};
+          }
+          
+          // Use displayCustomerName (without North/Reed prefix) as the customer
+          const mainCustomer = displayCustomerName || "UNKNOWN";
+          if (!tonysSections[sectionName][mainCustomer]) {
+            tonysSections[sectionName][mainCustomer] = {
+              hasSubVendors: false,
+              subVendors: {},
+              directProducts: [],
+            };
+          }
+          
+          // For now, treat as direct product (can be enhanced later if needed)
+          tonysSections[sectionName][mainCustomer].directProducts.push({
+            fullName: displayCustomerName,
+            product: product,
+            productCode: productCode,
+            quantities: totalsByKey[k].quantities,
+            revenues: totalsByKey[k].revenues,
+          });
+          return; // Skip normal processing for Tony's
+        }
+      }
+      
+      // Special handling for DC filtering (KeHe/Sprouts)
+      // NOTE: DC/Warehouse filtering requires the DC information from Column AA of the raw CSV
+      // Currently, normalized rows don't include DC data. To enable full DC filtering:
+      // 1. Update KeHe parser to extract DC/Warehouse (Column AA) and include it in the record
+      // 2. Update normalizeRow to preserve DC data (add as column 9 or in customer name)
+      // 3. Group by DC/Warehouse instead of Sub District here
+      // For now, we'll process using existing sub-vendor hierarchy (which may include some location info)
+      if (useDCFiltering) {
+        // Future enhancement: Group by DC/Warehouse when available
+        // Example: Group "Sprouts - Denver" by DC, then by store
+      }
 
       // Detect if this is a sub-vendor (contains " - " or ": ")
       let mainCustomer = fullCustomerName;
@@ -777,8 +890,48 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
       }
     });
 
+  // For Tony's: Process sections separately
+  if (isTonysFormat && Object.keys(tonysSections).length > 0) {
+    // Clear customerHierarchy and rebuild from tonysSections
+    Object.keys(customerHierarchy).forEach(k => delete customerHierarchy[k]);
+    
+    // Create hierarchy with sections as main customers
+    // Sort sections: NORTH, REED, then MORENO (or any custom order)
+    const sectionOrder = ["NORTH", "REED", "TONY'S FINE FOODS MORENO"];
+    const sortedSections = Object.keys(tonysSections).sort((a, b) => {
+      const aIdx = sectionOrder.indexOf(a);
+      const bIdx = sectionOrder.indexOf(b);
+      if (aIdx >= 0 && bIdx >= 0) return aIdx - bIdx;
+      if (aIdx >= 0) return -1;
+      if (bIdx >= 0) return 1;
+      return a.localeCompare(b);
+    });
+    
+    sortedSections.forEach(sectionName => {
+      const sectionCustomers = tonysSections[sectionName];
+      const sectionDisplayName = "► " + sectionName;
+      
+      customerHierarchy[sectionDisplayName] = {
+        hasSubVendors: true,
+        subVendors: {},
+        directProducts: [],
+      };
+      
+      Object.keys(sectionCustomers).sort().forEach(customerName => {
+        const customerData = sectionCustomers[customerName];
+        if (customerData.directProducts.length > 0) {
+          customerHierarchy[sectionDisplayName].subVendors[customerName] = customerData.directProducts;
+        }
+      });
+    });
+  }
+
   // Sort main customers alphabetically
   const sortedMainCustomers = Object.keys(customerHierarchy).sort();
+
+  // Store group information to create after all rows are written
+  const customerGroupInfo = [];
+  const subVendorGroupInfo = [];
 
   // Alternate row colors for better readability
   const customerColors = [
@@ -833,11 +986,12 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
     const mainTotal = mainCustomerTotals.reduce((a, b) => a + b, 0);
     const mainRevTotal = mainCustomerRevenues.reduce((a, b) => a + b, 0);
 
-    // Store customer section start for collapsibility
-    const customerSectionStart = currentRow;
+    // Store customer section start for native row grouping
+    const customerHeaderRow = currentRow;
 
     // Main customer row (bold, colored) - Cases
-    const mainRow = ["▼ " + mainCustomer + " (Cases)", ...mainCustomerTotals, mainTotal];
+    // This row will remain visible when collapsed
+    const mainRow = [mainCustomer + " (Cases)", ...mainCustomerTotals, mainTotal];
     sheet.getRange(currentRow, 1, 1, 14).setValues([mainRow]);
     sheet
       .getRange(currentRow, 1, 1, 14)
@@ -845,7 +999,6 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
       .setFontWeight("bold")
       .setFontSize(12);
     sheet.getRange(currentRow, 1).setFontColor("#000000");
-    const customerHeaderRow = currentRow;
     currentRow++;
 
     // Main customer revenue row
@@ -859,6 +1012,7 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
     sheet.getRange(currentRow, 1).setFontColor("#000000");
     currentRow++;
 
+    // Detail rows start here (these will be grouped and collapsed by default)
     const customerDetailStart = currentRow;
 
     if (hierarchy.hasSubVendors) {
@@ -878,9 +1032,13 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
         const subTotal = subVendorTotals.reduce((a, b) => a + b, 0);
         const subRevTotal = subVendorRevenues.reduce((a, b) => a + b, 0);
 
+        // Store sub-vendor section start for native row grouping
+        const subVendorHeaderRow = currentRow;
+
         // Sub-vendor row (indented once, semi-bold) - Cases
+        // This row will remain visible when the main customer is expanded
         const subVendorRow = [
-          "  → " + subVendor + " (Cases)",
+          "  " + subVendor + " (Cases)",
           ...subVendorTotals,
           subTotal,
         ];
@@ -907,6 +1065,8 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
           .setFontSize(9);
         sheet.getRange(currentRow, 1).setFontColor("#1565c0");
         currentRow++;
+
+        const subVendorDetailStart = currentRow;
 
         // Products under this sub-vendor (indented twice)
         const products = hierarchy.subVendors[subVendor].sort((a, b) =>
@@ -958,6 +1118,27 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
           }
           currentRow++;
         });
+
+        // Store sub-vendor group info for native row group creation
+        if (currentRow > subVendorDetailStart) {
+          const numSubVendorDetailRows = currentRow - subVendorDetailStart;
+          subVendorGroupInfo.push({
+            startRow: subVendorDetailStart,
+            numRows: numSubVendorDetailRows,
+            headerRow: subVendorHeaderRow,
+            subVendorName: subVendor,
+            detailStart: subVendorDetailStart,
+            detailEnd: currentRow - 1
+          });
+          // Remove in-cell arrow - native row groups will handle expand/collapse
+          const subHeaderCell = sheet.getRange(subVendorHeaderRow, 1);
+          subHeaderCell.setValue("  " + subVendor + " (Cases)");
+          // Clear any old notes
+          subHeaderCell.clearNote();
+        } else {
+          // No products for this sub-vendor
+          sheet.getRange(subVendorHeaderRow, 1).setValue("  " + subVendor + " (Cases)");
+        }
       });
     } else {
       // No sub-vendors, show direct products
@@ -1012,11 +1193,26 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
       });
     }
 
-    // Create collapsible group for this customer's details AND header
-    // NOTE: Temporarily disabled due to compatibility issues during uploads
-    // if (currentRow > customerDetailStart) {
-    //   sheet.getRowGroup(customerSectionStart, currentRow - 1).collapse();
-    // }
+    // Create native row group for customer details (groups must be created after all rows are written)
+    if (currentRow > customerDetailStart) {
+      const numDetailRows = currentRow - customerDetailStart;
+      customerGroupInfo.push({
+        startRow: customerDetailStart,
+        numRows: numDetailRows,
+        headerRow: customerHeaderRow,
+        customerName: mainCustomer,
+        detailStart: customerDetailStart,
+        detailEnd: currentRow - 1
+      });
+      // Remove in-cell arrow - native row groups will handle expand/collapse
+      const headerCell = sheet.getRange(customerHeaderRow, 1);
+      headerCell.setValue(mainCustomer + " (Cases)");
+      // Clear any old notes
+      headerCell.clearNote();
+    } else {
+      // No details
+      sheet.getRange(customerHeaderRow, 1).setValue(mainCustomer + " (Cases)");
+    }
 
     // Blank row between main customers
     currentRow++;
@@ -1029,6 +1225,233 @@ function rebuildMonthlyViewFor(sheet, dataRows) {
 
   // Set column widths for better appearance
   sheet.setColumnWidth(1, 250); // Customer/Product column wider
+
+  // Create native row groups and collapse them by default
+  // Native row groups will handle expand/collapse automatically via +/- buttons in left margin
+
+  Logger.log("Creating row groups for " + sheet.getName() + ". Customer groups: " + customerGroupInfo.length + ", Sub-vendor groups: " + subVendorGroupInfo.length);
+
+  // Create customer row groups
+  customerGroupInfo.forEach((groupInfo, index) => {
+    try {
+      if (groupInfo.detailStart && groupInfo.detailEnd && groupInfo.detailEnd >= groupInfo.detailStart) {
+        const numRows = groupInfo.detailEnd - groupInfo.detailStart + 1;
+        if (numRows > 0) {
+          Logger.log("Creating customer group " + index + ": rows " + groupInfo.detailStart + "-" + groupInfo.detailEnd + " (" + numRows + " rows)");
+          // Create the row group
+          const range = sheet.getRange(groupInfo.detailStart, 1, numRows, sheet.getLastColumn());
+          range.shiftRowGroupDepth(1);
+
+          // Collapse the group by default
+          try {
+            const group = sheet.getRowGroup(groupInfo.detailStart, numRows);
+            if (group) {
+              group.collapse();
+              Logger.log("Collapsed customer group " + index);
+            } else {
+              Logger.log("Warning: Could not get group object for customer group " + index);
+            }
+          } catch (collapseErr) {
+            Logger.log("Failed to collapse customer group " + index + ": " + collapseErr);
+          }
+        }
+      }
+    } catch (e) {
+      Logger.log("Failed to create customer group " + index + ": " + e);
+    }
+  });
+
+  // Create sub-vendor row groups
+  subVendorGroupInfo.forEach((groupInfo, index) => {
+    try {
+      if (groupInfo.detailStart && groupInfo.detailEnd && groupInfo.detailEnd >= groupInfo.detailStart) {
+        const numRows = groupInfo.detailEnd - groupInfo.detailStart + 1;
+        if (numRows > 0) {
+          Logger.log("Creating sub-vendor group " + index + ": rows " + groupInfo.detailStart + "-" + groupInfo.detailEnd + " (" + numRows + " rows)");
+          // Create the row group
+          const range = sheet.getRange(groupInfo.detailStart, 1, numRows, sheet.getLastColumn());
+          range.shiftRowGroupDepth(1);
+
+          // Collapse the group by default
+          try {
+            const group = sheet.getRowGroup(groupInfo.detailStart, numRows);
+            if (group) {
+              group.collapse();
+              Logger.log("Collapsed sub-vendor group " + index);
+            } else {
+              Logger.log("Warning: Could not get group object for sub-vendor group " + index);
+            }
+          } catch (collapseErr) {
+            Logger.log("Failed to collapse sub-vendor group " + index + ": " + collapseErr);
+          }
+        }
+      }
+    } catch (e) {
+      Logger.log("Failed to create sub-vendor group " + index + ": " + e);
+    }
+  });
+
+  Logger.log("Row group creation completed for " + sheet.getName());
+}
+
+// Debug function to check current sheet state
+function debugSheet(sheetName) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    Logger.log("Sheet not found: " + sheetName);
+    return "Sheet not found";
+  }
+
+  const lastRow = sheet.getLastRow();
+  Logger.log("Sheet: " + sheetName + ", Last row: " + lastRow);
+
+  // Check for row groups
+  let groupCount = 0;
+  for (let row = 1; row <= lastRow; row++) {
+    try {
+      const group = sheet.getRowGroup(row, 1);
+      if (group) {
+        groupCount++;
+        Logger.log("Found group at row " + row + ": collapsed=" + group.isCollapsed());
+      }
+    } catch (e) {
+      // No group at this row
+    }
+  }
+
+  Logger.log("Total row groups found: " + groupCount);
+
+  // Check control position
+  try {
+    const controlPos = sheet.getRowGroupControlPosition();
+    Logger.log("Row group control position: " + controlPos);
+  } catch (e) {
+    Logger.log("Could not get control position: " + e);
+  }
+
+  return "Debug complete - check logs for sheet " + sheetName;
+}
+
+// Simple test function to verify row groups work
+function testRowGroups() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const testSheet = getOrCreateSheet(ss, "TestRowGroups");
+
+  // Clear and set up test data
+  testSheet.clear();
+  testSheet.setRowGroupControlPosition(SpreadsheetApp.GroupControlPosition.BEFORE);
+
+  // Write test data
+  const testData = [
+    ["Main Section 1"],
+    ["Detail 1"],
+    ["Detail 2"],
+    ["Main Section 2"],
+    ["Detail 3"],
+    ["Detail 4"]
+  ];
+
+  testSheet.getRange(1, 1, testData.length, 1).setValues(testData);
+
+  // Create row groups
+  try {
+    // Group rows 2-3 under row 1
+    const range1 = testSheet.getRange(2, 1, 2, 1);
+    range1.shiftRowGroupDepth(1);
+    const group1 = testSheet.getRowGroup(2, 2);
+    if (group1) group1.collapse();
+
+    // Group rows 5-6 under row 4
+    const range2 = testSheet.getRange(5, 1, 2, 1);
+    range2.shiftRowGroupDepth(1);
+    const group2 = testSheet.getRowGroup(5, 2);
+    if (group2) group2.collapse();
+
+    Logger.log("Test row groups created successfully");
+    return "Test completed - check TestRowGroups sheet";
+  } catch (e) {
+    Logger.log("Test failed: " + e);
+    return "Test failed: " + e;
+  }
+}
+
+// Helper function to manually create row groups on any sheet
+// Usage: Run this function from the script editor with a sheet name
+// Example: createRowGroupsForSheet("Tony's Fine Foods")
+function createRowGroupsForSheet(sheetName) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    Logger.log("Sheet not found: " + sheetName);
+    return "Sheet not found";
+  }
+  
+  Logger.log("Starting row group creation for: " + sheetName);
+  
+  // Set control position
+  try {
+    sheet.setRowGroupControlPosition(SpreadsheetApp.GroupControlPosition.BEFORE);
+    Logger.log("Control position set");
+  } catch (e) {
+    Logger.log("Could not set control position: " + e);
+  }
+  
+  // Find customer rows (rows with "▼" or "►" in column A that are summary rows)
+  const lastRow = sheet.getLastRow();
+  let groupsCreated = 0;
+  
+  for (let row = 12; row <= lastRow; row++) {
+    try {
+      const cellValue = sheet.getRange(row, 1).getValue();
+      if (typeof cellValue === 'string' && (cellValue.includes('▼') || cellValue.includes('►'))) {
+        // This might be a customer header row
+        // Look for detail rows below it (rows that start with "  →" or "    •")
+        let detailStartRow = row + 2; // Skip revenue row
+        let detailEndRow = detailStartRow;
+        
+        // Find where the details end (next customer or blank row)
+        for (let checkRow = detailStartRow; checkRow <= Math.min(row + 50, lastRow); checkRow++) {
+          const checkValue = sheet.getRange(checkRow, 1).getValue();
+          if (!checkValue || checkValue === '') break;
+          // Check if it's a detail row (indented)
+          if (typeof checkValue === 'string' && (checkValue.startsWith('  ') || checkValue.startsWith('    '))) {
+            detailEndRow = checkRow;
+          } else if (typeof checkValue === 'string' && (checkValue.includes('▼') || checkValue.includes('►'))) {
+            // Found next customer, stop here
+            break;
+          }
+        }
+        
+        if (detailEndRow >= detailStartRow && detailEndRow < lastRow) {
+          const numRows = detailEndRow - detailStartRow + 1;
+          try {
+            const range = sheet.getRange(detailStartRow, 1, numRows, sheet.getLastColumn());
+            range.shiftRowGroupDepth(1);
+            groupsCreated++;
+            Logger.log(`Created group for row ${row}: rows ${detailStartRow}-${detailEndRow}`);
+            
+            // Try to collapse
+            try {
+              const group = sheet.getRowGroup(detailStartRow, numRows);
+              if (group) {
+                group.collapse();
+              }
+            } catch (collapseErr) {
+              // Continue
+            }
+          } catch (groupErr) {
+            Logger.log(`Failed to create group for row ${row}: ${groupErr}`);
+          }
+        }
+      }
+    } catch (e) {
+      // Continue
+    }
+  }
+  
+  Logger.log(`Created ${groupsCreated} row groups`);
+  return `Created ${groupsCreated} row groups`;
 }
 
 function getOrCreateSheet(ss, name) {
@@ -1084,4 +1507,49 @@ function toNumber(v) {
   if (v === null || v === undefined || v === "") return 0;
   const n = parseFloat(String(v).replace(/[$,\\s]/g, ""));
   return isNaN(n) ? 0 : n;
+}
+
+// Format customer names with vendor context for hierarchical data
+// Groups customers by distributor/vendor and displays as "Distributor → Customer"
+function formatCustomerNamesWithVendorContext(customerNames) {
+  if (!customerNames || customerNames.length === 0) {
+    return "";
+  }
+  
+  const grouped = {}; // vendor -> [customers]
+  const standalone = [];
+  
+  // Separate hierarchical and standalone customers
+  customerNames.forEach(custName => {
+    if (custName.includes(" - ")) {
+      // Hierarchical: split into vendor and customer
+      const parts = custName.split(" - ");
+      const mainVendor = parts[0].trim();
+      const subCustomer = parts.slice(1).join(" - ").trim();
+      if (!grouped[mainVendor]) {
+        grouped[mainVendor] = [];
+      }
+      grouped[mainVendor].push(subCustomer);
+    } else {
+      // Standalone customer
+      standalone.push(custName);
+    }
+  });
+  
+  // Build formatted display
+  const displayParts = [];
+  
+  // Add standalone customers first (sorted)
+  standalone.sort().forEach(c => {
+    displayParts.push(c);
+  });
+  
+  // Add hierarchical customers grouped by vendor
+  Object.keys(grouped).sort().forEach(vendor => {
+    grouped[vendor].sort().forEach(subCust => {
+      displayParts.push(`${vendor} → ${subCust}`);
+    });
+  });
+  
+  return displayParts.join("\n");
 }

@@ -188,3 +188,5 @@ All of this is available in the app's admin section once you're logged in!
 - Rotate passwords regularly
 - Use environment variables, never hardcode
 
+
+

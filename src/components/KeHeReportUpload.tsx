@@ -58,7 +58,7 @@ const KeHeReportUpload: React.FC<KeHeReportUploadProps> = ({ onDataParsed, onCle
       customers.forEach(c => customerProgressions.set(c, analyzeCustomerProgress(allRecords, c)));
 
       console.log(`KeHe Upload: Total ${allRecords.length} records, ${customers.length} customers`);
-      await await onDataParsed({ records: allRecords, customerProgressions });
+      await onDataParsed({ records: allRecords, customerProgressions });
 
       try {
         const webAppUrl = (process.env.REACT_APP_GS_WEBAPP_URL || '').trim();

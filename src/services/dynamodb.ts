@@ -227,30 +227,68 @@ class DynamoDBService {
       });
 
       const result = await docClient.send(command);
-      const items = (result.Items || []).map(item => ({
-        id: item.id,
-        distributor: item.distributor,
-        period: item.period,
-        customerName: item.customerName,
-        productName: item.productName,
-        productCode: item.productCode,
-        cases: item.cases,
-        revenue: item.revenue,
-        invoiceKey: item.invoiceKey,
-        source: item.source,
-        timestamp: item.timestamp,
-        createdAt: item.createdAt,
-        updatedAt: item.updatedAt,
-        accountName: item.accountName,
-        customerId: item.customerId,
-        itemNumber: item.itemNumber,
-        size: item.size,
-        weightLbs: item.weightLbs,
-      })) as SalesRecord[];
+      const items = (result.Items || []).map(item => {
+        // Ensure cases and revenue are numbers (DynamoDB might return strings in some edge cases)
+        const cases = typeof item.cases === 'number' ? item.cases : parseFloat(item.cases) || 0;
+        const revenue = typeof item.revenue === 'number' ? item.revenue : parseFloat(item.revenue) || 0;
+        
+        // Log negative cases to debug loading issues
+        if (cases < 0 && item.distributor === 'TONYS') {
+          console.log('[DynamoDB Load] Found negative cases in getSalesRecordsByDistributor:', {
+            distributor: item.distributor,
+            period: item.period,
+            customerName: item.customerName,
+            productName: item.productName,
+            cases: cases,
+            casesRaw: item.cases,
+            casesType: typeof item.cases,
+            invoiceKey: item.invoiceKey
+          });
+        }
+        
+        return {
+          id: item.id,
+          distributor: item.distributor,
+          period: item.period,
+          customerName: item.customerName,
+          productName: item.productName,
+          productCode: item.productCode,
+          cases: cases, // Explicitly convert to number, preserving negative values
+          revenue: revenue, // Explicitly convert to number
+          invoiceKey: item.invoiceKey,
+          source: item.source,
+          timestamp: item.timestamp,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          accountName: item.accountName,
+          customerId: item.customerId,
+          itemNumber: item.itemNumber,
+          size: item.size,
+          weightLbs: typeof item.weightLbs === 'number' ? item.weightLbs : (item.weightLbs ? parseFloat(item.weightLbs) : undefined),
+        };
+      }) as SalesRecord[];
 
       allItems.push(...items);
       lastEvaluatedKey = result.LastEvaluatedKey;
     } while (lastEvaluatedKey);
+
+    // Log summary of loaded records with negative cases
+    const negativeCasesRecords = allItems.filter(r => r.cases < 0 && r.distributor === 'TONYS');
+    if (negativeCasesRecords.length > 0) {
+      console.log('[DynamoDB Load Summary] getSalesRecordsByDistributor:', {
+        distributor: allItems[0]?.distributor,
+        totalRecords: allItems.length,
+        recordsWithNegativeCases: negativeCasesRecords.length,
+        totalNegativeCases: negativeCasesRecords.reduce((sum, r) => sum + r.cases, 0),
+        sampleNegativeRecords: negativeCasesRecords.slice(0, 5).map(r => ({
+          customerName: r.customerName,
+          productName: r.productName,
+          cases: r.cases,
+          period: r.period,
+          invoiceKey: r.invoiceKey
+        }))
+      });
+    }
 
     return allItems;
   }
@@ -271,26 +309,32 @@ class DynamoDBService {
       });
 
       const result = await docClient.send(command);
-      const items = (result.Items || []).map(item => ({
-        id: item.id,
-        distributor: item.distributor,
-        period: item.period,
-        customerName: item.customerName,
-        productName: item.productName,
-        productCode: item.productCode,
-        cases: item.cases,
-        revenue: item.revenue,
-        invoiceKey: item.invoiceKey,
-        source: item.source,
-        timestamp: item.timestamp,
-        createdAt: item.createdAt,
-        updatedAt: item.updatedAt,
-        accountName: item.accountName,
-        customerId: item.customerId,
-        itemNumber: item.itemNumber,
-        size: item.size,
-        weightLbs: item.weightLbs,
-      })) as SalesRecord[];
+      const items = (result.Items || []).map(item => {
+        // Ensure cases and revenue are numbers (DynamoDB might return strings in some edge cases)
+        const cases = typeof item.cases === 'number' ? item.cases : parseFloat(item.cases) || 0;
+        const revenue = typeof item.revenue === 'number' ? item.revenue : parseFloat(item.revenue) || 0;
+        
+        return {
+          id: item.id,
+          distributor: item.distributor,
+          period: item.period,
+          customerName: item.customerName,
+          productName: item.productName,
+          productCode: item.productCode,
+          cases: cases, // Explicitly convert to number, preserving negative values
+          revenue: revenue, // Explicitly convert to number
+          invoiceKey: item.invoiceKey,
+          source: item.source,
+          timestamp: item.timestamp,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          accountName: item.accountName,
+          customerId: item.customerId,
+          itemNumber: item.itemNumber,
+          size: item.size,
+          weightLbs: typeof item.weightLbs === 'number' ? item.weightLbs : (item.weightLbs ? parseFloat(item.weightLbs) : undefined),
+        };
+      }) as SalesRecord[];
 
       allItems.push(...items);
       lastEvaluatedKey = result.LastEvaluatedKey;
@@ -314,26 +358,32 @@ class DynamoDBService {
       });
 
       const result = await docClient.send(command);
-      const items = (result.Items || []).map(item => ({
-        id: item.id,
-        distributor: item.distributor,
-        period: item.period,
-        customerName: item.customerName,
-        productName: item.productName,
-        productCode: item.productCode,
-        cases: item.cases,
-        revenue: item.revenue,
-        invoiceKey: item.invoiceKey,
-        source: item.source,
-        timestamp: item.timestamp,
-        createdAt: item.createdAt,
-        updatedAt: item.updatedAt,
-        accountName: item.accountName,
-        customerId: item.customerId,
-        itemNumber: item.itemNumber,
-        size: item.size,
-        weightLbs: item.weightLbs,
-      })) as SalesRecord[];
+      const items = (result.Items || []).map(item => {
+        // Ensure cases and revenue are numbers (DynamoDB might return strings in some edge cases)
+        const cases = typeof item.cases === 'number' ? item.cases : parseFloat(item.cases) || 0;
+        const revenue = typeof item.revenue === 'number' ? item.revenue : parseFloat(item.revenue) || 0;
+        
+        return {
+          id: item.id,
+          distributor: item.distributor,
+          period: item.period,
+          customerName: item.customerName,
+          productName: item.productName,
+          productCode: item.productCode,
+          cases: cases, // Explicitly convert to number, preserving negative values
+          revenue: revenue, // Explicitly convert to number
+          invoiceKey: item.invoiceKey,
+          source: item.source,
+          timestamp: item.timestamp,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          accountName: item.accountName,
+          customerId: item.customerId,
+          itemNumber: item.itemNumber,
+          size: item.size,
+          weightLbs: typeof item.weightLbs === 'number' ? item.weightLbs : (item.weightLbs ? parseFloat(item.weightLbs) : undefined),
+        };
+      }) as SalesRecord[];
 
       allItems.push(...items);
       lastEvaluatedKey = result.LastEvaluatedKey;

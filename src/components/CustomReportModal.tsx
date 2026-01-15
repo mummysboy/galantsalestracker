@@ -508,9 +508,31 @@ const CustomReportModal: React.FC<CustomReportModalProps> = ({
               weight = (record.pack * record.sizeOz * record.cases) / 16;
             }
           }
-          // For Vistar: calculate from pack × sizeOz × cases / 16 to convert oz to lbs
-          else if (dist.name === 'Vistar' && record.pack && record.sizeOz && record.cases) {
-            weight = (record.pack * record.sizeOz * record.cases) / 16;
+          // For Vistar: use weightLbs field if available, otherwise calculate from pack × sizeOz × cases / 16
+          else if (dist.name === 'Vistar' && record.cases) {
+            if (record.weightLbs !== undefined && record.weightLbs > 0) {
+              // Use the weightLbs field calculated from Master Pricing data
+              weight = record.weightLbs;
+              console.log('[Broker Report] Vistar weight found from weightLbs:', { product: record.productName, weightLbs: record.weightLbs, cases: record.cases, weight });
+            } else if (record.pack && record.sizeOz) {
+              // Fallback: calculate weight from pack × sizeOz × cases / 16
+              weight = (record.pack * record.sizeOz * record.cases) / 16;
+              console.log('[Broker Report] Vistar weight calculated from pack/size/cases:', { product: record.productName, pack: record.pack, sizeOz: record.sizeOz, cases: record.cases, weight });
+            } else if (record.size) {
+              // Try to parse pack and size from the size field (e.g., "12pk x 5oz")
+              const sizeMatch = record.size.match(/(\d+)\s*pk\s*x\s*(\d+(?:\.\d+)?)\s*oz/i);
+              if (sizeMatch) {
+                const packFromSize = parseFloat(sizeMatch[1]);
+                const sizeOzFromSize = parseFloat(sizeMatch[2]);
+                if (packFromSize > 0 && sizeOzFromSize > 0) {
+                  weight = (packFromSize * sizeOzFromSize * record.cases) / 16;
+                  console.log('[Broker Report] Vistar weight calculated from size field:', { product: record.productName, size: record.size, pack: packFromSize, sizeOz: sizeOzFromSize, cases: record.cases, weight });
+                }
+              }
+            }
+            if (weight === undefined) {
+              console.log('[Broker Report] Vistar record - NO WEIGHT available:', { product: record.productName, weightLbs: record.weightLbs, pack: record.pack, sizeOz: record.sizeOz, size: record.size, cases: record.cases, revenue: record.revenue });
+            }
           }
           // For Tony's: use weightLbs field if available, otherwise calculate from pack × sizeOz × cases / 16
           else if (dist.name === "Tony's" && record.cases) {
