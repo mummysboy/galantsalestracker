@@ -800,6 +800,12 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '', a
   };
 
   const buildDedupKey = (record: AlpineSalesRecord & { invoiceKey?: string }, distributor: string): string => {
+    // Use invoiceKey if available (preferred for all distributors)
+    if (record.invoiceKey) {
+      return record.invoiceKey;
+    }
+    
+    // Fallback to generating key from fields for KEHE/VISTAR
     if (distributor === 'KEHE' || distributor === 'VISTAR') {
       return [
         distributor,
@@ -815,8 +821,8 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '', a
       ].join('|');
     }
 
-    return record.invoiceKey ||
-      `${distributor}-${record.period}-${record.customerName}-${record.productName}-${record.cases}-${record.revenue}`;
+    // Fallback for other distributors
+    return `${distributor}-${record.period}-${record.customerName}-${record.productName}-${record.cases}-${record.revenue}`;
   };
   React.useEffect(() => {
     if (selectedMonth) {
@@ -1093,7 +1099,14 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '', a
             // The hook sets salesRecords, but we need to convert and set our state
             // Let's use the service directly to get records
             const records = await supabaseService.getSalesRecordsByDistributor(distributor);
-            console.log(`Loaded ${records.length} records for ${distributor} from Supabase`);
+            console.log(`[Dashboard Load] Loaded ${records.length} records for ${distributor} from Supabase`);
+            
+            // Only update state if we got data from Supabase
+            // This prevents overwriting localStorage data with empty arrays if Supabase query fails
+            if (records.length === 0) {
+              console.log(`[Dashboard Load] No records found for ${distributor} in Supabase, keeping existing data`);
+              continue;
+            }
             
             // Convert SalesRecord back to AlpineSalesRecord format
             const convertedRecords: AlpineSalesRecord[] = records.map(convertSalesRecordToAlpineRecord);
@@ -1229,6 +1242,21 @@ const Dashboard: React.FC<DashboardProps> = ({ isAdmin = false, username = '', a
               });
               setCurrentKeHeData(deduplicatedRecords);
             } else if (distributor === 'VISTAR') {
+              console.log('[Dashboard Load] VISTAR data loaded:', {
+                totalRecords: deduplicatedRecords.length,
+                recordsBeforeDedup: convertedRecords.length,
+                periods: Array.from(new Set(deduplicatedRecords.map(r => r.period))).sort(),
+                recordsWithInvoiceKey: deduplicatedRecords.filter(r => (r as any).invoiceKey).length,
+                sampleRecords: deduplicatedRecords.slice(0, 3).map(r => ({
+                  customerName: r.customerName,
+                  accountName: r.accountName,
+                  productName: r.productName,
+                  period: r.period,
+                  cases: r.cases,
+                  revenue: r.revenue,
+                  invoiceKey: (r as any).invoiceKey
+                }))
+              });
               setCurrentVistarData(deduplicatedRecords);
             } else if (distributor === 'TONYS') {
               // Debug: Log sample records to verify hierarchical customer names

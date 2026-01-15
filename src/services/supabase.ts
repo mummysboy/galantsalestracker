@@ -225,20 +225,39 @@ class SupabaseService {
     
     console.log(`[Supabase] Querying sales records for distributor: ${distributor}`);
     
-    const { data, error } = await client
-      .from('sales_records')
-      .select('*')
-      .eq('distributor', distributor)
-      .order('created_at', { ascending: false });
+    // Supabase PostgREST has a default limit of 1000 rows
+    // We need to paginate to get all records
+    const allRecords: SalesRecordRow[] = [];
+    let from = 0;
+    const pageSize = 1000;
+    let hasMore = true;
 
-    if (error) {
-      console.error('[Supabase] Error fetching sales records by distributor:', error);
-      throw error;
+    while (hasMore) {
+      const { data, error } = await client
+        .from('sales_records')
+        .select('*')
+        .eq('distributor', distributor)
+        .order('created_at', { ascending: false })
+        .range(from, from + pageSize - 1);
+
+      if (error) {
+        console.error('[Supabase] Error fetching sales records by distributor:', error);
+        throw error;
+      }
+
+      if (data && data.length > 0) {
+        allRecords.push(...(data as SalesRecordRow[]));
+        from += pageSize;
+        // If we got fewer records than pageSize, we've reached the end
+        hasMore = data.length === pageSize;
+      } else {
+        hasMore = false;
+      }
     }
 
-    console.log(`[Supabase] Found ${data?.length || 0} records for distributor ${distributor}`);
-    if (distributor === 'KEHE' && data && data.length > 0) {
-      console.log('[Supabase] Sample KEHE records:', data.slice(0, 3).map((r: any) => ({
+    console.log(`[Supabase] Found ${allRecords.length} total records for distributor ${distributor} (after pagination)`);
+    if (distributor === 'KEHE' && allRecords.length > 0) {
+      console.log('[Supabase] Sample KEHE records:', allRecords.slice(0, 3).map((r: any) => ({
         distributor: r.distributor,
         period: r.period,
         customerName: r.customer_name,
@@ -246,8 +265,18 @@ class SupabaseService {
         productName: r.product_name
       })));
     }
+    if (distributor === 'VISTAR' && allRecords.length > 0) {
+      console.log('[Supabase] Sample VISTAR records:', allRecords.slice(0, 3).map((r: any) => ({
+        distributor: r.distributor,
+        period: r.period,
+        customerName: r.customer_name,
+        accountName: r.account_name,
+        productName: r.product_name,
+        invoiceKey: r.invoice_key
+      })));
+    }
 
-    return (data as SalesRecordRow[]).map(toSalesRecord);
+    return allRecords.map(toSalesRecord);
   }
 
   async getSalesRecordsByPeriod(period: string): Promise<SalesRecord[]> {
