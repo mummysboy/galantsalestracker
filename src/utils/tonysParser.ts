@@ -30,7 +30,7 @@ function toNumber(value: any): number {
   // Values in parentheses like "(1)" represent negative numbers in accounting
   // They should subtract from totals (be treated as -1, not 0 or +1)
   // Check for parentheses - handle both "(1)" format and cases with whitespace
-  const isParenNegative = /^\s*\([^)]+\)\s*$/.test(str) || str.startsWith('(') && str.endsWith(')');
+  const isParenNegative = /^\s*\([^)]+\)\s*$/.test(str) || (str.startsWith('(') && str.endsWith(')'));
   
   // Remove parentheses, dollar signs, commas, and whitespace
   const cleaned = str.replace(/[()$,%\s]/g, '');

@@ -555,7 +555,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
       
       // Also log all possible identifiers for this user to help with debugging
       try {
-        const { data: { user } } = await supabase?.auth.getUser() || { data: { user: null } };
+        const { data: { user: currentUser } } = await supabase?.auth.getUser() || { data: { user: null } };
         const profile = await supabaseService.getUserProfile(userId).catch(() => null);
         console.log('[AdminPage] User identifier info for debugging:', {
           userId,
@@ -564,6 +564,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
           profileUsername: profile?.username || 'none',
           emailPrefix: email ? email.split('@')[0] : 'none',
           savedKey: key,
+          currentUserId: currentUser?.id || 'none',
           note: 'Dashboard will try to find permissions using: normalized username, original username, email prefix, user ID, and profile username'
         });
       } catch (debugErr) {
@@ -598,6 +599,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
     loadUsers().catch(() => {
       // Silently fail - admin features require backend support
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Preload user profiles when users are loaded
@@ -620,6 +622,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
     if (users.length > 0) {
       loadProfiles();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [users]);
 
   // Load permissions when a user is selected
@@ -631,6 +634,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
         loadUserPermissions(user.id, user.email || null);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedUserForPermissions, users]);
 
   // Filter users based on search term

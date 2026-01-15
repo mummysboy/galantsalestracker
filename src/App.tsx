@@ -599,7 +599,6 @@ function App() {
   const isSupabaseConfigured = !!supabaseUrl && !!supabaseAnonKey;
   const isAuthenticated = authReady && hasSession && !forceLogout;
   const isAdminSession = isAuthenticated && authState?.groups?.includes(ADMIN_GROUP_NAME);
-  const displayName = authState?.username || authState?.email || 'User';
 
   // Show loading state while checking session
   if (isLoading) {

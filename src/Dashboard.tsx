@@ -19,7 +19,7 @@ import AlpineReportUpload from './components/AlpineReportUpload';
 import CustomReportModal from './components/CustomReportModal';
 import { AlpineSalesRecord, analyzeCustomerProgress } from './utils/alpineParser';
 // Removed hardcoded June seed; start empty and let uploads populate
-import { Upload, BarChart3, ChevronDown, Trash2, X, ChevronLeft, ChevronRight, Download, RefreshCw } from 'lucide-react';
+import { Upload, BarChart3, ChevronDown, Trash2, X, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { toTitleCase } from './lib/utils';
 import PetesReportUpload from './components/PetesReportUpload';
 import KeHeReportUpload from './components/KeHeReportUpload';
